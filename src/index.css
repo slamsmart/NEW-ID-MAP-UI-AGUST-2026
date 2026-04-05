@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Leaflet Map Override */
 .leaflet-container {
   width: 100%;
@@ -34,8 +38,10 @@
   box-shadow: none !important;
 }
 
-body {
+html, body {
   margin: 0;
+  padding: 0;
+  overflow-x: hidden;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background: #f9fafb;
 }
@@ -43,14 +49,20 @@ body {
 #root {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   width: 100%;
-  max-width: 100%;
   text-align: left;
-  border: none;
-  margin: 0;
+}
+
+/* Setiap child langsung #root mengisi penuh */
+#root > * {
+  width: 100%;
+  flex: 1;
 }
 
 /* ===== PRINT / EXPORT PDF CSS ===== */
+.print-only { display: none; }
+
 @media print {
   @page {
     size: A4;
@@ -76,17 +88,9 @@ body {
     background: white !important;
   }
 
-  /* Print header */
-  body::before {
-    content: "KEMENTERIAN KELAUTAN DAN PERIKANAN REPUBLIK INDONESIA";
-    display: block;
-    text-align: center;
-    font-size: 11pt;
-    font-weight: bold;
-    color: #14532d;
-    border-bottom: 2px solid #14532d;
-    padding-bottom: 8px;
-    margin-bottom: 16px;
+  /* Show print-only elements */
+  .print-only {
+    display: block !important;
   }
 
   body::after {

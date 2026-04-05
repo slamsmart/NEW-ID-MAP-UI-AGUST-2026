@@ -85,7 +85,7 @@ export default function Laporan() {
               <span className="text-sm font-medium text-green-400">Laporan Komprehensif · ID-MAP</span>
             </div>
             <h2 className="text-2xl font-bold mb-1">Evaluasi Program Restorasi Mangrove Nasional</h2>
-            <p className="text-green-400 text-sm">Periode: 2018 – Q1 2025 | Kementerian Kelautan dan Perikanan RI</p>
+            <p className="text-green-400 text-sm">Periode: 2018 – Q1 2025 | Basis data untuk Pemantauan dan Restorasi Lingkungan</p>
           </div>
           <button
             onClick={handlePrint}

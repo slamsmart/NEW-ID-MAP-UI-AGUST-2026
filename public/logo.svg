@@ -38,23 +38,6 @@
            C 380 138,376 110,380 82 Z"
        fill="#1a8c3e"/>
 
-  <!-- GARIS TOPOGRAFI -->
-  <g clip-path="url(#indoClip)" stroke="#0d5c28" stroke-width="3.2" fill="none" stroke-linecap="round">
-    <path d="M -10 18  Q 140 10 280 20 Q 420 30 570 16"/>
-    <path d="M -10 32  Q 145 24 282 34 Q 418 44 570 30"/>
-    <path d="M -10 46  Q 138 38 280 50 Q 422 60 570 44"/>
-    <path d="M -10 60  Q 140 52 278 63 Q 420 74 570 58"/>
-    <path d="M -10 75  Q 142 67 280 78 Q 418 88 570 73"/>
-    <path d="M -10 90  Q 140 82 278 94 Q 422 104 570 88"/>
-    <path d="M -10 105 Q 138 98 280 110 Q 420 120 570 103"/>
-    <path d="M -10 120 Q 142 112 280 125 Q 418 136 570 118"/>
-    <path d="M -10 135 Q 140 128 278 141 Q 422 152 570 133"/>
-    <path d="M -10 150 Q 142 143 280 156 Q 418 166 570 148"/>
-    <path d="M -10 165 Q 138 158 278 171 Q 422 181 570 163"/>
-    <path d="M -10 180 Q 140 173 280 186 Q 418 196 570 178"/>
-    <path d="M -10 195 Q 142 188 280 200 Q 416 210 570 193"/>
-  </g>
-
   <!-- TEKS ID-MA -->
   <!-- Font-size 108, baseline y=162. Cap-height ~y=85. "ID-MA" lebar ~355px, mulai x=48, berakhir x≈403 -->
   <text x="48" y="162"

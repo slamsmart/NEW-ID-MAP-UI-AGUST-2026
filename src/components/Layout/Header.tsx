@@ -37,7 +37,6 @@ export default function Header({ title, subtitle }: HeaderProps) {
 
     const handleOnline = async () => {
       setIsOnline(true);
-      // Auto-sync saat koneksi kembali
       setSyncing(true);
       await syncPendingQueue();
       setSyncing(false);
@@ -67,7 +66,6 @@ export default function Header({ title, subtitle }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Search */}
         <div className="relative">
           <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -77,19 +75,17 @@ export default function Header({ title, subtitle }: HeaderProps) {
           />
         </div>
 
-        {/* Data source badge — clarified: reference period, not current date */}
         <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-600">
           <Database className="w-3.5 h-3.5 text-gray-500" />
-          <span className="font-medium">GMW · PMN · KKP</span>
+          <span className="font-medium">GMW · PMN · MonMang</span>
           <span
             className="bg-green-700 text-white rounded px-1.5 py-0.5 font-bold text-xs"
-            title="Periode data referensi dari sumber GMW/PMN/KKP. Bukan tanggal sistem saat ini."
+            title="Periode data referensi dari sumber GMW/PMN/MonMang. Bukan tanggal sistem saat ini."
           >
             Ref. 2025
           </span>
         </div>
 
-        {/* Online/Offline + Sync status */}
         <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium border ${
           isOnline
             ? 'bg-green-50 border-green-200 text-green-700'
@@ -105,7 +101,6 @@ export default function Header({ title, subtitle }: HeaderProps) {
           )}
         </div>
 
-        {/* Survey realtime count */}
         {surveyCount > 0 && (
           <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs text-blue-700 font-medium">
             <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse inline-block" />
@@ -113,7 +108,6 @@ export default function Header({ title, subtitle }: HeaderProps) {
           </div>
         )}
 
-        {/* Notifications */}
         <button className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
           <Bell className="w-4 h-4" />
           {totalAlert > 0 && (
@@ -123,7 +117,6 @@ export default function Header({ title, subtitle }: HeaderProps) {
           )}
         </button>
 
-        {/* User from auth */}
         <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
           <div className="w-7 h-7 bg-green-700 rounded-lg flex items-center justify-center">
             <span className="text-white text-xs font-bold">{initials}</span>

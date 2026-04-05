@@ -5,6 +5,8 @@ import {
   Navigation, Loader2, Upload, WifiOff, Wifi, Trash2,
 } from 'lucide-react';
 import { mangroveLocations } from '../data/mockData';
+import { kkpdLocations } from '../data/kkpdData';
+import { PROVINSI_LIST, KABKOTA_BY_PROVINSI } from '../data/wilayahIndonesia';
 import { getCustomLocations, saveCustomLocation, saveSurvey } from '../data/localStore';
 import { useAuth } from '../context/AuthContext';
 import { uploadPhoto, fileToDataUrl, isCloudinaryConfigured } from '../lib/cloudinary';
@@ -50,14 +52,12 @@ interface NewLocForm {
   name: string;
   district: string;
   province: string;
-  lat: string;
-  lng: string;
   areaHa: string;
   kawasan: MangroveLocation['kawasan'];
 }
 
 const INIT_FORM: FormData = {
-  namaPetugas: '', nip: '', unitKerja: 'Dinas Kelautan dan Perikanan',
+  namaPetugas: '', nip: '', unitKerja: 'Tim Survei Lapangan',
   tanggal: new Date().toISOString().split('T')[0],
   locationId: '', metodeSurvei: 'ground_check',
   koordinatLat: '', koordinatLng: '',
@@ -72,7 +72,7 @@ const INIT_FORM: FormData = {
 };
 
 const INIT_NEW_LOC: NewLocForm = {
-  name: '', district: '', province: '', lat: '', lng: '', areaHa: '', kawasan: 'apl',
+  name: '', district: '', province: '', areaHa: '', kawasan: 'apl',
 };
 
 const ANCAMAN_OPTIONS = [
@@ -152,7 +152,7 @@ export default function InputLapangan() {
     ...INIT_FORM,
     namaPetugas: user?.nama ?? '',
     nip: user?.nip ?? '',
-    unitKerja: user?.unit ?? 'Dinas Kelautan dan Perikanan',
+    unitKerja: user?.unit ?? 'Tim Survei Lapangan',
   });
   const [submitted, setSubmitted] = useState(false);
   const [customLocs, setCustomLocs] = useState<MangroveLocation[]>([]);
@@ -246,7 +246,7 @@ export default function InputLapangan() {
     setPhotos(prev => prev.filter((_, i) => i !== idx));
   };
 
-  const allLocations = [...mangroveLocations, ...customLocs];
+  const allLocations = [...mangroveLocations, ...kkpdLocations, ...customLocs];
 
   const set = (key: keyof FormData) => (val: string) =>
     setForm(prev => ({ ...prev, [key]: val }));
@@ -268,8 +268,9 @@ export default function InputLapangan() {
       setNewLocError('Nama lokasi, kabupaten, dan provinsi wajib diisi.');
       return;
     }
-    const lat = parseFloat(newLoc.lat) || 0;
-    const lng = parseFloat(newLoc.lng) || 0;
+    // Gunakan koordinat GPS dari form utama jika sudah diambil
+    const lat = parseFloat(form.koordinatLat) || 0;
+    const lng = parseFloat(form.koordinatLng) || 0;
     const id = `LOC-CUSTOM-${Date.now()}`;
     const loc: MangroveLocation = {
       id,
@@ -370,9 +371,16 @@ export default function InputLapangan() {
   if (submitted) {
     const loc = allLocations.find(l => l.id === form.locationId);
     const isOfflineSave = savingStatus === 'saved_offline';
+    const nomorBA = `BA-MG/${form.tanggal.replace(/-/g, '')}/${(form.unitKerja || 'DKP').replace(/\s+/g, '').substring(0, 6).toUpperCase()}`;
+    const formatTanggal = (iso: string) => {
+      const [y, m, d] = iso.split('-');
+      const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      return `${d} ${bulan[parseInt(m) - 1]} ${y}`;
+    };
     return (
       <div className="max-w-2xl mx-auto">
-        <div className="bg-white border border-gray-200 rounded-xl p-10 text-center">
+        {/* ── Tampilan layar (disembunyikan saat print) ── */}
+        <div className="no-print bg-white border border-gray-200 rounded-xl p-10 text-center">
           <div className={`w-16 h-16 ${isOfflineSave ? 'bg-amber-100' : 'bg-green-100'} rounded-full flex items-center justify-center mx-auto mb-4`}>
             {isOfflineSave
               ? <WifiOff className="w-8 h-8 text-amber-600" />
@@ -404,14 +412,14 @@ export default function InputLapangan() {
               <div>pH Air: <strong>{form.ph}</strong></div>
               <div>Suhu: <strong>{form.suhu}°C</strong></div>
               <div>Ancaman: <strong>{form.ancamanUtama.length} jenis</strong></div>
-              <div>Status Tenurial: <strong className="capitalize">{form.statusTenurial}</strong></div>
+              <div>Status Lahan: <strong className="capitalize">{form.statusTenurial}</strong></div>
             </div>
           </div>
           <div className="flex gap-3 justify-center">
             <button
               onClick={() => {
                 setSubmitted(false);
-                setForm({ ...INIT_FORM, namaPetugas: user?.nama ?? '', nip: user?.nip ?? '', unitKerja: user?.unit ?? 'Dinas Kelautan dan Perikanan' });
+                setForm({ ...INIT_FORM, namaPetugas: user?.nama ?? '', nip: user?.nip ?? '', unitKerja: user?.unit ?? 'Tim Survei Lapangan' });
                 setStep(1);
               }}
               className="px-5 py-2 bg-green-700 text-white text-sm font-semibold rounded-lg hover:bg-green-800 transition-colors"
@@ -424,6 +432,188 @@ export default function InputLapangan() {
             >
               Cetak Berita Acara
             </button>
+          </div>
+        </div>
+
+        {/* ── BERITA ACARA (hanya tampil saat print) ── */}
+        <div className="print-only" style={{ fontFamily: 'Times New Roman, serif', fontSize: '11pt', color: '#000', lineHeight: '1.5' }}>
+          {/* KOP SURAT */}
+          <div style={{ borderBottom: '3px solid #14532d', paddingBottom: '10px', marginBottom: '16px', textAlign: 'center' }}>
+            <p style={{ fontSize: '9pt', margin: 0 }}>PEMERINTAH DAERAH — DINAS KELAUTAN DAN PERIKANAN</p>
+            <p style={{ fontSize: '13pt', fontWeight: 'bold', margin: '2px 0' }}>{form.unitKerja.toUpperCase()}</p>
+            <p style={{ fontSize: '8pt', color: '#555', margin: 0 }}>Sistem Informasi Survei Mangrove — Platform ID-MAP</p>
+          </div>
+
+          {/* JUDUL */}
+          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+            <p style={{ fontSize: '13pt', fontWeight: 'bold', textDecoration: 'underline', margin: '0 0 4px 0' }}>BERITA ACARA SURVEI LAPANGAN MANGROVE</p>
+            <p style={{ fontSize: '10pt', margin: 0 }}>Nomor: {nomorBA}</p>
+          </div>
+
+          {/* PEMBUKAAN */}
+          <p style={{ marginBottom: '12px', textAlign: 'justify' }}>
+            Pada hari ini, <strong>{formatTanggal(form.tanggal)}</strong>, telah dilaksanakan survei lapangan ekosistem mangrove
+            di kawasan <strong>{loc?.name || '—'}</strong>, {loc?.district && `Kabupaten/Kota ${loc.district}, `}Provinsi {loc?.province || '—'}.
+            Survei dilaksanakan oleh petugas berikut:
+          </p>
+
+          {/* BIODATA PETUGAS */}
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '14px', fontSize: '10pt' }}>
+            <tbody>
+              {[
+                ['Nama Petugas', form.namaPetugas || '—'],
+                ['NIP', form.nip || '—'],
+                ['Unit Kerja / Instansi', form.unitKerja || '—'],
+                ['Tanggal Pelaksanaan', formatTanggal(form.tanggal)],
+                ['Metode Survei', form.metodeSurvei.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())],
+              ].map(([label, val]) => (
+                <tr key={label}>
+                  <td style={{ width: '35%', padding: '4px 8px', border: '1px solid #ccc', backgroundColor: '#f0fdf4', fontWeight: 'bold' }}>{label}</td>
+                  <td style={{ padding: '4px 8px', border: '1px solid #ccc' }}>{val}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* LOKASI SURVEI */}
+          <p style={{ fontWeight: 'bold', borderBottom: '1px solid #14532d', paddingBottom: '3px', marginBottom: '8px', color: '#14532d' }}>A. INFORMASI LOKASI</p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '14px', fontSize: '10pt' }}>
+            <tbody>
+              {[
+                ['Nama Kawasan', loc?.name || '—'],
+                ['Kabupaten / Kota', loc?.district || '—'],
+                ['Provinsi', loc?.province || '—'],
+                ['Koordinat GPS', form.koordinatLat && form.koordinatLng ? `${form.koordinatLat}°, ${form.koordinatLng}°` : 'Tidak direkam'],
+                ['Status Kawasan', loc?.kawasan === 'konservasi' ? 'Kawasan Konservasi' : loc?.kawasan === 'hutan_lindung' ? 'Hutan Lindung' : 'APL (Area Penggunaan Lain)'],
+                ['Luas Kawasan (estimasi)', loc?.areaHa ? `${loc.areaHa.toLocaleString('id-ID')} ha` : '—'],
+              ].map(([label, val]) => (
+                <tr key={label}>
+                  <td style={{ width: '35%', padding: '4px 8px', border: '1px solid #ccc', backgroundColor: '#f0fdf4', fontWeight: 'bold' }}>{label}</td>
+                  <td style={{ padding: '4px 8px', border: '1px solid #ccc' }}>{val}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* DATA EKOSISTEM */}
+          <p style={{ fontWeight: 'bold', borderBottom: '1px solid #14532d', paddingBottom: '3px', marginBottom: '8px', color: '#14532d' }}>B. DATA KONDISI EKOSISTEM MANGROVE</p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '14px', fontSize: '10pt' }}>
+            <tbody>
+              {[
+                ['Tutupan Tajuk (%)', form.tutupanTajuk ? `${form.tutupanTajuk}%` : '—'],
+                ['Kerapatan Pohon (pohon/ha)', form.kerapatanEstimasi || '—'],
+                ['Spesies Dominan', form.spesiesDominan || '—'],
+                ['Spesies Lain', form.spesiesLain || '—'],
+                ['Laju Regenerasi Alami', form.lajuRegenerasi === 'tinggi' ? 'Tinggi — banyak semai/pancang alami' : form.lajuRegenerasi === 'sedang' ? 'Sedang — semai cukup tersedia' : 'Rendah — minim semai/regenerasi'],
+                ['Kondisi Serasah / Litter', form.kondisiSerasah === 'lebat' ? 'Lebat (ekosistem sehat)' : form.kondisiSerasah === 'normal' ? 'Normal' : 'Minim (potensi degradasi)'],
+              ].map(([label, val]) => (
+                <tr key={label}>
+                  <td style={{ width: '35%', padding: '4px 8px', border: '1px solid #ccc', backgroundColor: '#f0fdf4', fontWeight: 'bold' }}>{label}</td>
+                  <td style={{ padding: '4px 8px', border: '1px solid #ccc' }}>{val}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* DATA LINGKUNGAN */}
+          <p style={{ fontWeight: 'bold', borderBottom: '1px solid #14532d', paddingBottom: '3px', marginBottom: '8px', color: '#14532d' }}>C. DATA PARAMETER LINGKUNGAN</p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '14px', fontSize: '10pt' }}>
+            <tbody>
+              {[
+                ['Salinitas (ppt)', form.salinitas || '—'],
+                ['pH Air', form.ph || '—'],
+                ['Suhu Air (°C)', form.suhu || '—'],
+                ['Kekeruhan (NTU)', form.kekeruhan || '—'],
+                ['Jenis Substrat', form.substrat ? form.substrat.charAt(0).toUpperCase() + form.substrat.slice(1) : '—'],
+                ['Elevasi (m dpl)', form.elevasi || '—'],
+                ['Kondisi Pasang Surut', form.pasangSurut || '—'],
+              ].map(([label, val]) => (
+                <tr key={label}>
+                  <td style={{ width: '35%', padding: '4px 8px', border: '1px solid #ccc', backgroundColor: '#f0fdf4', fontWeight: 'bold' }}>{label}</td>
+                  <td style={{ padding: '4px 8px', border: '1px solid #ccc' }}>{val}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* TEKANAN & ANCAMAN */}
+          <p style={{ fontWeight: 'bold', borderBottom: '1px solid #14532d', paddingBottom: '3px', marginBottom: '8px', color: '#14532d' }}>D. TEKANAN DAN ANCAMAN EKOSISTEM</p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '14px', fontSize: '10pt' }}>
+            <tbody>
+              <tr>
+                <td style={{ width: '35%', padding: '4px 8px', border: '1px solid #ccc', backgroundColor: '#f0fdf4', fontWeight: 'bold' }}>Ancaman yang Teridentifikasi</td>
+                <td style={{ padding: '4px 8px', border: '1px solid #ccc' }}>
+                  {form.ancamanUtama.length > 0 ? form.ancamanUtama.join('; ') : 'Tidak ada ancaman teridentifikasi'}
+                </td>
+              </tr>
+              {[
+                ['Jarak ke Pemukiman Terdekat (m)', form.jarakPemukiman || '—'],
+                ['Estimasi Luas Tambak di Sekitar (ha)', form.luasTambakEstimasi || '—'],
+                ['Aktivitas Manusia yang Terpantau', form.aktivitasManusia || '—'],
+                ['Status Lahan', form.statusTenurial === 'aman' ? 'Aman — tidak ada konflik' : form.statusTenurial === 'proses_legal' ? 'Proses Legal — sedang diurus' : 'Bersengketa — konflik aktif'],
+              ].map(([label, val]) => (
+                <tr key={label}>
+                  <td style={{ width: '35%', padding: '4px 8px', border: '1px solid #ccc', backgroundColor: '#f0fdf4', fontWeight: 'bold' }}>{label}</td>
+                  <td style={{ padding: '4px 8px', border: '1px solid #ccc' }}>{val}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* KONDISI UMUM & REKOMENDASI */}
+          <p style={{ fontWeight: 'bold', borderBottom: '1px solid #14532d', paddingBottom: '3px', marginBottom: '8px', color: '#14532d' }}>E. PENILAIAN KONDISI UMUM DAN REKOMENDASI</p>
+          <p style={{ fontWeight: 'bold', fontSize: '10pt', marginBottom: '4px' }}>Kondisi Umum Kawasan:</p>
+          <p style={{ border: '1px solid #ccc', padding: '8px', minHeight: '60px', marginBottom: '10px', textAlign: 'justify', fontSize: '10pt' }}>
+            {form.kondisiUmum || '—'}
+          </p>
+          <p style={{ fontWeight: 'bold', fontSize: '10pt', marginBottom: '4px' }}>Rekomendasi Tindakan Lapangan:</p>
+          <p style={{ border: '1px solid #ccc', padding: '8px', minHeight: '60px', marginBottom: '14px', textAlign: 'justify', fontSize: '10pt' }}>
+            {form.rekomendasiLapangan || '—'}
+          </p>
+
+          {/* FOTO DOKUMENTASI */}
+          {photos.length > 0 && (
+            <div style={{ marginBottom: '14px', pageBreakInside: 'avoid' }}>
+              <p style={{ fontWeight: 'bold', borderBottom: '1px solid #14532d', paddingBottom: '3px', marginBottom: '8px', color: '#14532d' }}>F. DOKUMENTASI FOTO LAPANGAN</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                {photos.map((photo, i) => (
+                  <div key={i} style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center' }}>
+                    <img
+                      src={photo.url || photo.preview}
+                      alt={photo.tag}
+                      style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block' }}
+                    />
+                    <p style={{ fontSize: '8pt', marginTop: '3px', color: '#444' }}>{photo.tag}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TANDA TANGAN */}
+          <div style={{ marginTop: '24px', pageBreakInside: 'avoid' }}>
+            <p style={{ fontWeight: 'bold', borderBottom: '1px solid #14532d', paddingBottom: '3px', marginBottom: '14px', color: '#14532d' }}>G. PENGESAHAN</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', fontSize: '10pt' }}>
+              <div style={{ textAlign: 'center' }}>
+                <p>Petugas Pelaksana Survei,</p>
+                <div style={{ height: '60px' }} />
+                <p style={{ borderTop: '1px solid #000', paddingTop: '4px', margin: '0 20px' }}>
+                  <strong>{form.namaPetugas || '___________________'}</strong>
+                </p>
+                <p style={{ fontSize: '9pt' }}>NIP. {form.nip || '___________________'}</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p>Mengetahui,<br />Kepala Seksi Pengelolaan</p>
+                <div style={{ height: '60px' }} />
+                <p style={{ borderTop: '1px solid #000', paddingTop: '4px', margin: '0 20px' }}>
+                  <strong>___________________________</strong>
+                </p>
+                <p style={{ fontSize: '9pt' }}>NIP. ___________________________</p>
+              </div>
+            </div>
+            <p style={{ marginTop: '16px', fontSize: '8pt', color: '#666', textAlign: 'center' }}>
+              Dicetak dari Sistem ID-MAP — Integrasi Data Mangrove dan Pesisir &nbsp;|&nbsp; {form.tanggal}
+            </p>
           </div>
         </div>
       </div>
@@ -451,7 +641,7 @@ export default function InputLapangan() {
           </div>
           <div className="text-xs text-gray-400 text-right hidden sm:block">
             <p className="font-medium text-gray-600">Formulir Survey Mangrove</p>
-            <p>Dinas Kelautan dan Perikanan</p>
+            <p>Tim Survei Lapangan</p>
           </div>
         </div>
       </div>
@@ -518,7 +708,12 @@ export default function InputLapangan() {
                   }));
                 }}>
                   <option value="">-- Pilih Lokasi --</option>
+                  <option disabled>── Lokasi Umum ──</option>
                   {mangroveLocations.map(l => (
+                    <option key={l.id} value={l.id}>{l.name} — {l.province}</option>
+                  ))}
+                  <option disabled>── KKPD / Kawasan Konservasi ──</option>
+                  {kkpdLocations.map(l => (
                     <option key={l.id} value={l.id}>{l.name} — {l.province}</option>
                   ))}
                   {customLocs.length > 0 && (
@@ -559,11 +754,30 @@ export default function InputLapangan() {
                   <InputGroup label="Nama Lokasi" required>
                     <Inp value={newLoc.name} onChange={setNL('name')} placeholder="cth: Pesisir Teluk Kendari" />
                   </InputGroup>
-                  <InputGroup label="Kabupaten / Kota" required>
-                    <Inp value={newLoc.district} onChange={setNL('district')} placeholder="cth: Kendari" />
-                  </InputGroup>
                   <InputGroup label="Provinsi" required>
-                    <Inp value={newLoc.province} onChange={setNL('province')} placeholder="cth: Sulawesi Tenggara" />
+                    <select
+                      value={newLoc.province}
+                      onChange={e => setNewLoc(prev => ({ ...prev, province: e.target.value, district: '' }))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-600"
+                    >
+                      <option value="">-- Pilih Provinsi --</option>
+                      {PROVINSI_LIST.map(p => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </InputGroup>
+                  <InputGroup label="Kabupaten / Kota" required>
+                    <select
+                      value={newLoc.district}
+                      onChange={e => setNewLoc(prev => ({ ...prev, district: e.target.value }))}
+                      disabled={!newLoc.province}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-blue-600 disabled:bg-gray-100 disabled:text-gray-400"
+                    >
+                      <option value="">-- Pilih Kab/Kota --</option>
+                      {(KABKOTA_BY_PROVINSI[newLoc.province] ?? []).map(k => (
+                        <option key={k} value={k}>{k}</option>
+                      ))}
+                    </select>
                   </InputGroup>
                   <InputGroup label="Kawasan">
                     <select
@@ -576,12 +790,6 @@ export default function InputLapangan() {
                       <option value="apl">APL (Area Penggunaan Lain)</option>
                     </select>
                   </InputGroup>
-                  <InputGroup label="Koordinat Lintang (°)">
-                    <Inp type="number" step="0.000001" value={newLoc.lat} onChange={setNL('lat')} placeholder="-3.970000" />
-                  </InputGroup>
-                  <InputGroup label="Koordinat Bujur (°)">
-                    <Inp type="number" step="0.000001" value={newLoc.lng} onChange={setNL('lng')} placeholder="122.512000" />
-                  </InputGroup>
                   <InputGroup label="Estimasi Luas (ha)">
                     <Inp type="number" min="0" value={newLoc.areaHa} onChange={setNL('areaHa')} placeholder="0" />
                   </InputGroup>
@@ -593,48 +801,48 @@ export default function InputLapangan() {
                 >
                   <Plus className="w-4 h-4" /> Simpan & Pilih Lokasi Ini
                 </button>
-                <p className="text-xs text-blue-600">
-                  Lokasi baru akan tersimpan dan dapat digunakan pada survei berikutnya. Data terkonsolidasi ke laporan daerah.
-                </p>
+                <div className="text-xs text-blue-600 space-y-0.5">
+                  <p>Koordinat GPS otomatis diambil dari tombol <strong>Ambil Koordinat GPS</strong> di atas.</p>
+                  {form.koordinatLat && form.koordinatLng
+                    ? <p className="text-green-700 font-medium">✓ GPS siap: {form.koordinatLat}, {form.koordinatLng}</p>
+                    : <p className="text-amber-600">⚠ Belum ada GPS — tekan "Ambil Koordinat GPS" terlebih dahulu untuk menandai lokasi ini.</p>
+                  }
+                </div>
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <InputGroup label="Metode Survey">
-                <Sel value={form.metodeSurvei} onChange={set('metodeSurvei')}>
-                  <option value="ground_check">Ground Check Lapangan</option>
-                  <option value="transek">Transek Plot (20×20m)</option>
-                  <option value="drone">Pemotretan Drone</option>
-                  <option value="iot">Pembacaan Sensor IoT</option>
-                </Sel>
-              </InputGroup>
-              <InputGroup label="Koordinat Lintang (°)">
-                <Inp value={form.koordinatLat} onChange={set('koordinatLat')} placeholder="-7.843210" type="number" step="0.000001" />
-              </InputGroup>
-              <InputGroup label="Koordinat Bujur (°)">
-                <Inp value={form.koordinatLng} onChange={set('koordinatLng')} placeholder="114.412340" type="number" step="0.000001" />
-              </InputGroup>
-            </div>
+            <InputGroup label="Metode Survey">
+              <Sel value={form.metodeSurvei} onChange={set('metodeSurvei')}>
+                <option value="ground_check">Ground Check Lapangan</option>
+                <option value="transek">Transek Plot (20×20m)</option>
+                <option value="drone">Pemotretan Drone</option>
+                <option value="iot">Pembacaan Sensor IoT</option>
+              </Sel>
+            </InputGroup>
 
-            {/* GPS Button */}
-            <div className="flex items-start gap-3">
+            {/* GPS — koordinat diambil otomatis, tidak ada input manual */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-3 flex-wrap">
               <button
                 type="button"
                 onClick={handleGetGPS}
                 disabled={gpsLoading}
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-700 text-white text-sm font-semibold rounded-lg hover:bg-blue-800 disabled:opacity-60 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-700 text-white text-sm font-semibold rounded-lg hover:bg-blue-800 disabled:opacity-60 transition-colors flex-shrink-0"
               >
-                {gpsLoading
-                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                  : <Navigation className="w-4 h-4" />
-                }
+                {gpsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
                 {gpsLoading ? 'Mengambil GPS...' : 'Ambil Koordinat GPS'}
               </button>
-              <div className="text-xs text-gray-500 pt-2">
-                <p className="font-medium text-gray-600">GPS menggunakan sinyal satelit</p>
-                <p>Bekerja tanpa internet — cukup di luar ruangan.</p>
-                {gpsAccuracy && (
-                  <p className="text-green-600 font-medium mt-0.5">✓ Akurasi: ±{gpsAccuracy} meter</p>
+              <div className="flex-1 min-w-0 text-xs">
+                {form.koordinatLat && form.koordinatLng ? (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="font-mono bg-white border border-blue-200 rounded px-2 py-1 text-blue-800 font-semibold">
+                      {form.koordinatLat}, {form.koordinatLng}
+                    </span>
+                    {gpsAccuracy && (
+                      <span className="text-green-700 font-medium">✓ Akurasi ±{gpsAccuracy}m</span>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-blue-600">Koordinat otomatis dari GPS satelit HP — tidak butuh internet.</p>
                 )}
               </div>
             </div>
@@ -800,7 +1008,7 @@ export default function InputLapangan() {
               <InputGroup label="Estimasi Luas Tambak Sekitar (ha)">
                 <Inp type="number" min="0" value={form.luasTambakEstimasi} onChange={set('luasTambakEstimasi')} placeholder="0 jika tidak ada" />
               </InputGroup>
-              <InputGroup label="Status Tenurial Lahan">
+              <InputGroup label="Status Lahan">
                 <Sel value={form.statusTenurial} onChange={set('statusTenurial')}>
                   <option value="aman">Aman — tidak ada konflik</option>
                   <option value="proses_legal">Proses Legal — sedang diurus</option>

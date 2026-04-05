@@ -43,8 +43,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center px-4 py-10">
-
-      {/* ── Logo + Tagline ─────────────────────────────────── */}
       <div className="text-center mb-8">
         <img
           src="/logo.svg"
@@ -56,11 +54,10 @@ export default function Login() {
           Sistem Pemantauan &amp; Restorasi Mangrove Pesisir Indonesia
         </h1>
         <p className="text-xs text-gray-400 mt-1">
-          Kementerian Kelautan dan Perikanan RI
+          Basis data untuk Pemantauan dan Restorasi Lingkungan
         </p>
       </div>
 
-      {/* ── Login Card ─────────────────────────────────────── */}
       <div className="w-full max-w-sm bg-white border border-gray-200 rounded-2xl shadow-sm p-8 mb-6">
         <h2 className="text-lg font-bold text-gray-900 mb-0.5">Masuk ke Sistem</h2>
         <p className="text-xs text-gray-500 mb-6">Gunakan akun yang terdaftar atau klik akun demo di bawah.</p>
@@ -116,10 +113,9 @@ export default function Login() {
         </form>
       </div>
 
-      {/* ── Demo Accounts ──────────────────────────────────── */}
       <div className="w-full max-w-3xl">
         <p className="text-xs text-center text-gray-500 font-medium mb-3">
-          Akun Demo Hackathon — klik untuk login langsung
+          Akun Demo Hackathon 2026 — klik untuk login langsung
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {DEMO_ACCOUNTS.map(acc => {
@@ -149,7 +145,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-5">
-          Prototype Hackathon · Data tersimpan di browser · ID-MAP v1.0
+          Prototype Hackathon 2026 · Data tersimpan di browser · ID-MAP v1.0
         </p>
       </div>
     </div>
