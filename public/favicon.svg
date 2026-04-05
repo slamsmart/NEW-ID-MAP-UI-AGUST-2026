@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background bulat hijau -->
+  <rect width="64" height="64" rx="14" fill="#16a34a"/>
+
+  <!-- Indonesia silhouette mini: western mass -->
+  <path d="M 4 26 C 5 16,15 8,24 11 C 31 13,36 8,42 9
+           C 47 10,51 6,55 11 C 58 15,57 22,53 27
+           C 50 31,49 36,51 41 C 52 44,48 47,43 46
+           C 38 45,33 47,27 46 C 22 45,16 47,11 45
+           C 6 43,2 38,2 30 Z"
+       fill="#0d5c28"/>
+
+  <!-- Topografi mini (3 garis) -->
+  <g stroke="#0a4a20" stroke-width="1.2" fill="none" stroke-linecap="round">
+    <path d="M 1 19 Q 28 16 57 19"/>
+    <path d="M 1 25 Q 28 22 57 25"/>
+    <path d="M 1 31 Q 28 28 57 31"/>
+    <path d="M 1 37 Q 28 34 57 37"/>
+    <path d="M 1 43 Q 28 40 57 43"/>
+  </g>
+
+  <!-- Pin icon tengah -->
+  <g transform="translate(32, 34)">
+    <path d="M 0 0 C -10 0,-10 -18,-5 -22 C -2.5 -24,2.5 -24,5 -22
+             C 10 -18,10 0,0 10 Z"
+          fill="white"/>
+    <circle cx="0" cy="-14" r="4.5" fill="#16a34a"/>
+  </g>
+
+  <!-- "ID" teks kecil di kiri bawah, sudut -->
+  <text x="7" y="59"
+        font-family="Arial Black, Arial, sans-serif"
+        font-weight="900"
+        font-size="11"
+        fill="white"
+        letter-spacing="0.5">ID</text>
+</svg>

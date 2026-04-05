@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Leaflet Map Override */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Map popup custom style */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
+}
+
+.leaflet-popup-tip {
+  box-shadow: none !important;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: #f9fafb;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  text-align: left;
+  border: none;
+  margin: 0;
+}
+
+/* ===== PRINT / EXPORT PDF CSS ===== */
+@media print {
+  @page {
+    size: A4;
+    margin: 20mm 15mm 20mm 15mm;
+  }
+
+  /* Hide navigation & interactive elements */
+  aside,
+  header,
+  button,
+  input,
+  select,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Full width content */
+  #root,
+  main {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  /* Print header */
+  body::before {
+    content: "KEMENTERIAN KELAUTAN DAN PERIKANAN REPUBLIK INDONESIA";
+    display: block;
+    text-align: center;
+    font-size: 11pt;
+    font-weight: bold;
+    color: #14532d;
+    border-bottom: 2px solid #14532d;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+  }
+
+  body::after {
+    content: "Dokumen ini dicetak dari sistem ID-MAP — Integrasi Data Mangrove dan Pesisir | " attr(data-date);
+    display: block;
+    text-align: center;
+    font-size: 8pt;
+    color: #6b7280;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 8px;
+    margin-top: 20px;
+    position: fixed;
+    bottom: 10mm;
+    left: 0;
+    right: 0;
+  }
+
+  /* Typography adjustments */
+  h2, h3 { color: #14532d !important; }
+  p, span, td, th, li { font-size: 9pt !important; }
+  h2 { font-size: 14pt !important; }
+  h3 { font-size: 11pt !important; }
+
+  /* Page breaks */
+  .page-break { page-break-before: always; }
+  .no-break { page-break-inside: avoid; }
+
+  /* Cards as clean boxes */
+  .rounded-xl,
+  .rounded-lg {
+    border: 1px solid #e5e7eb !important;
+    box-shadow: none !important;
+    background: white !important;
+    border-radius: 4px !important;
+    page-break-inside: avoid;
+  }
+
+  /* Colors */
+  .bg-green-950, .bg-green-900, .bg-slate-800 {
+    background: #14532d !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .text-green-700 { color: #15803d !important; }
+  .text-red-600 { color: #dc2626 !important; }
+
+  /* Table */
+  table { border-collapse: collapse !important; width: 100% !important; }
+  th, td { border: 1px solid #e5e7eb !important; padding: 5px 8px !important; }
+  thead tr { background: #f0fdf4 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Sidebar & layout hide */
+  .leaflet-container { display: none !important; }
+}
