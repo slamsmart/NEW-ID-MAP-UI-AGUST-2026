@@ -11,6 +11,7 @@ import {
   mangroveLocations, ekosistemData, alerts, timeSeriesData, provinsiSummary,
 } from '../data/mockData';
 import { getSurveyStats, getSurveys } from '../data/localStore';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import KPICard from '../components/shared/KPICard';
 import StatusBadge from '../components/shared/StatusBadge';
 
@@ -35,10 +36,26 @@ export default function Dashboard() {
       setSurveyStats(getSurveyStats());
       setRecentSurveys(getSurveys().slice(0, 5));
     };
+    refresh();
     window.addEventListener('storage', refresh);
-    // Also poll every 5s for same-tab writes
     const timer = setInterval(refresh, 5000);
-    return () => { window.removeEventListener('storage', refresh); clearInterval(timer); };
+
+    // Supabase realtime: listen INSERT di tabel surveys
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    if (isSupabaseConfigured()) {
+      channel = supabase
+        .channel('surveys-realtime')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'surveys' }, () => {
+          refresh();
+        })
+        .subscribe();
+    }
+
+    return () => {
+      window.removeEventListener('storage', refresh);
+      clearInterval(timer);
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   const statusPieData = [

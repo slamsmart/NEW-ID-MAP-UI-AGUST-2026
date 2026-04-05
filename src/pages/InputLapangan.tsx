@@ -1,12 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList, MapPin, Leaf, Waves, Users, Camera,
   CheckCircle, ChevronRight, ChevronLeft, Save, AlertCircle, Plus, X,
+  Navigation, Loader2, Upload, WifiOff, Wifi, Trash2,
 } from 'lucide-react';
 import { mangroveLocations } from '../data/mockData';
 import { getCustomLocations, saveCustomLocation, saveSurvey } from '../data/localStore';
 import { useAuth } from '../context/AuthContext';
+import { uploadPhoto, fileToDataUrl, isCloudinaryConfigured } from '../lib/cloudinary';
+import { enqueueSurvey, enqueueLocation } from '../lib/offlineQueue';
 import type { MangroveLocation } from '../types';
+import type { DbLocation } from '../lib/supabase';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -132,6 +136,15 @@ function Textarea({ value, onChange, placeholder, rows = 3 }: {
   );
 }
 
+interface PhotoEntry {
+  file?: File;
+  preview: string;       // data URL untuk preview
+  url?: string;          // Cloudinary URL setelah upload
+  tag: string;
+  uploading: boolean;
+  error?: string;
+}
+
 export default function InputLapangan() {
   const { user } = useAuth();
   const [step, setStep] = useState<Step>(1);
@@ -147,9 +160,91 @@ export default function InputLapangan() {
   const [newLoc, setNewLoc] = useState<NewLocForm>(INIT_NEW_LOC);
   const [newLocError, setNewLocError] = useState('');
 
+  // GPS state
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [gpsError, setGpsError] = useState('');
+
+  // Photo state
+  const [photos, setPhotos] = useState<PhotoEntry[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Online status
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [savingStatus, setSavingStatus] = useState<'idle' | 'saving' | 'saved_online' | 'saved_offline'>('idle');
+
   useEffect(() => {
     setCustomLocs(getCustomLocations());
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
+
+  // GPS: ambil koordinat dari satelit (tidak butuh internet)
+  const handleGetGPS = () => {
+    if (!navigator.geolocation) {
+      setGpsError('Browser tidak mendukung GPS.');
+      return;
+    }
+    setGpsLoading(true);
+    setGpsError('');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setForm(prev => ({
+          ...prev,
+          koordinatLat: pos.coords.latitude.toFixed(6),
+          koordinatLng: pos.coords.longitude.toFixed(6),
+        }));
+        setGpsAccuracy(Math.round(pos.coords.accuracy));
+        setGpsLoading(false);
+      },
+      (err) => {
+        setGpsError(
+          err.code === 1 ? 'Izin GPS ditolak. Aktifkan di pengaturan browser.' :
+          err.code === 2 ? 'Sinyal GPS lemah. Pindah ke luar ruangan.' :
+          'Timeout GPS. Coba lagi di area terbuka.'
+        );
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  };
+
+  // Foto: tambah dari file picker
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (photos.length + files.length > 5) {
+      alert('Maksimum 5 foto.');
+      return;
+    }
+    for (const file of files) {
+      const preview = await fileToDataUrl(file);
+      const entry: PhotoEntry = { file, preview, tag: 'Kondisi Umum', uploading: false };
+      setPhotos(prev => [...prev, entry]);
+
+      // Upload ke Cloudinary jika online
+      if (isOnline && isCloudinaryConfigured()) {
+        setPhotos(prev => prev.map(p => p.preview === preview ? { ...p, uploading: true } : p));
+        try {
+          const result = await uploadPhoto(file);
+          setPhotos(prev => prev.map(p => p.preview === preview ? { ...p, url: result.url, uploading: false } : p));
+        } catch (err) {
+          setPhotos(prev => prev.map(p => p.preview === preview ? { ...p, uploading: false, error: 'Upload gagal — akan dicoba saat online' } : p));
+        }
+      }
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removePhoto = (idx: number) => {
+    setPhotos(prev => prev.filter((_, i) => i !== idx));
+  };
 
   const allLocations = [...mangroveLocations, ...customLocs];
 
@@ -168,7 +263,7 @@ export default function InputLapangan() {
     }));
   };
 
-  const handleAddLocation = () => {
+  const handleAddLocation = async () => {
     if (!newLoc.name.trim() || !newLoc.district.trim() || !newLoc.province.trim()) {
       setNewLocError('Nama lokasi, kabupaten, dan provinsi wajib diisi.');
       return;
@@ -181,14 +276,23 @@ export default function InputLapangan() {
       name: newLoc.name.trim(),
       district: newLoc.district.trim(),
       province: newLoc.province.trim(),
-      lat,
-      lng,
+      lat, lng,
       areaHa: parseFloat(newLoc.areaHa) || 0,
       status: 'sedang',
       kawasan: newLoc.kawasan,
       lastSurvey: new Date().toISOString().split('T')[0],
     };
+    // Simpan ke localStorage
     saveCustomLocation(loc);
+    // Sinkron ke Supabase (atau queue jika offline)
+    const dbLoc: DbLocation = {
+      id, name: loc.name, province: loc.province, district: loc.district,
+      lat, lng, area_ha: loc.areaHa, status: loc.status, kawasan: loc.kawasan,
+      last_survey: loc.lastSurvey, is_custom: true,
+      created_by: user?.nama ?? null, created_at: new Date().toISOString(),
+    };
+    await enqueueLocation(dbLoc);
+
     const updated = [...customLocs, loc];
     setCustomLocs(updated);
     setForm(prev => ({ ...prev, locationId: id, koordinatLat: String(lat), koordinatLng: String(lng) }));
@@ -197,11 +301,16 @@ export default function InputLapangan() {
     setNewLocError('');
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    setSavingStatus('saving');
     const loc = allLocations.find(l => l.id === form.locationId);
     const isCustom = customLocs.some(l => l.id === form.locationId);
+    const surveyId = `SRV-${Date.now()}`;
+    const photoUrls = photos.filter(p => p.url).map(p => p.url!);
+
+    // Simpan ke localStorage (legacy — untuk backward compat)
     saveSurvey({
-      id: `SRV-${Date.now()}`,
+      id: surveyId,
       timestamp: new Date().toISOString(),
       namaPetugas: form.namaPetugas,
       unit: form.unitKerja,
@@ -215,18 +324,70 @@ export default function InputLapangan() {
       kondisiUmum: form.kondisiUmum,
       isCustomLoc: isCustom,
     });
+
+    // Sinkron ke Supabase dengan offline fallback
+    const result = await enqueueSurvey({
+      id: surveyId,
+      petugas_nama: form.namaPetugas,
+      petugas_nip: form.nip || null,
+      petugas_unit: form.unitKerja,
+      location_id: form.locationId,
+      location_name: loc?.name ?? form.locationId,
+      province: loc?.province ?? '—',
+      tanggal: form.tanggal,
+      metode_survei: form.metodeSurvei,
+      koordinat_lat: parseFloat(form.koordinatLat) || null,
+      koordinat_lng: parseFloat(form.koordinatLng) || null,
+      gps_accuracy: gpsAccuracy,
+      tutupan_tajuk: parseFloat(form.tutupanTajuk) || null,
+      kerapatan_estimasi: parseFloat(form.kerapatanEstimasi) || null,
+      spesies_dominan: form.spesiesDominan || null,
+      spesies_lain: form.spesiesLain || null,
+      laju_regenerasi: form.lajuRegenerasi || null,
+      kondisi_serasah: form.kondisiSerasah || null,
+      salinitas: parseFloat(form.salinitas) || null,
+      ph: parseFloat(form.ph) || null,
+      suhu: parseFloat(form.suhu) || null,
+      kekeruhan: parseFloat(form.kekeruhan) || null,
+      substrat: form.substrat || null,
+      elevasi: parseFloat(form.elevasi) || null,
+      pasang_surut: form.pasangSurut || null,
+      ancaman_utama: form.ancamanUtama,
+      jarak_pemukiman: parseFloat(form.jarakPemukiman) || null,
+      luas_tambak_estimasi: parseFloat(form.luasTambakEstimasi) || null,
+      aktivitas_manusia: form.aktivitasManusia || null,
+      status_tenurial: form.statusTenurial || null,
+      kondisi_umum: form.kondisiUmum || null,
+      rekomendasi_lapangan: form.rekomendasiLapangan || null,
+      photo_urls: photoUrls,
+      sync_status: 'pending',
+    });
+
+    setSavingStatus(result.offline ? 'saved_offline' : 'saved_online');
     setSubmitted(true);
   };
 
   if (submitted) {
     const loc = allLocations.find(l => l.id === form.locationId);
+    const isOfflineSave = savingStatus === 'saved_offline';
     return (
       <div className="max-w-2xl mx-auto">
         <div className="bg-white border border-gray-200 rounded-xl p-10 text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className={`w-16 h-16 ${isOfflineSave ? 'bg-amber-100' : 'bg-green-100'} rounded-full flex items-center justify-center mx-auto mb-4`}>
+            {isOfflineSave
+              ? <WifiOff className="w-8 h-8 text-amber-600" />
+              : <CheckCircle className="w-8 h-8 text-green-600" />
+            }
           </div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Data Berhasil Disimpan</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">
+            {isOfflineSave ? 'Data Tersimpan (Mode Offline)' : 'Data Berhasil Disimpan'}
+          </h2>
+          {isOfflineSave && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4 text-xs text-amber-800 text-left">
+              <p className="font-semibold mb-1">Data tersimpan di perangkat ini.</p>
+              <p>Akan otomatis tersinkronisasi ke server Supabase saat koneksi internet tersedia kembali. Pastikan buka aplikasi saat ada sinyal.</p>
+            </div>
+          )}
           <p className="text-gray-500 text-sm mb-1">
             Survey lapangan oleh <strong>{form.namaPetugas}</strong>
           </p>
@@ -280,9 +441,18 @@ export default function InputLapangan() {
           <p className="text-xs text-gray-500 font-medium">Modul Platform</p>
           <p className="text-sm font-bold text-gray-800">EcoTrack — Input Data Petugas Lapangan</p>
         </div>
-        <div className="ml-auto text-xs text-gray-400 text-right">
-          <p className="font-medium text-gray-600">Formulir Survey Mangrove</p>
-          <p>Dinas Kelautan dan Perikanan</p>
+        <div className="ml-auto flex items-center gap-3">
+          {/* Online/Offline indicator */}
+          <div className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border ${
+            isOnline ? 'bg-green-50 border-green-200 text-green-700' : 'bg-amber-50 border-amber-200 text-amber-700'
+          }`}>
+            {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+            {isOnline ? 'Online' : 'Offline — data tersimpan lokal'}
+          </div>
+          <div className="text-xs text-gray-400 text-right hidden sm:block">
+            <p className="font-medium text-gray-600">Formulir Survey Mangrove</p>
+            <p>Dinas Kelautan dan Perikanan</p>
+          </div>
         </div>
       </div>
 
@@ -445,6 +615,34 @@ export default function InputLapangan() {
                 <Inp value={form.koordinatLng} onChange={set('koordinatLng')} placeholder="114.412340" type="number" step="0.000001" />
               </InputGroup>
             </div>
+
+            {/* GPS Button */}
+            <div className="flex items-start gap-3">
+              <button
+                type="button"
+                onClick={handleGetGPS}
+                disabled={gpsLoading}
+                className="flex items-center gap-2 px-4 py-2.5 bg-blue-700 text-white text-sm font-semibold rounded-lg hover:bg-blue-800 disabled:opacity-60 transition-colors"
+              >
+                {gpsLoading
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Navigation className="w-4 h-4" />
+                }
+                {gpsLoading ? 'Mengambil GPS...' : 'Ambil Koordinat GPS'}
+              </button>
+              <div className="text-xs text-gray-500 pt-2">
+                <p className="font-medium text-gray-600">GPS menggunakan sinyal satelit</p>
+                <p>Bekerja tanpa internet — cukup di luar ruangan.</p>
+                {gpsAccuracy && (
+                  <p className="text-green-600 font-medium mt-0.5">✓ Akurasi: ±{gpsAccuracy} meter</p>
+                )}
+              </div>
+            </div>
+            {gpsError && (
+              <div className="flex items-center gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" /> {gpsError}
+              </div>
+            )}
 
             {form.locationId && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
@@ -628,16 +826,75 @@ export default function InputLapangan() {
               <h3 className="font-bold text-gray-800">Dokumentasi & Catatan Lapangan</h3>
             </div>
             <InputGroup label="Foto Dokumentasi">
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors">
-                <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500 font-medium">Klik untuk upload foto lapangan</p>
-                <p className="text-xs text-gray-400 mt-1">JPG/PNG, maks. 10 MB per foto (maks. 5 foto)</p>
-                <div className="flex justify-center flex-wrap gap-2 mt-3">
-                  {['Kondisi Umum', 'Tutupan Tajuk', 'Substrat', 'Ancaman', 'Biota Asosiasi'].map(tag => (
-                    <span key={tag} className="text-xs bg-white border border-gray-200 rounded px-2 py-0.5 text-gray-500">{tag}</span>
+              {/* Upload area */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handlePhotoSelect}
+              />
+              {photos.length < 5 && (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors mb-3"
+                >
+                  <Upload className="w-7 h-7 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500 font-medium">Klik untuk pilih foto lapangan</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    JPG/PNG · maks. 10 MB/foto · {5 - photos.length} slot tersisa
+                  </p>
+                  {!isOnline && (
+                    <p className="text-xs text-amber-600 mt-1 font-medium">
+                      Offline — foto disimpan lokal, upload saat ada koneksi
+                    </p>
+                  )}
+                  {isOnline && !isCloudinaryConfigured() && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Cloudinary belum dikonfigurasi — foto hanya disimpan lokal
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Photo previews */}
+              {photos.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {photos.map((photo, i) => (
+                    <div key={i} className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                      <img src={photo.preview} alt={photo.tag} className="w-full h-24 object-cover" />
+                      <div className="p-1.5 flex items-center gap-1">
+                        <select
+                          value={photo.tag}
+                          onChange={e => setPhotos(prev => prev.map((p, j) => j === i ? { ...p, tag: e.target.value } : p))}
+                          className="flex-1 text-xs border border-gray-200 rounded px-1 py-0.5 bg-white"
+                        >
+                          {['Kondisi Umum', 'Tutupan Tajuk', 'Substrat', 'Ancaman', 'Biota Asosiasi'].map(t => (
+                            <option key={t}>{t}</option>
+                          ))}
+                        </select>
+                        <button onClick={() => removePhoto(i)} className="text-red-400 hover:text-red-600">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      {photo.uploading && (
+                        <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                          <Loader2 className="w-5 h-5 animate-spin text-green-600" />
+                        </div>
+                      )}
+                      {photo.url && (
+                        <div className="absolute top-1 right-1 w-5 h-5 bg-green-600 rounded-full flex items-center justify-center">
+                          <CheckCircle className="w-3 h-3 text-white" />
+                        </div>
+                      )}
+                      {photo.error && (
+                        <div className="absolute top-1 left-1 bg-amber-500 rounded text-white text-xs px-1">offline</div>
+                      )}
+                    </div>
                   ))}
                 </div>
-              </div>
+              )}
             </InputGroup>
             <InputGroup label="Penilaian Kondisi Umum Kawasan" required>
               <Textarea
@@ -695,9 +952,13 @@ export default function InputLapangan() {
         ) : (
           <button
             onClick={handleSubmit}
-            className="flex items-center gap-2 px-6 py-2.5 bg-green-700 text-white text-sm font-semibold rounded-lg hover:bg-green-800 transition-colors"
+            disabled={savingStatus === 'saving'}
+            className="flex items-center gap-2 px-6 py-2.5 bg-green-700 text-white text-sm font-semibold rounded-lg hover:bg-green-800 disabled:opacity-60 transition-colors"
           >
-            <Save className="w-4 h-4" /> Simpan Data
+            {savingStatus === 'saving'
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Menyimpan...</>
+              : <><Save className="w-4 h-4" /> {isOnline ? 'Simpan & Sinkronkan' : 'Simpan Offline'}</>
+            }
           </button>
         )}
       </div>

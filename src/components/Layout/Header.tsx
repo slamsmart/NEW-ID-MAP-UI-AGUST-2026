@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Bell, Search, Database } from 'lucide-react';
+import { Bell, Search, Database, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { alerts } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import { getSurveyStats } from '../../data/localStore';
+import { syncPendingQueue, getPendingCount } from '../../lib/offlineQueue';
 
 interface HeaderProps {
   title: string;
@@ -22,18 +23,37 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const totalAlert = criticalCount + warningCount;
 
   const [surveyCount, setSurveyCount] = useState(0);
+  const [pendingSync, setPendingSync] = useState(0);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    const stats = getSurveyStats();
-    setSurveyCount(stats.total);
-
-    // Refresh when localStorage changes (cross-tab or same-tab writes)
-    const handleStorage = () => {
-      const s = getSurveyStats();
-      setSurveyCount(s.total);
+    const refresh = () => {
+      const stats = getSurveyStats();
+      setSurveyCount(stats.total);
+      setPendingSync(getPendingCount());
     };
+    refresh();
+
+    const handleOnline = async () => {
+      setIsOnline(true);
+      // Auto-sync saat koneksi kembali
+      setSyncing(true);
+      await syncPendingQueue();
+      setSyncing(false);
+      refresh();
+    };
+    const handleOffline = () => setIsOnline(false);
+    const handleStorage = refresh;
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   const initials = user?.initials ?? 'USR';
@@ -69,11 +89,27 @@ export default function Header({ title, subtitle }: HeaderProps) {
           </span>
         </div>
 
+        {/* Online/Offline + Sync status */}
+        <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium border ${
+          isOnline
+            ? 'bg-green-50 border-green-200 text-green-700'
+            : 'bg-amber-50 border-amber-200 text-amber-700'
+        }`}>
+          {syncing
+            ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            : isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />
+          }
+          {syncing ? 'Sinkronisasi...' : isOnline ? 'Online' : 'Offline'}
+          {pendingSync > 0 && !isOnline && (
+            <span className="bg-amber-600 text-white rounded-full px-1.5 font-bold">{pendingSync}</span>
+          )}
+        </div>
+
         {/* Survey realtime count */}
         {surveyCount > 0 && (
           <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs text-blue-700 font-medium">
             <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse inline-block" />
-            {surveyCount} survei tercatat
+            {surveyCount} survei
           </div>
         )}
 
