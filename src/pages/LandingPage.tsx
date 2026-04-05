@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LogIn, UserPlus, X, Eye, EyeOff, AlertCircle, CheckCircle,
@@ -11,8 +11,13 @@ import { ADMIN_ACCOUNTS } from '../context/AuthContext';
 type ModalMode = 'none' | 'login-choice' | 'admin-login' | 'user-login' | 'user-otp' | 'signup' | 'signup-otp';
 
 export default function LandingPage() {
-  const { login, loginWithEmail, verifyOTP, signUp } = useAuth();
+  const { login, loginWithEmail, verifyOTP, signUp, user } = useAuth();
   const navigate = useNavigate();
+
+  // Kalau user sudah login (autoconfirm atau session restore) → langsung ke dashboard
+  useEffect(() => {
+    if (user) { navigate('/dashboard', { replace: true }); }
+  }, [user, navigate]);
   const [modal, setModal] = useState<ModalMode>('none');
 
   // Admin login state
@@ -66,6 +71,7 @@ export default function LandingPage() {
     const res = await loginWithEmail(email.trim());
     setLoading(false);
     if (!res.success) { setEmailError(res.error ?? 'Gagal mengirim kode.'); return; }
+    // Autoconfirm mode: user state akan di-set oleh useEffect
     setDemoOtp(res.demoOtp ?? '');
     setModal('user-otp');
   };
@@ -87,7 +93,18 @@ export default function LandingPage() {
     const res = await signUp({ nama: suNama, email: suEmail, unit: suUnit, provinsi: suProvinsi });
     setLoading(false);
     if (!res.success) { setSuError(res.error ?? 'Gagal mendaftar.'); return; }
-    setDemoOtp(res.demoOtp ?? '');
+
+    // Jika ada demoOtp → mode demo, tampilkan OTP screen
+    if (res.demoOtp) {
+      setDemoOtp(res.demoOtp);
+      setEmail(suEmail);
+      setModal('signup-otp');
+      return;
+    }
+
+    // Mode production: cek apakah user sudah langsung login (autoconfirm aktif)
+    // useEffect di atas akan handle navigate jika user state berubah
+    // Jika tidak autoconfirm → tampilkan OTP screen
     setEmail(suEmail);
     setModal('signup-otp');
   };
