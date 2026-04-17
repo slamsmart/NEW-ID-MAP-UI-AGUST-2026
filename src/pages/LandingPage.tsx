@@ -5,7 +5,6 @@ import {
   ShieldCheck, Mail, KeyRound, ArrowRight, Loader2, Satellite,
   ClipboardList, Bot,
 } from 'lucide-react';
-import { ADMIN_ACCOUNTS } from '../context/authAccounts';
 import { useAuth } from '../context/useAuth';
 
 type ModalMode = 'none' | 'login-choice' | 'admin-login' | 'user-login' | 'user-otp' | 'signup' | 'signup-otp';
@@ -56,12 +55,6 @@ export default function LandingPage() {
     const ok = login(username.trim(), password);
     if (ok) { closeModal(); navigate('/dashboard', { replace: true }); }
     else setAdminError('Username atau password tidak valid.');
-  };
-
-  const quickLogin = (u: string, p: string) => {
-    login(u, p);
-    closeModal();
-    navigate('/dashboard', { replace: true });
   };
 
   // ── User email OTP ──
@@ -178,8 +171,8 @@ export default function LandingPage() {
       </div>
 
       {/* ── MODULE CARDS ── */}
-      <div className="max-w-5xl mx-auto px-4 pb-16 -mt-8 relative z-10">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="max-w-4xl mx-auto px-4 pb-16 -mt-8 relative z-10">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             { label: 'SpaceWatch', desc: 'Pantau citra satelit Sentinel & Landsat multi-temporal', badge: 'bg-blue-600', icon: Satellite },
             { label: 'EcoTrack', desc: 'Input & survei data lapangan berbasis mobile.', badge: 'bg-green-700', icon: ClipboardList },
@@ -283,24 +276,6 @@ export default function LandingPage() {
                 </button>
               </form>
 
-              {/* Demo quick login */}
-              <div className="mt-5 pt-4 border-t border-gray-100">
-                <p className="text-xs text-center text-gray-400 mb-3">Akun Demo — klik untuk langsung masuk</p>
-                <div className="flex flex-col gap-2">
-                  {ADMIN_ACCOUNTS.map(acc => (
-                    <button key={acc.id} onClick={() => quickLogin(acc.username, acc.password)}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 hover:border-green-400 hover:bg-green-50 transition-all text-left">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${acc.role === 'verifikator' ? 'bg-green-800' : 'bg-blue-600'}`}>
-                        <ShieldCheck className="w-4 h-4 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate">{acc.nama}</p>
-                        <p className="text-xs text-gray-400">{acc.username} / {acc.password}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
               <p className="text-center text-xs text-gray-400 mt-4">
                 <button onClick={() => setModal('login-choice')} className="text-blue-600 hover:underline">← Kembali</button>
               </p>
