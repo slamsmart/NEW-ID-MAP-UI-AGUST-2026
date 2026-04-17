@@ -1,84 +1,75 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 215" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 170" fill="none">
   <defs>
-    <clipPath id="indoClip">
-      <path d="M 18 90 C 25 52,72 22,112 36 C 148 48,178 28,212 32
-               C 248 36,272 18,298 40 C 315 56,314 82,298 106
-               C 283 126,278 148,286 168 C 292 184,268 196,236 190
-               C 204 184,174 194,144 188 C 115 182,86 192,58 184
-               C 30 176,8 155,6 122 C 4 104,10 96,18 90 Z"/>
-      <path d="M 314 68 C 326 42,348 38,358 58 C 366 74,362 96,350 112
-               C 342 124,332 128,326 142 C 321 155,324 172,316 178
-               C 308 184,296 178,293 165 C 290 152,296 138,298 124
-               C 300 111,298 98,292 86 C 286 74,304 60,314 68 Z"/>
-      <path d="M 362 112 C 370 96,384 94,388 110 C 392 124,382 134,370 130
-               C 360 126,357 120,362 112 Z"/>
-      <path d="M 393 58 C 412 28,450 18,488 33 C 518 45,546 68,548 100
-               C 552 132,534 160,500 170 C 468 180,432 172,405 154
-               C 380 138,376 110,380 82 Z"/>
-    </clipPath>
+    <!-- Badge gradient: top lighter, bottom deeper -->
+    <linearGradient id="badgeGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#1a9e4a"/>
+      <stop offset="100%" stop-color="#0f4a24"/>
+    </linearGradient>
+    <!-- Subtle inner top-highlight -->
+    <linearGradient id="shineGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="white" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
   </defs>
 
-  <!-- BASE GREEN BLOBS -->
-  <path d="M 18 90 C 25 52,72 22,112 36 C 148 48,178 28,212 32
-           C 248 36,272 18,298 40 C 315 56,314 82,298 106
-           C 283 126,278 148,286 168 C 292 184,268 196,236 190
-           C 204 184,174 194,144 188 C 115 182,86 192,58 184
-           C 30 176,8 155,6 122 C 4 104,10 96,18 90 Z"
-       fill="#1a8c3e"/>
-  <path d="M 314 68 C 326 42,348 38,358 58 C 366 74,362 96,350 112
-           C 342 124,332 128,326 142 C 321 155,324 172,316 178
-           C 308 184,296 178,293 165 C 290 152,296 138,298 124
-           C 300 111,298 98,292 86 C 286 74,304 60,314 68 Z"
-       fill="#1a8c3e"/>
-  <path d="M 362 112 C 370 96,384 94,388 110 C 392 124,382 134,370 130
-           C 360 126,357 120,362 112 Z"
-       fill="#1a8c3e"/>
-  <path d="M 393 58 C 412 28,450 18,488 33 C 518 45,546 68,548 100
-           C 552 132,534 160,500 170 C 468 180,432 172,405 154
-           C 380 138,376 110,380 82 Z"
-       fill="#1a8c3e"/>
+  <!-- ─── BADGE ─────────────────────────────────────────────────────── -->
+  <rect width="440" height="114" rx="20" fill="url(#badgeGrad)"/>
+  <!-- top shine overlay -->
+  <rect width="440" height="57"  rx="20" fill="url(#shineGrad)"/>
+  <!-- thin bright border -->
+  <rect width="440" height="114" rx="20"
+        fill="none" stroke="white" stroke-width="1" stroke-opacity="0.12"/>
 
-  <!-- TEKS ID-MA -->
-  <!-- Font-size 108, baseline y=162. Cap-height ~y=85. "ID-MA" lebar ~355px, mulai x=48, berakhir x≈403 -->
-  <text x="48" y="162"
-        font-family="Arial Black, Arial, sans-serif"
-        font-weight="900"
-        font-size="108"
-        fill="white"
-        letter-spacing="-2">ID-MA</text>
-
+  <!-- ─── WORDMARK: "ID-MA" ─────────────────────────────────────────── -->
   <!--
-    PIN LOKASI — pengganti huruf "P"
-    Posisi: setelah "A" berakhir di x≈403
-    translate(cx=442, cy=116)
-      → top teardrop: cy - 74 = 42  (sedikit di atas cap-height 85, konsisten dengan font bold)
-      → bottom point: cy + 48 = 164 (tepat di bawah baseline 162)
-    Total tinggi pin: 122px ≈ setinggi huruf kapital + sedikit descender
-    Lebar maks: ±34px → kiri 408, kanan 476
+    font-size=66, textLength=244 → "ID-MA" forced to exactly 244 px
+    starts at x=72, ends at x=316
+    baseline y=87, cap-top ≈ y=39, visual-mid ≈ y=63
   -->
-  <g transform="translate(442, 116)">
-    <!--
-      Teardrop path — dibaca dari atas ke bawah:
-      Puncak (0, -74) → lengkung kiri keluar ke (-34, -22) → meruncing ke titik bawah (0, +48)
-      Simetri kanan → kembali ke puncak
-    -->
-    <path d="M 0 -74
-             C -10 -74, -36 -62, -36 -28
-             C -36 -6,  -20  16,  0  48
-             C  20  16,  36  -6,  36 -28
-             C  36 -62,  10 -74,  0 -74
-             Z"
-          fill="white"/>
-    <!-- Ring lubang tengah: pusat di (0, -42), radius 15 -->
-    <circle cx="0" cy="-42" r="15" fill="#1a8c3e"/>
+  <text
+    x="72" y="87"
+    font-family="'Arial Black', Arial, sans-serif"
+    font-weight="900"
+    font-size="66"
+    fill="white"
+    textLength="244"
+    lengthAdjust="spacingAndGlyphs">ID-MA</text>
+
+  <!-- ─── PIN-AS-P ───────────────────────────────────────────────────── -->
+  <!--
+    Asymmetric teardrop: sisi kiri datar (batang P), sisi kanan melengkung (mangkuk P)
+    Tinggi total: 86 px (−43 … +43 dari pusat y)
+    Lebar: kiri −22, kanan +28 (total 50 px)
+    Pusat: translate(341, 62)
+      → top  = 62−43 = 19   (dalam badge)
+      → point= 62+43 = 105  (dalam badge, sedikit di bawah baseline 87)
+    Margin kiri  = 72 px  |  kanan = 440−(341+28) = 71 px  ← nyaris simetris ✓
+  -->
+  <g transform="translate(341, 62)">
+    <!-- Outer P-pin shape -->
+    <path d="
+      M -4 -43
+      C -4 -43, -22 -33, -22  -8
+      C -22  14,  -8  30,   0  43
+      C   8  30,  28  14,  28  -8
+      C  28 -33,   4 -43,  -4 -43
+      Z"
+      fill="white"/>
+    <!-- Counter hole — offset kanan untuk kesan counter huruf P -->
+    <circle cx="4" cy="-19" r="12" fill="#166534"/>
   </g>
 
-  <!-- SUBTITLE — center antara x=48 dan x=476, midpoint≈262 -->
-  <text x="262" y="206"
-        font-family="Arial, sans-serif"
-        font-weight="600"
-        font-size="18"
-        fill="#111827"
-        text-anchor="middle"
-        letter-spacing="1.8">Integrasi Data Mangrove Pesisir</text>
+  <!-- ─── THIN DIVIDER ──────────────────────────────────────────────── -->
+  <line x1="72" y1="103" x2="368" y2="103"
+        stroke="white" stroke-width="0.6" stroke-opacity="0.2"/>
+
+  <!-- ─── SUBTITLE ─────────────────────────────────────────────────── -->
+  <text
+    x="220" y="149"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="13.5"
+    font-weight="600"
+    fill="#1f2937"
+    text-anchor="middle"
+    letter-spacing="1.6">Integrasi Data Mangrove Pesisir</text>
 </svg>
