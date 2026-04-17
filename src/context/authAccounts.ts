@@ -4,7 +4,7 @@ export const ADMIN_ACCOUNTS: (AuthUser & { password: string; username: string })
   {
     id: 'USR-001',
     username: 'verifikator',
-    password: 'verif123',
+    password: '@Verif2026',
     nama: 'Verifikator',
     unit: 'Tim Verifikasi Data Lingkungan',
     role: 'verifikator',
@@ -13,7 +13,7 @@ export const ADMIN_ACCOUNTS: (AuthUser & { password: string; username: string })
   {
     id: 'USR-002',
     username: 'admin',
-    password: 'admin123',
+    password: '@Admin2026',
     nama: 'Admin',
     unit: 'Koordinator Survei Wilayah Jawa Timur',
     provinsi: 'Jawa Timur',
