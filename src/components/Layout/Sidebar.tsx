@@ -89,7 +89,7 @@ export default function Sidebar() {
             }`
           }
         >
-          {({ isActive }) => (
+          {({ isActive }: { isActive: boolean }) => (
             <>
               <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-green-200' : 'text-green-500 group-hover:text-green-300'}`} />
               <span className="flex-1">{label}</span>
