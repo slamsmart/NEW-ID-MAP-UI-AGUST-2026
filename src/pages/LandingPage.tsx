@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   LogIn, UserPlus, X, Eye, EyeOff, AlertCircle, CheckCircle,
   ShieldCheck, Mail, KeyRound, ArrowRight, Loader2, Satellite,
-  ClipboardList, Waves, Bot,
+  ClipboardList, Bot,
 } from 'lucide-react';
 import { ADMIN_ACCOUNTS } from '../context/authAccounts';
 import { useAuth } from '../context/useAuth';
@@ -183,7 +183,6 @@ export default function LandingPage() {
           {[
             { label: 'SpaceWatch', desc: 'Pantau citra satelit Sentinel & Landsat multi-temporal', badge: 'bg-blue-600', icon: Satellite },
             { label: 'EcoTrack', desc: 'Input & survei data lapangan berbasis mobile.', badge: 'bg-green-700', icon: ClipboardList },
-            { label: 'BioSense', desc: 'Sensor IoT kualitas air seperti salinitas & suhu', badge: 'bg-teal-600', icon: Waves },
             { label: 'RestoreAI', desc: 'Rekomendasi Restorasi & kebijakan berbasis AI', badge: 'bg-orange-500', icon: Bot },
           ].map(m => (
             <div key={m.label} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -198,19 +197,6 @@ export default function LandingPage() {
           ))}
         </div>
 
-        {/* Data source row */}
-        <div className="mt-8 bg-gray-900 rounded-2xl px-5 py-4 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <span className="text-xs font-bold text-white">Sumber Data PMN 2025</span>
-          </div>
-          <div className="h-4 w-px bg-gray-700" />
-          <div className="flex flex-wrap gap-2">
-            {['PMN 2025 · KLHK', 'GMW v3.0 · JAXA', 'Sentinel-2 · ESA', 'SIKONSER · KKP', 'BRGM · Rehabilitasi', 'BIG · RBI'].map(s => (
-              <span key={s} className="text-xs bg-gray-800 border border-gray-700 text-gray-300 rounded px-2 py-0.5">{s}</span>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* ═══════════════════════════════════════════ */}
