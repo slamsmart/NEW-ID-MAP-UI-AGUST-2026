@@ -10,9 +10,6 @@ import {
 import {
   mangroveLocations, ekosistemData, alerts, timeSeriesData,
 } from '../data/mockData';
-import {
-  PMN_TOTAL_HA, PMN_TOTAL_REHABILITASI, pmnTop10, pmnKondisiSummary, pmnProvinsi,
-} from '../data/pmnData';
 import { getSurveyStats, getSurveys } from '../data/localStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import KPICard from '../components/shared/KPICard';
@@ -70,7 +67,7 @@ export default function Dashboard() {
 
   const trendData = timeSeriesData.map(d => ({
     tahun: d.tahun,
-    'Luas Mangrove (×1000 ha)': Math.round(d.luasMangrove / 1000),
+    'Luas Mangrove (ha)': d.luasMangrove,
     'Area Restorasi (ha)': d.luasRestorasi,
     'Tutupan (%)': d.persenTutupan,
   }));
@@ -85,15 +82,15 @@ export default function Dashboard() {
             <img src="/logo.svg" alt="ID-MAP" className="h-18 w-auto object-contain" style={{height:'72px'}} draggable={false} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-green-500 text-xs font-semibold uppercase tracking-widest mb-0.5">Sistem Pemantauan Terintegrasi</p>
+            <p className="text-green-500 text-xs font-semibold uppercase tracking-widest mb-0.5">Wilker Cabdin KP Kab. Malang</p>
             <h2 className="text-white text-xl font-bold">Integrasi Data Mangrove dan Pesisir</h2>
-            <p className="text-green-400 text-sm mt-0.5">Sebagai basis data untuk pemantauan dan restorasi lingkungan</p>
+            <p className="text-green-400 text-sm mt-0.5">Data Monitoring Mangrove/Vegetasi dan Ekosistem Pesisir</p>
           </div>
           <div className="flex-shrink-0 hidden lg:flex flex-col gap-2 items-end">
             <div className="border border-green-800 rounded-lg px-4 py-2 text-center">
               <p className="text-green-500 text-xs font-medium">Ref. Data</p>
               <p className="text-white text-lg font-black">2024–2025</p>
-              <p className="text-green-600 text-xs">GMW · PMN · MonMang</p>
+              <p className="text-green-600 text-xs">Wilker Cabdin KP Kab. Malang</p>
             </div>
             {surveyStats.total > 0 && (
               <div className="border border-blue-700 bg-blue-900/30 rounded-lg px-3 py-1.5 text-center">
@@ -109,7 +106,7 @@ export default function Dashboard() {
       <div className="bg-slate-800 rounded-xl px-5 py-3 flex flex-wrap items-center gap-3 border border-slate-700">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-          <span className="text-xs font-bold text-white">Sumber Data Referensi 2024–2025</span>
+          <span className="text-xs font-bold text-white">Sumber Data · Wilker Cabdin KP Kab. Malang 2024–2025</span>
         </div>
         <div className="h-4 w-px bg-slate-600" />
         <div className="flex flex-wrap gap-2">
@@ -228,10 +225,10 @@ export default function Dashboard() {
       {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
-          label="Total Luas Mangrove PMN 2025"
-          value={(PMN_TOTAL_HA / 1000000).toFixed(2).replace('.', ',') + ' Jt'}
+          label="Total Luas Mangrove Wilker"
+          value={totalArea.toLocaleString('id-ID')}
           unit="ha"
-          trend={2.6}
+          trend={3.2}
           icon={<TreePine className="w-6 h-6 text-green-600" />}
           colorClass="text-green-700"
           bgClass="bg-green-100"
@@ -246,19 +243,19 @@ export default function Dashboard() {
           bgClass="bg-blue-100"
         />
         <KPICard
-          label="Target Rehabilitasi BRGM 2025"
-          value={(PMN_TOTAL_REHABILITASI / 1000).toLocaleString('id-ID', { maximumFractionDigits: 0 })}
-          unit="× 10³ ha"
-          trend={22.5}
+          label="Lokasi Kondisi Baik"
+          value={`${lebatCount}`}
+          unit="lokasi"
+          trend={10}
           icon={<Sprout className="w-6 h-6 text-teal-600" />}
           colorClass="text-teal-700"
           bgClass="bg-teal-100"
         />
         <KPICard
-          label="Provinsi Kritis / Sangat Kritis"
-          value={`${pmnKondisiSummary.kritis + pmnKondisiSummary.sangatKritis}`}
-          unit="provinsi"
-          trend={-8}
+          label="Lokasi Kritis"
+          value={`${kritisCount}`}
+          unit="lokasi"
+          trend={-15}
           icon={<AlertTriangle className="w-6 h-6 text-red-500" />}
           colorClass="text-red-600"
           bgClass="bg-red-100"
@@ -271,8 +268,8 @@ export default function Dashboard() {
         <div className="lg:col-span-2 bg-white rounded-xl p-5 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-semibold text-gray-800">Tren Luas Mangrove Nasional</h3>
-              <p className="text-xs text-gray-500">Data multi-temporal 2018–2024</p>
+              <h3 className="font-semibold text-gray-800">Tren Luas Mangrove Wilker Cabdin KP Kab. Malang</h3>
+              <p className="text-xs text-gray-500">Data multi-temporal 2018–2025</p>
             </div>
             <div className="flex items-center gap-1.5 bg-green-50 border border-green-100 rounded-lg px-2.5 py-1">
               <TrendingUp className="w-3.5 h-3.5 text-green-600" />
@@ -295,7 +292,7 @@ export default function Dashboard() {
               />
               <Area
                 type="monotone"
-                dataKey="Luas Mangrove (×1000 ha)"
+                dataKey="Luas Mangrove (ha)"
                 stroke="#16a34a"
                 strokeWidth={2.5}
                 fill="url(#areaGrad)"
@@ -339,31 +336,30 @@ export default function Dashboard() {
 
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Provinsi Bar — PMN 2025 Top 10 */}
+        {/* Luas per Lokasi */}
         <div className="lg:col-span-2 bg-white rounded-xl p-5 border border-gray-200">
           <div className="flex items-center justify-between mb-1">
-            <h3 className="font-semibold text-gray-800">Luas Mangrove per Provinsi (PMN 2025)</h3>
-            <span className="text-xs bg-green-50 text-green-700 border border-green-100 rounded px-2 py-0.5">Top 10</span>
+            <h3 className="font-semibold text-gray-800">Luas Mangrove per Lokasi Pemantauan</h3>
+            <span className="text-xs bg-green-50 text-green-700 border border-green-100 rounded px-2 py-0.5">Kab. Malang</span>
           </div>
-          <p className="text-xs text-gray-500 mb-4">Dalam ribuan hektar · Sumber: KLHK / BRGM / GMW v3.0</p>
+          <p className="text-xs text-gray-500 mb-4">Dalam hektar · Wilker Cabdin KP Kab. Malang 2025</p>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={pmnTop10} layout="vertical" margin={{ left: 20, right: 30 }}>
+            <BarChart data={mangroveLocations.map(l => ({ name: l.name.length > 20 ? l.name.slice(0, 20) + '…' : l.name, luas: l.areaHa, status: l.status }))} layout="vertical" margin={{ left: 20, right: 30 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={v => `${v}K`} />
-              <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={90} />
+              <XAxis type="number" tick={{ fontSize: 11 }} />
+              <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={120} />
               <Tooltip
                 contentStyle={{ borderRadius: '12px', fontSize: '12px' }}
-                formatter={(v) => [`${(Number(v ?? 0) * 1000).toLocaleString('id-ID')} ha`, 'Luas PMN']}
+                formatter={(v) => [`${Number(v ?? 0).toLocaleString('id-ID')} ha`, 'Luas']}
               />
-              <Bar dataKey="luas" name="Luas (×1000 ha)" radius={[0, 6, 6, 0]}>
-                {pmnTop10.map((entry, i) => (
+              <Bar dataKey="luas" name="Luas (ha)" radius={[0, 6, 6, 0]}>
+                {mangroveLocations.map((loc, i) => (
                   <Cell
                     key={i}
                     fill={
-                      entry.kondisi === 'Sangat Baik' ? '#16a34a'
-                      : entry.kondisi === 'Baik' ? '#4ade80'
-                      : entry.kondisi === 'Sedang' ? '#eab308'
-                      : entry.kondisi === 'Kritis' ? '#f97316'
+                      loc.status === 'lebat' ? '#16a34a'
+                      : loc.status === 'sedang' ? '#eab308'
+                      : loc.status === 'jarang' ? '#f97316'
                       : '#ef4444'
                     }
                   />
@@ -414,81 +410,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* PMN 2025 — Kondisi Nasional */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-gray-800">Peta Mangrove Nasional 2025 — Kondisi per Provinsi</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Total nasional: <strong>{PMN_TOTAL_HA.toLocaleString('id-ID')} ha</strong> · 38 provinsi · Sumber: KLHK / BRGM / GMW v3.0 JAXA
-            </p>
-          </div>
-          <div className="hidden lg:flex items-center gap-2">
-            {[
-              { label: 'Sangat Baik', color: 'bg-green-600', count: pmnKondisiSummary.sangatBaik },
-              { label: 'Baik', color: 'bg-green-400', count: pmnKondisiSummary.baik },
-              { label: 'Sedang', color: 'bg-yellow-400', count: pmnKondisiSummary.sedang },
-              { label: 'Kritis', color: 'bg-orange-400', count: pmnKondisiSummary.kritis },
-              { label: 'Sgt Kritis', color: 'bg-red-500', count: pmnKondisiSummary.sangatKritis },
-            ].map(k => (
-              <div key={k.label} className="flex items-center gap-1 text-xs text-gray-600">
-                <div className={`w-2 h-2 rounded-full ${k.color}`} />
-                <span>{k.label}: <strong>{k.count}</strong></span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-gray-50 text-xs uppercase tracking-wider text-gray-500">
-                <th className="px-4 py-2.5 text-left font-semibold">Provinsi</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Luas PMN 2025 (ha)</th>
-                <th className="px-4 py-2.5 text-right font-semibold">PMN 2021 (ha)</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Perubahan</th>
-                <th className="px-4 py-2.5 text-center font-semibold">Kondisi</th>
-                <th className="px-4 py-2.5 text-right font-semibold">Rehab. (ha)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {pmnProvinsi.slice(0, 15).map(p => (
-                <tr key={p.provinsi} className="hover:bg-green-50/30 transition-colors">
-                  <td className="px-4 py-2.5 font-medium text-gray-800">{p.provinsi}</td>
-                  <td className="px-4 py-2.5 text-right text-gray-700 font-medium">{p.luasPMN.toLocaleString('id-ID')}</td>
-                  <td className="px-4 py-2.5 text-right text-gray-500">{p.luasPMN2021.toLocaleString('id-ID')}</td>
-                  <td className="px-4 py-2.5 text-right font-medium">
-                    <span className={p.perubahan >= 0 ? 'text-green-600' : 'text-red-500'}>
-                      {p.perubahan >= 0 ? '+' : ''}{p.perubahan.toLocaleString('id-ID')}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-center">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      p.kondisi === 'Sangat Baik' ? 'bg-green-100 text-green-700'
-                      : p.kondisi === 'Baik' ? 'bg-green-50 text-green-600'
-                      : p.kondisi === 'Sedang' ? 'bg-yellow-100 text-yellow-700'
-                      : p.kondisi === 'Kritis' ? 'bg-orange-100 text-orange-700'
-                      : 'bg-red-100 text-red-700'
-                    }`}>{p.kondisi}</span>
-                  </td>
-                  <td className="px-4 py-2.5 text-right text-teal-600 font-medium">{p.luasRehabilitasi.toLocaleString('id-ID')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {pmnProvinsi.length > 15 && (
-          <div className="px-5 py-3 border-t border-gray-100 text-center">
-            <span className="text-xs text-gray-400">Menampilkan 15 dari {pmnProvinsi.length} provinsi · Data lengkap tersedia di modul Laporan</span>
-          </div>
-        )}
-      </div>
-
       {/* Lokasi Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-gray-800">Daftar Lokasi Pemantauan</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Total: {mangroveLocations.length} lokasi aktif</p>
+            <h3 className="font-semibold text-gray-800">Lokasi Pemantauan — Kab. Malang</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Total: {mangroveLocations.length} lokasi aktif · Wilker Cabdin KP Kab. Malang</p>
           </div>
           <span className="text-xs bg-green-50 text-green-700 border border-green-100 rounded-lg px-2.5 py-1 font-medium">
             {totalArea.toLocaleString('id-ID')} ha total

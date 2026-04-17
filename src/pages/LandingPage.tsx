@@ -5,8 +5,8 @@ import {
   ShieldCheck, Mail, KeyRound, ArrowRight, Loader2, Satellite,
   ClipboardList, Waves, Bot,
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { ADMIN_ACCOUNTS } from '../context/AuthContext';
+import { ADMIN_ACCOUNTS } from '../context/authAccounts';
+import { useAuth } from '../context/useAuth';
 
 type ModalMode = 'none' | 'login-choice' | 'admin-login' | 'user-login' | 'user-otp' | 'signup' | 'signup-otp';
 
@@ -30,6 +30,7 @@ export default function LandingPage() {
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [demoOtp, setDemoOtp] = useState(''); // shown for hackathon demo
+  const [otpNotice, setOtpNotice] = useState('');
   const [emailError, setEmailError] = useState('');
   const [otpError, setOtpError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -44,7 +45,7 @@ export default function LandingPage() {
   const closeModal = () => {
     setModal('none');
     setUsername(''); setPassword(''); setAdminError(''); setShowPass(false);
-    setEmail(''); setOtp(''); setEmailError(''); setOtpError(''); setDemoOtp('');
+    setEmail(''); setOtp(''); setEmailError(''); setOtpError(''); setDemoOtp(''); setOtpNotice('');
     setSuNama(''); setSuEmail(''); setSuUnit(''); setSuProvinsi(''); setSuError('');
     setLoading(false);
   };
@@ -71,6 +72,7 @@ export default function LandingPage() {
     const res = await loginWithEmail(email.trim());
     setLoading(false);
     if (!res.success) { setEmailError(res.error ?? 'Gagal mengirim kode.'); return; }
+    setOtpNotice(res.warning ?? '');
     // Autoconfirm mode: user state akan di-set oleh useEffect
     setDemoOtp(res.demoOtp ?? '');
     setModal('user-otp');
@@ -93,11 +95,12 @@ export default function LandingPage() {
     const res = await signUp({ nama: suNama, email: suEmail, unit: suUnit, provinsi: suProvinsi });
     setLoading(false);
     if (!res.success) { setSuError(res.error ?? 'Gagal mendaftar.'); return; }
+    setOtpNotice(res.warning ?? '');
 
     // Jika ada demoOtp → mode demo, tampilkan OTP screen
     if (res.demoOtp) {
       setDemoOtp(res.demoOtp);
-      setEmail(suEmail);
+      setSuEmail(suEmail.trim());
       setModal('signup-otp');
       return;
     }
@@ -105,7 +108,7 @@ export default function LandingPage() {
     // Mode production: cek apakah user sudah langsung login (autoconfirm aktif)
     // useEffect di atas akan handle navigate jika user state berubah
     // Jika tidak autoconfirm → tampilkan OTP screen
-    setEmail(suEmail);
+    setSuEmail(suEmail.trim());
     setModal('signup-otp');
   };
 
@@ -124,29 +127,38 @@ export default function LandingPage() {
       {/* ── HERO ── */}
       <div
         className="relative w-full flex flex-col items-center justify-center overflow-hidden"
-        style={{ minHeight: '100vh' }}
+        style={{ minHeight: '100vh', background: '#f8fafb' }}
       >
-        {/* Background image — full cover */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: 'url(/hero.png)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center top',
-            backgroundRepeat: 'no-repeat',
-          }}
-        />
-        {/* Overlay gradient bottom-to-white untuk cards di bawah */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-transparent to-white/90" />
+        {/* Geometric line background — isometric grid */}
+        <svg
+          className="absolute inset-0 w-full h-full"
+          xmlns="http://www.w3.org/2000/svg"
+          preserveAspectRatio="xMidYMid slice"
+        >
+          <defs>
+            <pattern id="iso-grid" x="0" y="0" width="80" height="46" patternUnits="userSpaceOnUse">
+              {/* isometric diamond lines */}
+              <line x1="0" y1="23" x2="40" y2="0"  stroke="#d1d5db" strokeWidth="0.8" />
+              <line x1="40" y1="0"  x2="80" y2="23" stroke="#d1d5db" strokeWidth="0.8" />
+              <line x1="80" y1="23" x2="40" y2="46" stroke="#d1d5db" strokeWidth="0.8" />
+              <line x1="40" y1="46" x2="0"  y2="23" stroke="#d1d5db" strokeWidth="0.8" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#iso-grid)" opacity="0.5" />
+        </svg>
+        {/* Soft radial glow di tengah */}
+        <div className="absolute inset-0" style={{
+          background: 'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(255,255,255,0.95) 30%, rgba(248,250,251,0.7) 70%, transparent 100%)'
+        }} />
 
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center px-4 text-center py-20">
           <img src="/logo.svg" alt="ID-MAP" className="h-32 w-auto mb-6 drop-shadow-2xl" draggable={false} />
           <h1 className="text-3xl sm:text-5xl font-extrabold text-gray-900 leading-tight max-w-2xl drop-shadow-sm">
-            Pantau &amp; Restorasi Mangrove dan Pesisir Indonesia
+            Integrasi Data Mangrove dan Pesisir
           </h1>
           <p className="mt-4 text-base sm:text-lg text-gray-800 max-w-xl leading-relaxed drop-shadow-sm">
-            Sistem pemantauan terpadu untuk pengelolaan data ekosistem mangrove dan pesisir Indonesia.
+            Data Monitoring Mangrove/Vegetasi dan Ekosistem Pesisir
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
             <button
@@ -222,7 +234,7 @@ export default function LandingPage() {
                     <ShieldCheck className="w-6 h-6 text-white" />
                   </div>
                   <div className="text-center">
-                    <p className="font-bold text-gray-800">Admin / Petugas</p>
+                    <p className="font-bold text-gray-800">Verifikator / Admin</p>
                     <p className="text-xs text-gray-500 mt-0.5">Username &amp; Password</p>
                   </div>
                   <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-green-600" />
@@ -250,7 +262,7 @@ export default function LandingPage() {
 
           {/* ── Admin login ── */}
           {modal === 'admin-login' && (
-            <ModalBox title="Login Admin / Petugas" onClose={closeModal}>
+            <ModalBox title="Login Verifikator / Admin" onClose={closeModal}>
               <form onSubmit={handleAdminLogin} className="space-y-4 mt-2">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Username</label>
@@ -258,7 +270,7 @@ export default function LandingPage() {
                     autoFocus
                     value={username}
                     onChange={e => { setUsername(e.target.value); setAdminError(''); }}
-                    placeholder="contoh: admin / petugas"
+                    placeholder="contoh: verifikator / admin"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
                   />
                 </div>
@@ -292,7 +304,7 @@ export default function LandingPage() {
                   {ADMIN_ACCOUNTS.map(acc => (
                     <button key={acc.id} onClick={() => quickLogin(acc.username, acc.password)}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 hover:border-green-400 hover:bg-green-50 transition-all text-left">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${acc.role === 'admin_nasional' ? 'bg-green-800' : 'bg-blue-600'}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${acc.role === 'verifikator' ? 'bg-green-800' : 'bg-blue-600'}`}>
                         <ShieldCheck className="w-4 h-4 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -344,9 +356,14 @@ export default function LandingPage() {
           {modal === 'user-otp' && (
             <ModalBox title="Masukkan Kode Verifikasi" onClose={closeModal}>
               <p className="text-xs text-gray-500 mb-1">Kode dikirim ke <strong>{email}</strong></p>
+              {otpNotice && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mb-4 text-center">
+                  <p className="text-xs text-amber-800">{otpNotice}</p>
+                </div>
+              )}
               {demoOtp && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 mb-4 text-center">
-                  <p className="text-xs text-blue-600 font-medium">Demo Mode — Kode OTP Anda:</p>
+                  <p className="text-xs text-blue-600 font-medium">Kode Verifikasi</p>
                   <p className="text-2xl font-black text-blue-800 tracking-widest mt-1">{demoOtp}</p>
                 </div>
               )}
@@ -377,7 +394,7 @@ export default function LandingPage() {
           {/* ── Sign up ── */}
           {modal === 'signup' && (
             <ModalBox title="Daftar Akun Baru" onClose={closeModal}>
-              <p className="text-xs text-gray-500 mb-5">Buat akun pengguna untuk mengakses data mangrove nasional.</p>
+              <p className="text-xs text-gray-500 mb-5">Buat akun pengguna untuk mengakses data mangrove Wilker Cabdin KP Kab. Malang.</p>
               <form onSubmit={handleSignUp} className="space-y-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Nama Lengkap <span className="text-red-500">*</span></label>
@@ -405,7 +422,7 @@ export default function LandingPage() {
                 </div>
                 {suError && <ErrorBox msg={suError} />}
                 <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
-                  Akun baru mendapat akses <strong>Viewer</strong> — bisa lihat dashboard & peta. Akses laporan & input lapangan memerlukan verifikasi admin.
+                  Akun baru mendapat akses <strong>Viewer</strong> — bisa lihat dashboard, peta & data monitoring. Akses input data lapangan memerlukan role Admin dari Verifikator.
                 </div>
                 <button type="submit"
                   className="w-full flex items-center justify-center gap-2 bg-green-800 text-white font-bold py-2.5 rounded-xl hover:bg-green-700 transition-colors">
@@ -427,9 +444,14 @@ export default function LandingPage() {
                 <p className="text-xs text-green-800">Akun berhasil dibuat! Verifikasi email Anda untuk masuk.</p>
               </div>
               <p className="text-xs text-gray-500 mb-1">Kode dikirim ke <strong>{suEmail}</strong></p>
+              {otpNotice && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mb-4 text-center">
+                  <p className="text-xs text-amber-800">{otpNotice}</p>
+                </div>
+              )}
               {demoOtp && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 mb-4 text-center">
-                  <p className="text-xs text-blue-600 font-medium">Demo Mode — Kode OTP Anda:</p>
+                  <p className="text-xs text-blue-600 font-medium">Kode Verifikasi</p>
                   <p className="text-2xl font-black text-blue-800 tracking-widest mt-1">{demoOtp}</p>
                 </div>
               )}
@@ -485,3 +507,4 @@ function ErrorBox({ msg }: { msg: string }) {
     </div>
   );
 }
+

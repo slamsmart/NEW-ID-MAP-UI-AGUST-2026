@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from 'react-router-dom';
+﻿import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
@@ -9,7 +9,10 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/lingkungan': { title: 'Analisis Lingkungan & Biofisik', subtitle: 'Kualitas perairan, substrat, dan regime pasang surut' },
   '/tekanan-sosial': { title: 'Tekanan & Sosial-Ekonomi', subtitle: 'Pemetaan risiko dan faktor keberlanjutan program' },
   '/laporan': { title: 'Laporan & Analitik', subtitle: 'Laporan komprehensif, rekomendasi kebijakan, dan analisis tren multi-temporal' },
-  '/input-lapangan': { title: 'Input Data Lapangan (EcoTrack)', subtitle: 'Formulir survei petugas DKP — integrasi data lapangan ke sistem ID-MAP' },
+  '/input-lapangan': { title: 'Input Data Lapangan (EcoTrack)', subtitle: '' },
+  '/rekomendasi-lokasi': { title: 'Rekomendasi Lokasi Penanaman', subtitle: '' },
+  '/pembibitan-mangrove': { title: 'Lokasi Pembibitan Mangrove', subtitle: 'Nursery mangrove tersertifikasi BRGM/KLHK â€” SNI 7604:2011 Â· Data 2025' },
+  '/mangrove-nasional': { title: 'Luasan Mangrove Nasional', subtitle: 'Data Peta Mangrove Nasional (PMN) 2025 per Kabupaten/Kota se-Indonesia â€” KLHK / BRGM [ADMIN]' },
 };
 
 export default function Layout() {
@@ -28,3 +31,5 @@ export default function Layout() {
     </div>
   );
 }
+
+

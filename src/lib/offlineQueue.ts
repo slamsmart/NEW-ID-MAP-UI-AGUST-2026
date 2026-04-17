@@ -98,7 +98,9 @@ export async function enqueueLocation(loc: DbLocation): Promise<{ success: boole
 
 async function _uploadSurveyToSupabase(survey: QueuedSurvey): Promise<{ success: boolean; offline: boolean }> {
   try {
-    const { _queued_at: _q, _offline_photos: _p, ...dbSurvey } = survey;
+    const { _queued_at, _offline_photos, ...dbSurvey } = survey;
+    void _queued_at;
+    void _offline_photos;
     const { error } = await supabase
       .from('surveys')
       .upsert({ ...dbSurvey, sync_status: 'synced' }, { onConflict: 'id' });
@@ -121,7 +123,7 @@ async function _uploadSurveyToSupabase(survey: QueuedSurvey): Promise<{ success:
 async function _uploadLocationToSupabase(loc: DbLocation): Promise<{ success: boolean; offline: boolean }> {
   try {
     const { error } = await supabase
-      .from('locations')
+      .from('mangrove_locations')
       .upsert(loc, { onConflict: 'id' });
 
     if (error) throw error;

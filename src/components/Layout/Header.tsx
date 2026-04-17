@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Bell, Search, Database, Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, Search, Database, Wifi, WifiOff, RefreshCw, ChevronDown, LogOut } from 'lucide-react';
 import { alerts } from '../../data/mockData';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { getSurveyStats } from '../../data/localStore';
 import { syncPendingQueue, getPendingCount } from '../../lib/offlineQueue';
 
@@ -11,13 +12,14 @@ interface HeaderProps {
 }
 
 const ROLE_LABEL: Record<string, string> = {
-  admin_nasional: 'Admin Nasional',
-  petugas_daerah: 'Petugas Daerah',
+  verifikator: 'Verifikator',
+  admin: 'Admin',
   viewer: 'Viewer',
 };
 
 export default function Header({ title, subtitle }: HeaderProps) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const criticalCount = alerts.filter(a => a.type === 'critical').length;
   const warningCount = alerts.filter(a => a.type === 'warning').length;
   const totalAlert = criticalCount + warningCount;
@@ -26,6 +28,8 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const [pendingSync, setPendingSync] = useState(0);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncing, setSyncing] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const refresh = () => {
@@ -55,8 +59,25 @@ export default function Header({ title, subtitle }: HeaderProps) {
     };
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!accountMenuRef.current?.contains(event.target as Node)) {
+        setAccountMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const initials = user?.initials ?? 'USR';
   const roleName = user?.role ? ROLE_LABEL[user.role] : 'Pengguna';
+
+  const handleLogout = async () => {
+    setAccountMenuOpen(false);
+    await logout();
+    navigate('/', { replace: true });
+  };
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between">
@@ -77,7 +98,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
 
         <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-600">
           <Database className="w-3.5 h-3.5 text-gray-500" />
-          <span className="font-medium">GMW · PMN · MonMang</span>
+          <span className="font-medium">Cabdin KP Kab. Malang</span>
           <span
             className="bg-green-700 text-white rounded px-1.5 py-0.5 font-bold text-xs"
             title="Periode data referensi dari sumber GMW/PMN/MonMang. Bukan tanggal sistem saat ini."
@@ -117,14 +138,39 @@ export default function Header({ title, subtitle }: HeaderProps) {
           )}
         </button>
 
-        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
-          <div className="w-7 h-7 bg-green-700 rounded-lg flex items-center justify-center">
-            <span className="text-white text-xs font-bold">{initials}</span>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-800 max-w-32 truncate">{user?.nama ?? 'Pengguna'}</p>
-            <p className="text-xs text-gray-400">{roleName}</p>
-          </div>
+        <div className="relative" ref={accountMenuRef}>
+          <button
+            type="button"
+            onClick={() => setAccountMenuOpen(open => !open)}
+            className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-100 transition-colors"
+          >
+            <div className="w-7 h-7 bg-green-700 rounded-lg flex items-center justify-center">
+              <span className="text-white text-xs font-bold">{initials}</span>
+            </div>
+            <div className="text-left">
+              <p className="text-xs font-semibold text-gray-800 max-w-32 truncate">{user?.nama ?? 'Pengguna'}</p>
+              <p className="text-xs text-gray-400">{roleName}</p>
+            </div>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {accountMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-20">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <p className="text-sm font-semibold text-gray-800 truncate">{user?.nama ?? 'Pengguna'}</p>
+                <p className="text-xs text-gray-500">{roleName}</p>
+                {user?.email && <p className="text-xs text-gray-400 mt-1 truncate">{user.email}</p>}
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

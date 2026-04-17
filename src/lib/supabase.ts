@@ -7,6 +7,15 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseAnonKey || 'placeholder-key',
+  {
+    auth: {
+      // This app currently uses EmailJS-based OTP, so don't auto-restore stale
+      // Supabase auth sessions from storage and trigger refresh-token errors.
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  },
 );
 
 export const isSupabaseConfigured = () =>
@@ -34,6 +43,7 @@ export interface DbLocation {
 export interface DbSurvey {
   id: string;
   created_at?: string;
+  tujuan_survei: 'monitoring' | 'potensi_penanaman' | 'abrasi' | 'pendaratan_penyu' | 'monitoring_vegetasi';
   petugas_nama: string;
   petugas_nip: string | null;
   petugas_unit: string;
@@ -69,6 +79,11 @@ export interface DbSurvey {
   // Catatan
   kondisi_umum: string | null;
   rekomendasi_lapangan: string | null;
+  // Pendaratan Penyu
+  jenis_penyu?: string | null;
+  jumlah_sarang?: number | null;
+  status_perlindungan?: string | null;
+  sarang_points?: Array<{ lat: string; lng: string; catatan?: string; waktu?: string; fotoUrl?: string }>;
   // Sync
   sync_status: 'synced' | 'pending';
   photo_urls: string[];

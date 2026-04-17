@@ -1,23 +1,24 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, AlertCircle, ShieldCheck, User, Globe } from 'lucide-react';
-import { useAuth, DEMO_ACCOUNTS } from '../context/AuthContext';
+import { DEMO_ACCOUNTS } from '../context/authAccounts';
+import { useAuth } from '../context/useAuth';
 
 const ROLE_LABEL: Record<string, string> = {
-  admin_nasional: 'Admin Nasional',
-  petugas_daerah: 'Petugas Daerah',
+  verifikator: 'Verifikator',
+  admin: 'Admin',
   viewer: 'Viewer Publik',
 };
 
 const ROLE_COLOR: Record<string, string> = {
-  admin_nasional: 'bg-green-700',
-  petugas_daerah: 'bg-blue-700',
+  verifikator: 'bg-green-700',
+  admin: 'bg-blue-700',
   viewer: 'bg-gray-500',
 };
 
 const ROLE_ICON: Record<string, React.ReactNode> = {
-  admin_nasional: <ShieldCheck className="w-4 h-4" />,
-  petugas_daerah: <User className="w-4 h-4" />,
+  verifikator: <ShieldCheck className="w-4 h-4" />,
+  admin: <User className="w-4 h-4" />,
   viewer: <Globe className="w-4 h-4" />,
 };
 

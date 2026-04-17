@@ -1,37 +1,8 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import emailjs from '@emailjs/browser';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { EMAILJS_CONFIG } from '../lib/emailjs';
-
-export type UserRole = 'admin_nasional' | 'petugas_daerah' | 'viewer';
-
-export interface AuthUser {
-  id: string;
-  nama: string;
-  email?: string;
-  nip?: string;
-  unit: string;
-  provinsi?: string;
-  role: UserRole;
-  initials: string;
-}
-
-export interface SignUpData {
-  nama: string;
-  email: string;
-  unit: string;
-  provinsi?: string;
-}
-
-interface AuthContextValue {
-  user: AuthUser | null;
-  loading: boolean;
-  login: (username: string, password: string) => boolean;
-  loginWithEmail: (email: string) => Promise<{ success: boolean; demoOtp?: string; error?: string }>;
-  verifyOTP: (email: string, otp: string) => Promise<boolean>;
-  signUp: (data: SignUpData) => Promise<{ success: boolean; demoOtp?: string; error?: string }>;
-  logout: () => Promise<void>;
-}
+import { ADMIN_ACCOUNTS } from './authAccounts';
+import { AuthContext, type AuthUser, type SignUpData, type UserRole } from './authModel';
 
 interface OtpEntry {
   otp: string;
@@ -64,78 +35,51 @@ function saveLocalUsers(users: (AuthUser & { email: string })[]) {
   localStorage.setItem('idmap_registered_users', JSON.stringify(users));
 }
 
-export const ADMIN_ACCOUNTS: (AuthUser & { password: string; username: string })[] = [
-  {
-    id: 'USR-001',
-    username: 'admin',
-    password: 'admin123',
-    nama: 'Admin Nasional',
-    unit: 'Tim Integrasi Data Lingkungan',
-    role: 'admin_nasional',
-    initials: 'ADM',
-  },
-  {
-    id: 'USR-002',
-    username: 'petugas',
-    password: 'dkp2025',
-    nama: 'Slamet Abdullah, S.Pi',
-    nip: '198905012015031002',
-    unit: 'Koordinator Survei Wilayah Jawa Timur',
-    provinsi: 'Jawa Timur',
-    role: 'petugas_daerah',
-    initials: 'SA',
-  },
-];
+interface OtpDeliveryResult {
+  delivered: boolean;
+  warning?: string;
+}
 
-export const DEMO_ACCOUNTS = ADMIN_ACCOUNTS;
-
-async function sendOTPEmail(toEmail: string, otpCode: string): Promise<boolean> {
+async function sendOTPEmail(toEmail: string, otpCode: string): Promise<OtpDeliveryResult> {
   try {
-    if (!EMAILJS_CONFIG.SERVICE_ID || !EMAILJS_CONFIG.TEMPLATE_ID || !EMAILJS_CONFIG.PUBLIC_KEY) {
-      console.error('[EmailJS] Konfigurasi belum lengkap.', EMAILJS_CONFIG);
-      return false;
-    }
-
-    await emailjs.send(
-      EMAILJS_CONFIG.SERVICE_ID,
-      EMAILJS_CONFIG.TEMPLATE_ID,
-      {
-        email: toEmail,
-        passcode: otpCode,
-        time: '15',
-      },
-      EMAILJS_CONFIG.PUBLIC_KEY,
-    );
-
-    return true;
-  } catch (err) {
-    const emailErr = err as { status?: number; text?: string };
-    console.error('[EmailJS] Gagal kirim OTP:', {
-      status: emailErr?.status,
-      text: emailErr?.text,
-      detail: err,
-      payload: {
-        serviceId: EMAILJS_CONFIG.SERVICE_ID,
-        templateId: EMAILJS_CONFIG.TEMPLATE_ID,
-        publicKey: EMAILJS_CONFIG.PUBLIC_KEY ? 'configured' : 'missing',
-        email: toEmail,
-        passcode: '[redacted]',
-        time: '15',
-      },
+    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        service_id:  EMAILJS_CONFIG.SERVICE_ID,
+        template_id: EMAILJS_CONFIG.TEMPLATE_ID,
+        user_id:     EMAILJS_CONFIG.PUBLIC_KEY,
+        template_params: {
+          to_email:     toEmail,
+          user_name:    toEmail.split('@')[0],
+          otp_code:     otpCode,
+          otp_exp:      '15',
+          email:        toEmail,
+          passcode:     otpCode,
+          time:         '15',
+          from_name:    'ID MAP Admin',
+          from_email:   'id.map.admin@gmail.com',
+          company_name: 'ID-MAP',
+          reply_to:     'id.map.admin@gmail.com',
+        },
+      }),
     });
-    return false;
+    if (!res.ok) {
+      const body = await res.text();
+      console.error('[EmailJS] Error:', res.status, body);
+      return { delivered: false, warning: 'Layanan email OTP sedang bermasalah. Gunakan kode OTP yang ditampilkan di layar ini.' };
+    }
+    return { delivered: true };
+  } catch (err) {
+    console.error('[EmailJS] Fetch gagal:', err);
+    return { delivered: false, warning: 'Koneksi ke layanan email OTP gagal. Gunakan kode OTP yang ditampilkan di layar ini.' };
   }
 }
 
-const AuthContext = createContext<AuthContextValue>({
-  user: null,
-  loading: true,
-  login: () => false,
-  loginWithEmail: async () => ({ success: false }),
-  verifyOTP: async () => false,
-  signUp: async () => ({ success: false }),
-  logout: async () => {},
-});
+function buildOtpResponse(otp: string, delivery: OtpDeliveryResult) {
+  if (delivery.delivered) return { success: true } as const;
+  return { success: true, demoOtp: otp, warning: delivery.warning } as const;
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
@@ -196,10 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchProfile]);
 
   useEffect(() => {
-    if (!isSupabaseConfigured() || USE_EMAILJS_ONLY_OTP) {
-      setLoading(false);
-      return;
-    }
+    if (!isSupabaseConfigured() || USE_EMAILJS_ONLY_OTP) return;
     if (initialized.current) return;
     initialized.current = true;
 
@@ -237,13 +178,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const match = ADMIN_ACCOUNTS.find(a => a.username === username && a.password === password);
     if (!match) return false;
 
-    const { password: _p, username: _u, ...authUser } = match;
+    const authUser: AuthUser = {
+      id: match.id,
+      nama: match.nama,
+      email: match.email,
+      nip: match.nip,
+      unit: match.unit,
+      provinsi: match.provinsi,
+      role: match.role,
+      initials: match.initials,
+    };
     setUser(authUser);
     localStorage.setItem('idmap_auth', JSON.stringify(authUser));
     return true;
   }, []);
 
-  const loginWithEmail = useCallback(async (email: string): Promise<{ success: boolean; demoOtp?: string; error?: string }> => {
+  const loginWithEmail = useCallback(async (email: string): Promise<{ success: boolean; demoOtp?: string; error?: string; warning?: string }> => {
     const emailNorm = email.trim().toLowerCase();
 
     if (isSupabaseConfigured() && !USE_EMAILJS_ONLY_OTP) {
@@ -251,11 +201,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!data) return { success: false, error: 'Email belum terdaftar. Silakan Sign Up terlebih dahulu.' };
 
       const otp = genOTP();
-      const sent = await sendOTPEmail(emailNorm, otp);
-      if (!sent) return { success: false, error: 'Gagal mengirim kode OTP. Coba lagi.' };
-
       localOtpStore[emailNorm] = { otp, type: 'login', expiresAt: Date.now() + 15 * 60 * 1000 };
-      return { success: true };
+      const delivery = await sendOTPEmail(emailNorm, otp);
+      return buildOtpResponse(otp, delivery);
     }
 
     const users = getLocalUsers();
@@ -263,16 +211,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!found) return { success: false, error: 'Email belum terdaftar. Silakan Sign Up terlebih dahulu.' };
 
     const otp = genOTP();
-    const sent = await sendOTPEmail(emailNorm, otp);
-    if (!sent) return { success: false, error: 'Gagal mengirim kode OTP. Coba lagi.' };
-
-    localOtpStore[emailNorm] = {
-      otp,
-      type: 'login',
-      demoUser: found,
-      expiresAt: Date.now() + 15 * 60 * 1000,
-    };
-    return { success: true };
+    localOtpStore[emailNorm] = { otp, type: 'login', demoUser: found, expiresAt: Date.now() + 15 * 60 * 1000 };
+    const delivery = await sendOTPEmail(emailNorm, otp);
+    return buildOtpResponse(otp, delivery);
   }, []);
 
   const verifyOTP = useCallback(async (email: string, otp: string): Promise<boolean> => {
@@ -351,7 +292,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   }, [ensureProfile]);
 
-  const signUp = useCallback(async (data: SignUpData): Promise<{ success: boolean; demoOtp?: string; error?: string }> => {
+  const signUp = useCallback(async (data: SignUpData): Promise<{ success: boolean; demoOtp?: string; error?: string; warning?: string }> => {
     const emailNorm = data.email.trim().toLowerCase();
     const nama = data.nama.trim();
 
@@ -360,9 +301,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (existing) return { success: false, error: 'Email sudah terdaftar. Silakan Login.' };
 
       const otp = genOTP();
-      const sent = await sendOTPEmail(emailNorm, otp);
-      if (!sent) return { success: false, error: 'Gagal mengirim kode OTP. Periksa koneksi dan coba lagi.' };
-
       localOtpStore[emailNorm] = {
         otp,
         type: 'signup',
@@ -375,7 +313,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         unit: data.unit,
         provinsi: data.provinsi,
       }));
-      return { success: true };
+      const delivery = await sendOTPEmail(emailNorm, otp);
+      return buildOtpResponse(otp, delivery);
     }
 
     const users = getLocalUsers();
@@ -383,16 +322,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (existing) return { success: false, error: 'Email sudah terdaftar. Silakan Login.' };
 
     const otp = genOTP();
-    const sent = await sendOTPEmail(emailNorm, otp);
-    if (!sent) return { success: false, error: 'Gagal mengirim kode OTP. Periksa koneksi dan coba lagi.' };
-
     localOtpStore[emailNorm] = {
       otp,
       type: 'signup',
       expiresAt: Date.now() + 15 * 60 * 1000,
       signupData: { ...data, nama, email: emailNorm },
     };
-    return { success: true };
+    const delivery = await sendOTPEmail(emailNorm, otp);
+    return buildOtpResponse(otp, delivery);
   }, []);
 
   const logout = useCallback(async () => {
@@ -407,5 +344,3 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
-export const useAuth = () => useContext(AuthContext);
