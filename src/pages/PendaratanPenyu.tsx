@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Turtle, MapPin, Search, Plus, AlertTriangle, FileDown, Pencil, Check, X, Trash2, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
-import { getSurveys, saveSurvey } from '../data/localStore';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { fetchSurveys, updateSurveyRemote, removeSurvey } from '../data/localStore';
 
 interface PenyuEntry {
   id: string;
@@ -52,9 +51,7 @@ export default function PendaratanPenyu() {
   };
 
   useEffect(() => {
-    const fromLocal = (): PenyuEntry[] => {
-      const surveys = getSurveys();
-      // Tampilkan SEMUA status (pending, approved, rejected) -- bukan hanya approved
+    const fromRecords = (surveys: Awaited<ReturnType<typeof fetchSurveys>>): PenyuEntry[] => {
       return surveys
         .filter(s => s.tujuanSurvei === 'pendaratan_penyu')
         .map(s => ({
@@ -75,93 +72,16 @@ export default function PendaratanPenyu() {
 
     const loadData = async () => {
       // 1. Load dari localStorage dulu (instant)
-      const localEntries = fromLocal();
-      if (localEntries.length > 0) setData(localEntries);
-
-      // 2. Jika online, tarik dari Supabase & merge agar data tidak hilang walaupun localStorage bersih
-      if (!isSupabaseConfigured()) return;
-      try {
-        const { data: rows, error } = await supabase
-          .from('surveys')
-          .select('*')
-          .eq('tujuan_survei', 'pendaratan_penyu')
-          .order('created_at', { ascending: false })
-          .limit(500);
-
-        if (error || !rows) return;
-
-        // Buat map dari localStorage (id -> entry) agar sarang_points lokal tidak hilang
-        const localMap = new Map(localEntries.map(e => [e.id, e]));
-
-        const merged: PenyuEntry[] = rows.map((row: Record<string, unknown>) => {
-          const local = localMap.get(row.id as string);
-          return {
-            id: row.id as string,
-            namaPantai: (row.location_name as string) || '',
-            koordinat: row.koordinat_lat && row.koordinat_lng
-              ? `${row.koordinat_lat}, ${row.koordinat_lng}` : '',
-            lokasi: (row.location_name as string) || '',
-            jenisPenyu: (row.spesies_dominan as string) || '',
-            jumlahSarang: local?.sarangPoints?.length ?? 0,
-            tanggalSurvei: (row.tanggal as string) || '',
-            statusPerlindungan: 'dilindungi',
-            ancaman: Array.isArray(row.ancaman_utama)
-              ? (row.ancaman_utama as string[]).join(', ') : '',
-            fotoUrl: Array.isArray(row.photo_urls) && (row.photo_urls as string[]).length > 0
-              ? (row.photo_urls as string[])[0] : '',
-            verificationStatus: local?.verificationStatus ?? 'pending',
-            // Prioritaskan sarangPoints dari localStorage (koordinat detail)
-            sarangPoints: local?.sarangPoints ?? [],
-          };
-        });
-
-        // Tambah data lokal yang belum ada di Supabase (masih pending upload)
-        const supabaseIds = new Set(rows.map((r: Record<string, unknown>) => r.id as string));
-        const onlyLocal = localEntries.filter(e => !supabaseIds.has(e.id));
-
-        const combined = [...merged, ...onlyLocal];
-        combined.sort((a, b) => (b.tanggalSurvei > a.tanggalSurvei ? 1 : -1));
-        setData(combined);
-
-        // Simpan ke localStorage agar data tersedia offline
-        const existingLocal = getSurveys();
-        const existingIds = new Set(existingLocal.map(s => s.id));
-        rows.forEach((row: Record<string, unknown>) => {
-          if (!existingIds.has(row.id as string)) {
-            saveSurvey({
-              id: row.id as string,
-              timestamp: (row.created_at as string) || new Date().toISOString(),
-              namaPetugas: (row.petugas_nama as string) || '',
-              unit: (row.petugas_unit as string) || '',
-              locationId: (row.location_id as string) || '',
-              locationName: (row.location_name as string) || '',
-              province: (row.province as string) || '',
-              tutupanTajuk: '',
-              kerapatan: '',
-              salinitas: '',
-              ancamanCount: Array.isArray(row.ancaman_utama) ? (row.ancaman_utama as string[]).length : 0,
-              kondisiUmum: (row.kondisi_umum as string) || '',
-              isCustomLoc: true,
-              tujuanSurvei: 'pendaratan_penyu',
-              jenisPenyu: (row.spesies_dominan as string) || '',
-              namaPantai: (row.location_name as string) || '',
-              koordinatLat: row.koordinat_lat ? String(row.koordinat_lat) : '',
-              koordinatLng: row.koordinat_lng ? String(row.koordinat_lng) : '',
-              ancamanUtama: Array.isArray(row.ancaman_utama) ? (row.ancaman_utama as string[]) : [],
-              fotoDokumentasi: Array.isArray(row.photo_urls) && (row.photo_urls as string[]).length > 0
-                ? (row.photo_urls as string[])[0] : '',
-              verificationStatus: 'pending',
-            });
-          }
-        });
-      } catch (err) {
-        console.warn('[PendaratanPenyu] Supabase load gagal, pakai localStorage:', err);
-      }
+      const surveys = await fetchSurveys();
+      const entries = fromRecords(surveys);
+      entries.sort((a, b) => (b.tanggalSurvei > a.tanggalSurvei ? 1 : -1));
+      setData(entries);
     };
 
     void loadData();
-    window.addEventListener('storage', () => setData(fromLocal()));
-    return () => window.removeEventListener('storage', () => setData(fromLocal()));
+    const handleStorage = () => { void loadData(); };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   const filtered = data.filter(d =>
@@ -195,16 +115,29 @@ export default function PendaratanPenyu() {
     setEditForm(null);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!isAdmin || !editForm) return;
+    const [lat = '', lng = ''] = editForm.koordinat.split(',').map(part => part.trim());
+    await updateSurveyRemote(editForm.id, {
+      namaPantai: editForm.namaPantai,
+      locationName: editForm.lokasi,
+      jenisPenyu: editForm.jenisPenyu,
+      jumlahSarang: String(editForm.jumlahSarang),
+      statusPerlindungan: editForm.statusPerlindungan,
+      ancamanUtama: editForm.ancaman ? editForm.ancaman.split(',').map(item => item.trim()).filter(Boolean) : [],
+      koordinatLat: lat,
+      koordinatLng: lng,
+      sarangPoints: editForm.sarangPoints,
+    });
     setData(prev => prev.map(d => d.id === editForm.id ? editForm : d));
     setEditId(null);
     setEditForm(null);
   };
 
-  const deleteEntry = (id: string, namaPantai: string) => {
+  const deleteEntry = async (id: string, namaPantai: string) => {
     if (!isAdmin) return;
     if (window.confirm(`Hapus data "${namaPantai}"?\n\nData yang dihapus tidak dapat dikembalikan.`)) {
+      await removeSurvey(id);
       setData(prev => prev.filter(d => d.id !== id));
     }
   };

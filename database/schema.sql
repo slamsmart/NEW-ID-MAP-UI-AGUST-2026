@@ -151,6 +151,11 @@ CREATE TABLE IF NOT EXISTS surveys (
   -- Foto & Sync
   foto_dokumentasi      TEXT,
   photo_urls            TEXT[]      NOT NULL DEFAULT '{}',
+  verification_status   TEXT        NOT NULL DEFAULT 'pending'
+                                    CHECK (verification_status IN ('pending','approved','rejected')),
+  verification_note     TEXT,
+  verified_by           TEXT,
+  verified_at           TIMESTAMPTZ,
   sync_status           TEXT        NOT NULL DEFAULT 'pending'
                                     CHECK (sync_status IN ('synced','pending','failed')),
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -263,10 +268,38 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='surveys' AND column_name='verification_status') THEN
+    ALTER TABLE surveys ADD COLUMN verification_status TEXT NOT NULL DEFAULT 'pending';
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='surveys' AND column_name='verification_note') THEN
+    ALTER TABLE surveys ADD COLUMN verification_note TEXT;
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='surveys' AND column_name='verified_by') THEN
+    ALTER TABLE surveys ADD COLUMN verified_by TEXT;
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='surveys' AND column_name='verified_at') THEN
+    ALTER TABLE surveys ADD COLUMN verified_at TIMESTAMPTZ;
+  END IF;
+END $$;
+
 -- Update CHECK constraint untuk tujuan_survei (drop & recreate)
 ALTER TABLE surveys DROP CONSTRAINT IF EXISTS surveys_tujuan_survei_check;
 ALTER TABLE surveys ADD CONSTRAINT surveys_tujuan_survei_check
   CHECK (tujuan_survei IN ('monitoring','potensi_penanaman','abrasi','pendaratan_penyu','monitoring_vegetasi'));
+
+ALTER TABLE surveys DROP CONSTRAINT IF EXISTS surveys_verification_status_check;
+ALTER TABLE surveys ADD CONSTRAINT surveys_verification_status_check
+  CHECK (verification_status IN ('pending','approved','rejected'));
 
 
 -- ============================================================

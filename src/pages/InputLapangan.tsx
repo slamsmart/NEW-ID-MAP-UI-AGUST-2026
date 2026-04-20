@@ -6,12 +6,13 @@ import {
 } from 'lucide-react';
 // Location data no longer needed â€" GPS auto-detect used instead
 import { PROVINSI_LIST, KABKOTA_BY_PROVINSI } from '../data/wilayahIndonesia';
-import { getSurveys, saveSurvey, type SurveyRecord } from '../data/localStore';
+import { fetchSurveys, getSurveys, saveSurvey, type SurveyRecord } from '../data/localStore';
 import { hitungSkorPotensi, rekomendasiSpesiesBySubstrat } from '../data/abrasiData';
 import { useAuth } from '../context/useAuth';
 import { uploadPhoto, fileToDataUrl, isCloudinaryConfigured } from '../lib/cloudinary';
 import { enqueueSurvey } from '../lib/offlineQueue';
 import { extractGpsAuto, preloadOcrWorker, type ExifGpsResult } from '../lib/exifGps';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 // â"€â"€â"€ Types â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 type TujuanSurvei = 'monitoring_vegetasi' | 'potensi_penanaman' | 'pendaratan_penyu';
@@ -1010,7 +1011,31 @@ export default function InputLapangan() {
   const norm = (value?: string | null) => (value ?? '').trim().toLowerCase();
   const userNameNorm = norm(user?.nama);
   const userUnitNorm = norm(user?.unit);
-  const allHistory = getSurveys();
+  const [allHistory, setAllHistory] = useState<SurveyRecord[]>(() => getSurveys());
+  useEffect(() => {
+    const loadHistory = async () => {
+      const surveys = await fetchSurveys();
+      setAllHistory(surveys);
+    };
+    void loadHistory();
+    const handleStorage = () => { void loadHistory(); };
+    window.addEventListener('storage', handleStorage);
+    const timer = setInterval(() => { void loadHistory(); }, 10000);
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    if (isSupabaseConfigured()) {
+      channel = supabase
+        .channel('input-lapangan-history')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'surveys' }, () => {
+          void loadHistory();
+        })
+        .subscribe();
+    }
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(timer);
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
   const matchedHistory = allHistory.filter(s => {
     const byName = userNameNorm ? norm(s.namaPetugas) === userNameNorm : false;
     const byUnit = userUnitNorm ? norm(s.unit) === userUnitNorm : false;
@@ -2016,5 +2041,3 @@ export default function InputLapangan() {
     </div>
   );
 }
-
-

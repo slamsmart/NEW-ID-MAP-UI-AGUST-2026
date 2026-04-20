@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   Sprout, AlertTriangle, MapPin, Filter, ChevronDown, ChevronUp,
   Leaf, Droplets, Layers, Camera, ClipboardCheck, BarChart2, Info,
@@ -10,18 +10,18 @@ import {
   rekomendasiSpesiesBySubstrat, hitungSkorPotensi,
   type PrioritasLevel, type TitikAbrasi,
 } from '../data/abrasiData';
-import { getSurveys, updateSurvey, deleteSurvey, type SurveyRecord } from '../data/localStore';
+import { fetchSurveys, updateSurveyRemote, removeSurvey, type SurveyRecord } from '../data/localStore';
 import { useAuth } from '../context/useAuth';
 
-// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 type TabId = 'abrasi' | 'potensi' | 'ringkasan';
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatLuasan(min: number, max: number, satuan: string): string {
   if (min === max) return `${min.toLocaleString('id-ID')} ${satuan}`;
-  return `${min.toLocaleString('id-ID')}â€“${max.toLocaleString('id-ID')} ha`;
+  return `${min.toLocaleString('id-ID')}–${max.toLocaleString('id-ID')} ha`;
 }
 
 function estimateAbrasiLuasan(panjangTerdampak?: string): { min: number; max: number; satuan: string } {
@@ -145,7 +145,7 @@ function SurveyPotensiCard({ survey, isAdmin, onEdit, onDelete }: {
                 <span className={`w-1.5 h-1.5 rounded-full ${vDot}`} />{vLabel}
               </span>
             </div>
-            <p className="text-xs text-gray-500">{survey.province} Â· {new Date(survey.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+            <p className="text-xs text-gray-500">{survey.province} · {new Date(survey.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             {isAdmin && (
@@ -254,7 +254,7 @@ function SurveyPotensiCard({ survey, isAdmin, onEdit, onDelete }: {
           )}
           <div className="flex items-center gap-1.5 text-xs text-gray-400">
             <Camera className="w-3 h-3" />
-            <span>Petugas: {survey.namaPetugas} Â· {survey.unit}</span>
+            <span>Petugas: {survey.namaPetugas} · {survey.unit}</span>
           </div>
         </div>
       )}
@@ -262,7 +262,7 @@ function SurveyPotensiCard({ survey, isAdmin, onEdit, onDelete }: {
   );
 }
 
-// â”€â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function RekomendasiLokasi() {
   const { user } = useAuth();
@@ -288,7 +288,7 @@ export default function RekomendasiLokasi() {
     if (editAbrasiForm.id.startsWith('ABR-')) {
       setAbrasiData(prev => prev.map(d => d.id === editAbrasiForm.id ? editAbrasiForm : d));
     } else {
-      updateSurvey(editAbrasiForm.id, {
+      void updateSurveyRemote(editAbrasiForm.id, {
         namaPantai: editAbrasiForm.namaPantai,
         locationName: editAbrasiForm.kecamatan,
         province: editAbrasiForm.provinsi,
@@ -313,7 +313,7 @@ export default function RekomendasiLokasi() {
         koordinatLat: String(editAbrasiForm.koordinat.lat || ''),
         koordinatLng: String(editAbrasiForm.koordinat.lng || ''),
       });
-      refreshSurveys();
+      void refreshSurveys();
     }
     setEditAbrasiId(null);
     setEditAbrasiForm(null);
@@ -324,18 +324,25 @@ export default function RekomendasiLokasi() {
       if (id.startsWith('ABR-')) {
         setAbrasiData(prev => prev.filter(d => d.id !== id));
       } else {
-        deleteSurvey(id);
-        refreshSurveys();
+        void removeSurvey(id);
+        void refreshSurveys();
       }
     }
   };
 
-  // â”€â”€ Surveys state (refreshable) â”€â”€
-  const [surveys, setSurveys] = useState<SurveyRecord[]>(() => getSurveys());
+  // ── Surveys state (refreshable) ──
+  const [surveys, setSurveys] = useState<SurveyRecord[]>([]);
   const [editSurvey, setEditSurvey] = useState<SurveyRecord | null>(null);
   const [editSurveyForm, setEditSurveyForm] = useState<SurveyRecord | null>(null);
 
-  const refreshSurveys = () => setSurveys(getSurveys());
+  const refreshSurveys = async () => setSurveys(await fetchSurveys());
+
+  useEffect(() => {
+    void refreshSurveys();
+    const handleStorage = () => { void refreshSurveys(); };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   const startEditSurvey = (s: SurveyRecord) => {
     if (!isAdmin) return;
@@ -345,16 +352,16 @@ export default function RekomendasiLokasi() {
   const cancelEditSurvey = () => { setEditSurvey(null); setEditSurveyForm(null); };
   const saveEditSurvey = () => {
     if (!isAdmin || !editSurveyForm) return;
-    updateSurvey(editSurveyForm.id, editSurveyForm);
-    refreshSurveys();
+    void updateSurveyRemote(editSurveyForm.id, editSurveyForm);
+    void refreshSurveys();
     setEditSurvey(null);
     setEditSurveyForm(null);
   };
   const deleteSurveyFn = (id: string, nama: string) => {
     if (!isAdmin) return;
     if (window.confirm(`Hapus data survei "${nama}"?\n\nData yang dihapus tidak dapat dikembalikan.`)) {
-      deleteSurvey(id);
-      refreshSurveys();
+      void removeSurvey(id);
+      void refreshSurveys();
     }
   };
 
@@ -417,7 +424,7 @@ export default function RekomendasiLokasi() {
       <html lang="id">
       <head>
         <meta charset="UTF-8"/>
-        <title>Rekomendasi Lokasi Penanaman Mangrove â€” ID-MAP</title>
+        <title>Rekomendasi Lokasi Penanaman Mangrove — ID-MAP</title>
         <style>
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a1a; padding: 24px; }
@@ -444,18 +451,18 @@ export default function RekomendasiLokasi() {
       </head>
       <body>
         <h1>Rekomendasi Lokasi Penanaman Mangrove</h1>
-        <p class="subtitle">Sistem ID-MAP â€” Integrasi Data Mangrove Pesisir</p>
-        <p class="meta">Tanggal cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} Â· Sumber: Survey lapangan DKP + analisis citra satelit + data BRGM 2025</p>
+        <p class="subtitle">Sistem ID-MAP — Integrasi Data Mangrove Pesisir</p>
+        <p class="meta">Tanggal cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} · Sumber: Survey lapangan DKP + analisis citra satelit + data BRGM 2025</p>
 
         <div class="kpi-grid">
           <div class="kpi"><div class="kpi-val">${combinedAbrasiData.length}</div><div class="kpi-lbl">Titik Rawan Abrasi</div></div>
           <div class="kpi"><div class="kpi-val">${prioritasTinggi}</div><div class="kpi-lbl">Prioritas Tinggi</div></div>
-          <div class="kpi"><div class="kpi-val">Â±${totalLuasan.toLocaleString('id-ID')}</div><div class="kpi-lbl">Target Luasan (ha)</div></div>
+          <div class="kpi"><div class="kpi-val">±${totalLuasan.toLocaleString('id-ID')}</div><div class="kpi-lbl">Target Luasan (ha)</div></div>
           <div class="kpi"><div class="kpi-val">${potentialSurveys.length}</div><div class="kpi-lbl">Data Survei Lapangan</div></div>
         </div>
 
         <div class="section">
-          <div class="section-title">A. Titik Rawan Abrasi â€” Rekomendasi Lokasi Penanaman</div>
+          <div class="section-title">A. Titik Rawan Abrasi — Rekomendasi Lokasi Penanaman</div>
           <table>
             <thead>
               <tr>
@@ -474,7 +481,7 @@ export default function RekomendasiLokasi() {
                   <td>${r.indikasi}</td>
                   <td>${r.kondisiSesudah}</td>
                   <td style="text-transform:capitalize">${r.substrat}</td>
-                  <td>${r.luasanRestorasi.min === r.luasanRestorasi.max ? r.luasanRestorasi.min : `${r.luasanRestorasi.min}â€“${r.luasanRestorasi.max}`} ${r.luasanRestorasi.satuan}</td>
+                  <td>${r.luasanRestorasi.min === r.luasanRestorasi.max ? r.luasanRestorasi.min : `${r.luasanRestorasi.min}–${r.luasanRestorasi.max}`} ${r.luasanRestorasi.satuan}</td>
                   <td><span class="badge-${r.prioritas === 'Tinggi' ? 'tinggi' : r.prioritas === 'Sedang' ? 'sedang' : 'rendah'}">${r.prioritas}</span></td>
                   <td><em>${r.tanamanRekomendasi.join(', ')}</em></td>
                 </tr>`).join('')}
@@ -500,12 +507,12 @@ export default function RekomendasiLokasi() {
                   <td>${i + 1}</td>
                   <td><strong>${s.locationName}</strong></td>
                   <td>${s.province}</td>
-                  <td style="text-transform:capitalize">${s.substrat ?? 'â€”'}</td>
-                  <td>${s.salinitas || 'â€”'}</td>
-                  <td>${s.tutupanTajuk || 'â€”'}</td>
+                  <td style="text-transform:capitalize">${s.substrat ?? '—'}</td>
+                  <td>${s.salinitas || '—'}</td>
+                  <td>${s.tutupanTajuk || '—'}</td>
                   <td><strong>${skor}/10</strong></td>
-                  <td><em>${s.spesiesDominan || 'â€”'}</em></td>
-                  <td>${s.rekomendasiLapangan || 'â€”'}</td>
+                  <td><em>${s.spesiesDominan || '—'}</em></td>
+                  <td>${s.rekomendasiLapangan || '—'}</td>
                   <td>${new Date(s.timestamp).toLocaleDateString('id-ID')}</td>
                 </tr>`;
               }).join('')}
@@ -514,7 +521,7 @@ export default function RekomendasiLokasi() {
         </div>` : ''}
 
         <div class="footer">
-          Dicetak dari Sistem ID-MAP Â· Data bersifat referensi lapangan. Verifikasi lapangan tetap diperlukan sebelum implementasi program penanaman.
+          Dicetak dari Sistem ID-MAP · Data bersifat referensi lapangan. Verifikasi lapangan tetap diperlukan sebelum implementasi program penanaman.
         </div>
       </body>
       </html>
@@ -536,7 +543,7 @@ export default function RekomendasiLokasi() {
   return (
     <div className="space-y-6">
 
-      {/* PDF Export Toggle â€” admin only */}
+      {/* PDF Export Toggle — admin only */}
       {isAdmin && (
         <div className="flex items-center justify-end">
           <button
@@ -574,8 +581,8 @@ export default function RekomendasiLokasi() {
                 Cetak / Simpan PDF
               </button>
               <div className="text-xs text-green-600 space-y-0.5">
-                <p>âœ“ {combinedAbrasiData.length} titik rawan abrasi</p>
-                <p>âœ“ {potentialSurveys.length} data survei lapangan</p>
+                <p>✓ {combinedAbrasiData.length} titik rawan abrasi</p>
+                <p>✓ {potentialSurveys.length} data survei lapangan</p>
               </div>
             </div>
           </div>
@@ -611,7 +618,7 @@ export default function RekomendasiLokasi() {
             </div>
             <span className="text-xs text-gray-500 font-medium">Target Luasan</span>
           </div>
-          <p className="text-2xl font-bold text-gray-800">Â±{totalLuasan.toLocaleString('id-ID')}</p>
+          <p className="text-2xl font-bold text-gray-800">±{totalLuasan.toLocaleString('id-ID')}</p>
           <p className="text-xs text-gray-400 mt-0.5">ha area restorasi</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
@@ -657,7 +664,7 @@ export default function RekomendasiLokasi() {
           ))}
         </div>
 
-        {/* â”€â”€ Tab: Titik Rawan Abrasi â”€â”€ */}
+        {/* ── Tab: Titik Rawan Abrasi ── */}
         {activeTab === 'abrasi' && (
           <div className="p-4 space-y-4">
             {/* Filters */}
@@ -682,7 +689,7 @@ export default function RekomendasiLokasi() {
                   <option value="semua">Semua Prioritas</option>
                   <option value="Tinggi">Tinggi</option>
                   <option value="Sedang">Sedang</option>
-                  <option value="Rendahâ€“Sedang">Rendahâ€“Sedang</option>
+                  <option value="Rendah–Sedang">Rendah–Sedang</option>
                 </select>
               </div>
               <select
@@ -790,7 +797,7 @@ export default function RekomendasiLokasi() {
                         <tr key={`${row.id}-edit`}>
                           <td colSpan={10} className="px-4 py-4 bg-yellow-50/50 border-t border-yellow-200">
                             <div className="flex items-center justify-between mb-3">
-                              <p className="text-xs font-semibold text-green-700">Edit Data Abrasi â€” {row.id}</p>
+                              <p className="text-xs font-semibold text-green-700">Edit Data Abrasi — {row.id}</p>
                               <div className="flex items-center gap-2">
                                 <button onClick={saveEditAbrasi} className="flex items-center gap-1 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg transition-colors">
                                   <Check className="w-3 h-3" /> Simpan
@@ -817,7 +824,7 @@ export default function RekomendasiLokasi() {
                                   className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-green-500">
                                   <option value="Tinggi">Tinggi</option>
                                   <option value="Sedang">Sedang</option>
-                                  <option value="Rendahâ€“Sedang">Rendah-Sedang</option>
+                                  <option value="Rendah–Sedang">Rendah-Sedang</option>
                                 </select>
                               </div>
                               <div>
@@ -928,7 +935,7 @@ export default function RekomendasiLokasi() {
           </div>
         )}
 
-        {/* â”€â”€ Tab: Potensi dari Survei Lapangan â”€â”€ */}
+        {/* ── Tab: Potensi dari Survei Lapangan ── */}
         {activeTab === 'potensi' && (
           <div className="p-4 space-y-4">
             <div className="flex items-center justify-between">
@@ -968,14 +975,14 @@ export default function RekomendasiLokasi() {
           </div>
         )}
 
-        {/* â”€â”€ Tab: Ringkasan & Analisis â”€â”€ */}
+        {/* ── Tab: Ringkasan & Analisis ── */}
         {activeTab === 'ringkasan' && (
           <div className="p-4 space-y-6">
             {/* Prioritas breakdown */}
             <div>
               <p className="text-sm font-semibold text-gray-800 mb-3">Distribusi Prioritas Lokasi Abrasi</p>
               <div className="space-y-2">
-                {(['Tinggi', 'Sedang', 'Rendahâ€“Sedang'] as PrioritasLevel[]).map(p => {
+                {(['Tinggi', 'Sedang', 'Rendah–Sedang'] as PrioritasLevel[]).map(p => {
                   const count = combinedAbrasiData.filter(d => d.prioritas === p).length;
                   const pct = combinedAbrasiData.length ? Math.round((count / combinedAbrasiData.length) * 100) : 0;
                   return (
@@ -1066,8 +1073,8 @@ export default function RekomendasiLokasi() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
                   { icon: Layers, label: 'Substrat', desc: 'Lumpur (+4), Campuran (+3), Pasir (+1). Lumpur ideal untuk akar nafas Avicennia & Rhizophora.' },
-                  { icon: Droplets, label: 'Salinitas', desc: '10â€“30 ppt optimal (+3). Di bawah 10 atau di atas 35 ppt mengurangi skor.' },
-                  { icon: Leaf, label: 'Tutupan Tajuk', desc: '<30% (+3): lahan terbuka ideal. 30â€“60% (+2): sebagian terbuka. >60% (+1): sudah padat.' },
+                  { icon: Droplets, label: 'Salinitas', desc: '10–30 ppt optimal (+3). Di bawah 10 atau di atas 35 ppt mengurangi skor.' },
+                  { icon: Leaf, label: 'Tutupan Tajuk', desc: '<30% (+3): lahan terbuka ideal. 30–60% (+2): sebagian terbuka. >60% (+1): sudah padat.' },
                 ].map(m => (
                   <div key={m.label} className="flex gap-2">
                     <m.icon className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -1083,12 +1090,12 @@ export default function RekomendasiLokasi() {
         )}
       </div>
 
-      {/* â”€â”€ Edit Survey Modal â”€â”€ */}
+      {/* ── Edit Survey Modal ── */}
       {editSurvey && editSurveyForm && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-gray-200 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <p className="text-sm font-bold text-green-700">Edit Data Survei â€” {editSurvey.id}</p>
+              <p className="text-sm font-bold text-green-700">Edit Data Survei — {editSurvey.id}</p>
               <button onClick={cancelEditSurvey} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-4 space-y-3">
@@ -1107,7 +1114,7 @@ export default function RekomendasiLokasi() {
                   <label className="text-xs text-gray-500 mb-1 block">Substrat</label>
                   <select value={editSurveyForm.substrat ?? ''} onChange={e => setEditSurveyForm({ ...editSurveyForm, substrat: e.target.value })}
                     className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-green-500">
-                    <option value="">â€”</option>
+                    <option value="">—</option>
                     <option value="lumpur">Lumpur</option>
                     <option value="pasir">Pasir</option>
                     <option value="campuran">Campuran</option>

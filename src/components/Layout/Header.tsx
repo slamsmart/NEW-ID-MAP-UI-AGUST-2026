@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, Search, Database, Wifi, WifiOff, RefreshCw, ChevronDown, LogOut } from 'lucide-react';
 import { alerts } from '../../data/mockData';
 import { useAuth } from '../../context/useAuth';
-import { getSurveyStats } from '../../data/localStore';
+import { fetchSurveyStats } from '../../data/localStore';
 import { syncPendingQueue, getPendingCount } from '../../lib/offlineQueue';
 
 interface HeaderProps {
@@ -32,22 +32,22 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const refresh = () => {
-      const stats = getSurveyStats();
+    const refresh = async () => {
+      const stats = await fetchSurveyStats();
       setSurveyCount(stats.total);
       setPendingSync(getPendingCount());
     };
-    refresh();
+    void refresh();
 
     const handleOnline = async () => {
       setIsOnline(true);
       setSyncing(true);
       await syncPendingQueue();
       setSyncing(false);
-      refresh();
+      await refresh();
     };
     const handleOffline = () => setIsOnline(false);
-    const handleStorage = refresh;
+    const handleStorage = () => { void refresh(); };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);

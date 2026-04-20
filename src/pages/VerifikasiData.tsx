@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ClipboardCheck, Search, Filter, Check, X,
   AlertCircle, Eye, FileText, Camera, Navigation, ExternalLink,
   Leaf, Trees, Turtle, AlertTriangle, Sprout, RefreshCw,
 } from 'lucide-react';
-import { getSurveys, verifySurvey, getVerificationStats } from '../data/localStore';
+import { fetchSurveys, fetchVerificationStats, verifySurveyRemote, type SurveyRecord } from '../data/localStore';
 import { useAuth } from '../context/useAuth';
 
 type FilterStatus = 'semua' | 'pending' | 'approved' | 'rejected';
@@ -46,13 +46,24 @@ export default function VerifikasiData() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [verifyId, setVerifyId] = useState<string | null>(null);
   const [verifyNote, setVerifyNote] = useState('');
-  const [refreshKey, setRefreshKey] = useState(0);
-  const refresh = () => setRefreshKey(k => k + 1);
-  void refreshKey;
+  const [allSurveys, setAllSurveys] = useState<SurveyRecord[]>([]);
+  const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
+
+  const refresh = async () => {
+    const [loadedSurveys, loadedStats] = await Promise.all([fetchSurveys(), fetchVerificationStats()]);
+    setAllSurveys(loadedSurveys);
+    setStats(loadedStats);
+  };
+
+  useEffect(() => {
+    void refresh();
+    const handleStorage = () => { void refresh(); };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   const surveys = (() => {
-    const all = getSurveys();
-    let filtered = [...all];
+    let filtered = [...allSurveys];
     if (filterStatus !== 'semua') filtered = filtered.filter(s => s.verificationStatus === filterStatus);
     if (filterTujuan !== 'semua') filtered = filtered.filter(s => s.tujuanSurvei === filterTujuan);
     if (search.trim()) {
@@ -67,14 +78,12 @@ export default function VerifikasiData() {
     return filtered;
   })();
 
-  const stats = getVerificationStats();
-
-  const handleVerify = (id: string, status: 'approved' | 'rejected') => {
+  const handleVerify = async (id: string, status: 'approved' | 'rejected') => {
     if (!isVerifikator) return;
-    verifySurvey(id, status, verifyNote, user?.nama ?? 'Verifikator');
+    await verifySurveyRemote(id, status, verifyNote, user?.nama ?? 'Verifikator');
     setVerifyId(null);
     setVerifyNote('');
-    refresh();
+    await refresh();
   };
 
   return (
@@ -90,7 +99,7 @@ export default function VerifikasiData() {
             <p className="text-sm font-bold text-gray-800">Data Input Lapangan</p>
           </div>
         </div>
-        <button onClick={refresh} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors">
+        <button onClick={() => void refresh()} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors">
           <RefreshCw className="w-3.5 h-3.5" /> Refresh
         </button>
       </div>

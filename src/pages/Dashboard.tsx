@@ -10,7 +10,7 @@ import {
 import {
   mangroveLocations, ekosistemData, alerts, timeSeriesData,
 } from '../data/mockData';
-import { getSurveyStats, getSurveys } from '../data/localStore';
+import { fetchSurveyStats, fetchSurveys, getSurveyStats, getSurveys } from '../data/localStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import KPICard from '../components/shared/KPICard';
 import StatusBadge from '../components/shared/StatusBadge';
@@ -32,12 +32,14 @@ export default function Dashboard() {
   const [recentSurveys, setRecentSurveys] = useState(getSurveys().slice(0, 5));
 
   useEffect(() => {
-    const refresh = () => {
-      setSurveyStats(getSurveyStats());
-      setRecentSurveys(getSurveys().slice(0, 5));
+    const refresh = async () => {
+      const [stats, surveys] = await Promise.all([fetchSurveyStats(), fetchSurveys()]);
+      setSurveyStats(stats);
+      setRecentSurveys(surveys.slice(0, 5));
     };
-    refresh();
-    window.addEventListener('storage', refresh);
+    void refresh();
+    const handleStorage = () => { void refresh(); };
+    window.addEventListener('storage', handleStorage);
     const timer = setInterval(refresh, 5000);
 
     // Supabase realtime: listen INSERT di tabel surveys
@@ -45,14 +47,14 @@ export default function Dashboard() {
     if (isSupabaseConfigured()) {
       channel = supabase
         .channel('surveys-realtime')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'surveys' }, () => {
-          refresh();
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'surveys' }, () => {
+          void refresh();
         })
         .subscribe();
     }
 
     return () => {
-      window.removeEventListener('storage', refresh);
+      window.removeEventListener('storage', handleStorage);
       clearInterval(timer);
       if (channel) supabase.removeChannel(channel);
     };
