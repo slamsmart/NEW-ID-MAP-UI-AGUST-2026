@@ -197,7 +197,7 @@ export default function PetaPublik() {
           <div className="w-px h-6 bg-white/20" />
           <div>
             <h1 className="text-white font-bold text-sm sm:text-base leading-tight">Peta Interaktif Mangrove</h1>
-            <p className="text-white/40 text-[10px] hidden sm:block">Data titik mangrove, abrasi, dan pendaratan penyu</p>
+            <p className="text-white/40 text-[10px] hidden sm:block">Data Integrasi Mangrove dan Ekosistem Pesisir berdasarkan hasil ground check dan pengolahan data secara spasial</p>
           </div>
         </div>
 
