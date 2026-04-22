@@ -4,6 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { mangroveLocations, ekosistemData } from '../data/mockData';
 import { titikAbrasiData } from '../data/abrasiData';
+import { fetchSurveys } from '../data/localStore';
 import { Filter, Layers, MapPin, Map, Satellite, Mountain, ChevronRight, X, Download, FileText, LogIn, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
@@ -84,17 +85,17 @@ export default function PetaPublik() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterKawasan, setFilterKawasan] = useState('all');
-  const [activeLayer, setActiveLayer] = useState('osm');
+  // Single layer filter: 'all' | 'mangrove' | 'abrasi' | 'penyu' | 'benthic'
+  const [activeLayerFilter, setActiveLayerFilter] = useState<'all' | 'mangrove' | 'abrasi' | 'penyu' | 'benthic'>('all');
+  const [activeMapLayer, setActiveMapLayer] = useState('osm');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<'mangrove' | 'abrasi' | 'penyu' | null>(null);
 
-  // Layer visibility
-  const [showMangrove, setShowMangrove] = useState(true);
-  const [showAbrasi, setShowAbrasi] = useState(true);
-  const [showPenyu, setShowPenyu] = useState(true);
-  const [showBenthic, setShowBenthic] = useState(false);
+  // Derived visibility from single filter
+  const showMangrove = activeLayerFilter === 'all' || activeLayerFilter === 'mangrove';
+  const showAbrasi   = activeLayerFilter === 'all' || activeLayerFilter === 'abrasi';
+  const showPenyu    = activeLayerFilter === 'all' || activeLayerFilter === 'penyu';
+  const showBenthic  = activeLayerFilter === 'all' || activeLayerFilter === 'benthic';
 
   // Benthic GeoJSON
   const [benthicData, setBenthicData] = useState<any>(null);
@@ -103,13 +104,61 @@ export default function PetaPublik() {
   // Download gate modal
   const [showDownloadGate, setShowDownloadGate] = useState(false);
 
-  const mangroveFiltered = mangroveLocations.filter(loc => {
-    if (filterStatus !== 'all' && loc.status !== filterStatus) return false;
-    if (filterKawasan !== 'all' && loc.kawasan !== filterKawasan) return false;
-    return true;
-  });
+  // Real survey data from field officers
+  const [surveyPenyu, setSurveyPenyu] = useState<typeof penyuLocations>([]);
+  const [surveyAbrasi, setSurveyAbrasi] = useState<typeof titikAbrasiData>([]);
 
-  // Load benthic when toggled on
+  const mangroveFiltered = mangroveLocations;
+
+  // Load survey data (field officer input → map)
+  useEffect(() => {
+    fetchSurveys().then(surveys => {
+      // Penyu from surveys
+      const penyuFromDB = surveys
+        .filter(s => s.tujuanSurvei === 'pendaratan_penyu' && s.koordinatLat && s.koordinatLng)
+        .map(s => ({
+          id: s.id,
+          namaPantai: s.namaPantai || s.locationName || 'Pantai Pendaratan Penyu',
+          lokasi: s.locationName || s.province || '',
+          lat: parseFloat(s.koordinatLat!),
+          lng: parseFloat(s.koordinatLng!),
+          jenis: s.jenisPenyu || 'Penyu',
+          sarang: parseInt(s.jumlahSarang || '0'),
+        }))
+        .filter(p => !isNaN(p.lat) && !isNaN(p.lng));
+      if (penyuFromDB.length > 0) setSurveyPenyu(penyuFromDB);
+
+      // Abrasi from surveys
+      const abrasiFromDB = surveys
+        .filter(s => s.tujuanSurvei === 'abrasi' && s.koordinatLat && s.koordinatLng)
+        .map(s => ({
+          id: s.id,
+          namaPantai: s.namaPantai || s.locationName || 'Titik Abrasi',
+          kecamatan: s.locationName || '',
+          kabKota: s.province || '',
+          provinsi: s.province || '',
+          koordinat: { lat: parseFloat(s.koordinatLat!), lng: parseFloat(s.koordinatLng!) },
+          indikasi: '',
+          kondisiSebelum: '',
+          kondisiSesudah: '',
+          tanamanRekomendasi: s.rekomendasiLapangan ? [s.rekomendasiLapangan] : [],
+          luasanRestorasi: { min: 0, max: 0, satuan: 'ha' },
+          prioritas: 'Sedang' as const,
+          substrat: (s.substrat || 'pasir') as any,
+          ancamanUtama: s.ancamanUtama || [],
+          skorRisiko: s.skorPotensi || 5,
+        }))
+        .filter(a => !isNaN(a.koordinat.lat) && !isNaN(a.koordinat.lng));
+      if (abrasiFromDB.length > 0) setSurveyAbrasi(abrasiFromDB);
+    }).catch(() => {});
+  }, []);
+
+  // All penyu = static fallback + live survey data
+  const allPenyu = surveyPenyu.length > 0 ? surveyPenyu : penyuLocations;
+  // All abrasi = static + live
+  const allAbrasi = [...titikAbrasiData, ...surveyAbrasi];
+
+  // Load benthic when selected
   useEffect(() => {
     if (showBenthic && !benthicData) {
       setBenthicLoading(true);
@@ -121,8 +170,8 @@ export default function PetaPublik() {
   }, [showBenthic, benthicData]);
 
   const selectedMangrove = mangroveLocations.find(l => l.id === selectedId && selectedType === 'mangrove');
-  const selectedAbrasi = titikAbrasiData.find(l => l.id === selectedId && selectedType === 'abrasi');
-  const selectedPenyu = penyuLocations.find(l => l.id === selectedId && selectedType === 'penyu');
+  const selectedAbrasi = allAbrasi.find(l => l.id === selectedId && selectedType === 'abrasi');
+  const selectedPenyu = allPenyu.find(l => l.id === selectedId && selectedType === 'penyu');
   const selectedEco = ekosistemData.find(e => e.locationId === selectedId);
 
   const totalLebat = mangroveLocations.filter(l => l.status === 'lebat').length;
@@ -191,44 +240,38 @@ export default function PetaPublik() {
       {/* ── FILTER BAR ── */}
       <div className="flex items-center gap-3 px-5 py-2.5 flex-wrap border-b border-white/10 flex-shrink-0" style={{ background: '#161b27' }}>
         <div className="flex items-center gap-1.5 text-white/50 text-xs">
-          <Filter className="w-3.5 h-3.5" /> Filter
+          <Filter className="w-3.5 h-3.5" /> Layer
         </div>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="text-xs rounded-lg px-3 py-1.5 border border-white/15 focus:outline-none focus:border-teal-500"
-          style={{ background: '#1e2533', color: '#e2e8f0' }}>
-          <option value="all">Semua Status</option>
-          <option value="lebat">Lebat</option>
-          <option value="sedang">Sedang</option>
-          <option value="jarang">Jarang</option>
-          <option value="kritis">Kritis</option>
-        </select>
-        <select value={filterKawasan} onChange={e => setFilterKawasan(e.target.value)}
-          className="text-xs rounded-lg px-3 py-1.5 border border-white/15 focus:outline-none focus:border-teal-500"
-          style={{ background: '#1e2533', color: '#e2e8f0' }}>
-          <option value="all">Semua Kawasan</option>
-          <option value="konservasi">Kaw. Konservasi</option>
-          <option value="hutan_lindung">Hutan Lindung</option>
-          <option value="apl">APL</option>
-        </select>
 
-        {/* Layer toggles */}
-        <div className="flex items-center gap-1.5 ml-2 flex-wrap">
-          {[
-            { key: 'mangrove', label: '🌿 Mangrove', val: showMangrove, set: setShowMangrove, color: '#22c55e' },
-            { key: 'abrasi', label: '🌿 Abrasi/Rekomendasi', val: showAbrasi, set: setShowAbrasi, color: '#f97316' },
-            { key: 'penyu', label: '🐢 Penyu', val: showPenyu, set: setShowPenyu, color: '#0d9488' },
-            { key: 'benthic', label: '🪸 Benthic', val: showBenthic, set: setShowBenthic, color: '#22d3ee' },
-          ].map(lyr => (
-            <button key={lyr.key} onClick={() => lyr.set(!lyr.val)}
-              className="text-xs px-2.5 py-1 rounded-full font-medium transition-all"
-              style={{
-                background: lyr.val ? `${lyr.color}25` : 'rgba(255,255,255,0.05)',
-                color: lyr.val ? lyr.color : '#64748b',
-                border: `1px solid ${lyr.val ? lyr.color + '60' : 'rgba(255,255,255,0.1)'}`,
-              }}>
-              {lyr.label}
-            </button>
-          ))}
+        {/* Single layer dropdown */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {([ 
+            { val: 'all',     label: 'Semua Layer',         icon: '🗺️',  color: '#94a3b8' },
+            { val: 'mangrove', label: 'Mangrove',            icon: '🌿',  color: '#22c55e' },
+            { val: 'abrasi',   label: 'Abrasi/Rekomendasi',  icon: '🌿',  color: '#f97316' },
+            { val: 'penyu',    label: 'Penyu',               icon: '🐢',  color: '#0d9488' },
+            { val: 'benthic',  label: 'Benthic',             icon: '🪸',  color: '#22d3ee' },
+          ] as const).map(opt => {
+            const isActive = activeLayerFilter === opt.val;
+            return (
+              <button
+                key={opt.val}
+                onClick={() => {
+                  setActiveLayerFilter(opt.val);
+                  setSelectedId(null);
+                  setSelectedType(null);
+                }}
+                className="text-xs px-3 py-1.5 rounded-full font-medium transition-all"
+                style={{
+                  background: isActive ? `${opt.color}25` : 'rgba(255,255,255,0.05)',
+                  color: isActive ? opt.color : '#64748b',
+                  border: `1px solid ${isActive ? opt.color + '70' : 'rgba(255,255,255,0.1)'}`,
+                }}
+              >
+                {opt.icon} {opt.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Map type buttons */}
@@ -236,12 +279,12 @@ export default function PetaPublik() {
           {MAP_LAYERS.map(l => {
             const Icon = l.icon;
             return (
-              <button key={l.id} onClick={() => setActiveLayer(l.id)}
+              <button key={l.id} onClick={() => setActiveMapLayer(l.id)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                 style={{
-                  background: activeLayer === l.id ? '#0ea5e9' : 'rgba(255,255,255,0.07)',
-                  color: activeLayer === l.id ? '#fff' : '#94a3b8',
-                  border: activeLayer === l.id ? '1px solid #0ea5e9' : '1px solid transparent',
+                  background: activeMapLayer === l.id ? '#0ea5e9' : 'rgba(255,255,255,0.07)',
+                  color: activeMapLayer === l.id ? '#fff' : '#94a3b8',
+                  border: activeMapLayer === l.id ? '1px solid #0ea5e9' : '1px solid transparent',
                 }}>
                 <Icon className="w-3.5 h-3.5" /> {l.label}
               </button>
@@ -251,7 +294,11 @@ export default function PetaPublik() {
 
         <div className="flex items-center gap-1 text-white/40 text-xs">
           <MapPin className="w-3.5 h-3.5" />
-          <strong className="text-white">{mangroveFiltered.length + titikAbrasiData.length + penyuLocations.length}</strong>&nbsp;titik
+          <strong className="text-white">
+            {(showMangrove ? mangroveFiltered.length : 0) +
+             (showAbrasi ? allAbrasi.length : 0) +
+             (showPenyu ? allPenyu.length : 0)}
+          </strong>&nbsp;titik
         </div>
       </div>
 
@@ -262,7 +309,7 @@ export default function PetaPublik() {
         <div className="flex-1 relative">
           <MapContainer center={[-8.3, 112.6]} zoom={9} style={{ height: '100%', width: '100%', background: '#0d1117' }} zoomControl={true}>
             <MapController center={[-8.3, 112.6]} zoom={9} />
-            <TileLayerSwitcher activeLayer={activeLayer} />
+            <TileLayerSwitcher activeLayer={activeMapLayer} />
 
             {/* Mangrove markers */}
             {showMangrove && mangroveFiltered.map(loc => (
@@ -295,7 +342,7 @@ export default function PetaPublik() {
             ))}
 
             {/* Abrasi / Rekomendasi Mangrove markers */}
-            {showAbrasi && titikAbrasiData.map(abr => (
+            {showAbrasi && allAbrasi.map(abr => (
               <Marker
                 key={abr.id}
                 position={[abr.koordinat.lat, abr.koordinat.lng]}
@@ -317,7 +364,7 @@ export default function PetaPublik() {
             ))}
 
             {/* Penyu markers */}
-            {showPenyu && penyuLocations.map(pny => (
+            {showPenyu && allPenyu.map(pny => (
               <Marker
                 key={pny.id}
                 position={[pny.lat, pny.lng]}
@@ -365,7 +412,7 @@ export default function PetaPublik() {
           {/* Map mode badge */}
           <div className="absolute top-3 left-3 z-[999] px-3 py-1.5 rounded-lg text-xs font-semibold"
             style={{ background: 'rgba(0,0,0,0.7)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)' }}>
-            {MAP_LAYERS.find(l => l.id === activeLayer)?.label}
+            {MAP_LAYERS.find(l => l.id === activeMapLayer)?.label}
           </div>
 
           {benthicLoading && (
@@ -539,11 +586,13 @@ export default function PetaPublik() {
 
           {/* No selection: location list */}
           {!selectedId && (
-            <div className="flex-1 flex flex-col px-4 py-4">
+            <div className="flex-1 flex flex-col px-4 py-4 overflow-y-auto">
+              {(activeLayerFilter === 'all' || activeLayerFilter === 'mangrove') && (
+              <>
               <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">
-                Daftar Lokasi Mangrove ({mangroveFiltered.length})
+                🌿 Mangrove ({mangroveFiltered.length})
               </p>
-              <div className="space-y-0.5 overflow-y-auto" style={{ maxHeight: '40vh' }}>
+              <div className="space-y-0.5 overflow-y-auto" style={{ maxHeight: activeLayerFilter === 'mangrove' ? '70vh' : '30vh' }}>
                 {mangroveFiltered.map(loc => (
                   <button key={loc.id}
                     onClick={() => { setSelectedId(loc.id); setSelectedType('mangrove'); }}
@@ -554,12 +603,16 @@ export default function PetaPublik() {
                   </button>
                 ))}
               </div>
+              </>
+              )}
 
+              {(activeLayerFilter === 'all' || activeLayerFilter === 'abrasi') && (
+              <>
               <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2 mt-4">
-                Titik Rawan Abrasi ({titikAbrasiData.length})
+                🌊 Abrasi / Rekomendasi ({allAbrasi.length})
               </p>
-              <div className="space-y-0.5 overflow-y-auto" style={{ maxHeight: '25vh' }}>
-                {titikAbrasiData.map(abr => (
+              <div className="space-y-0.5 overflow-y-auto" style={{ maxHeight: activeLayerFilter === 'abrasi' ? '70vh' : '25vh' }}>
+                {allAbrasi.map(abr => (
                   <button key={abr.id}
                     onClick={() => { setSelectedId(abr.id); setSelectedType('abrasi'); }}
                     className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors">
@@ -570,12 +623,16 @@ export default function PetaPublik() {
                   </button>
                 ))}
               </div>
+              </>
+              )}
 
+              {(activeLayerFilter === 'all' || activeLayerFilter === 'penyu') && (
+              <>
               <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2 mt-4">
-                Pendaratan Penyu ({penyuLocations.length})
+                🐢 Pendaratan Penyu ({allPenyu.length})
               </p>
-              <div className="space-y-0.5">
-                {penyuLocations.map(pny => (
+              <div className="space-y-0.5 overflow-y-auto" style={{ maxHeight: activeLayerFilter === 'penyu' ? '70vh' : '25vh' }}>
+                {allPenyu.map(pny => (
                   <button key={pny.id}
                     onClick={() => { setSelectedId(pny.id); setSelectedType('penyu'); }}
                     className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors">
@@ -585,6 +642,8 @@ export default function PetaPublik() {
                   </button>
                 ))}
               </div>
+              </>
+              )}
             </div>
           )}
         </div>
