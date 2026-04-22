@@ -170,11 +170,11 @@ export default function LandingPage() {
           <div className="mb-5 h-0.5 w-12 rounded-full bg-teal-400" />
 
           <h1 className="max-w-4xl text-3xl font-extrabold leading-tight text-white drop-shadow-lg sm:text-5xl md:text-6xl">
-            Integrasi Data Mangrove dan Pesisir
+            Selamat Datang di ID-MAP
           </h1>
 
           <p className="mt-5 max-w-2xl text-sm leading-relaxed text-white/80 sm:text-base">
-            Platform pemantauan ekosistem mangrove dan pesisir secara terpadu dari data lapangan secara akurat
+            Temukan informasi data mangrove dan pesisir dalam satu platform dari data lapangan hingga visualisasi interaktif untuk memahami kondisi lingkungan secara cepat dan tepat
           </p>
 
           <div className="mt-8 flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:items-center">
