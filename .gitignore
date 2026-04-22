@@ -35,3 +35,6 @@ dist-ssr
 .vercel
 supabase/.temp/
 tmp_doc_image1.png
+
+.vercel
+.env*.local
