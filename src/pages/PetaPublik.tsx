@@ -1,51 +1,73 @@
 import { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Marker, Popup, useMap, GeoJSON } from 'react-leaflet';
+import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { mangroveLocations, ekosistemData } from '../data/mockData';
-import { kkpdLocations, type KKPDLocation } from '../data/kkpdData';
-import { Filter, Layers, MapPin, Shield, Map, Satellite, Mountain, ChevronRight, X } from 'lucide-react';
+import { titikAbrasiData } from '../data/abrasiData';
+import { Filter, Layers, MapPin, Map, Satellite, Mountain, ChevronRight, X, Download, FileText, LogIn, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 
-const allLocations = [...mangroveLocations, ...kkpdLocations];
+// ── Penyu sample coordinates (nesting beaches Kab. Malang & sekitar) ─────────
+const penyuLocations = [
+  { id: 'PNY-001', namaPantai: 'Pantai Bajul Mati', lokasi: 'Gedangan, Kab. Malang', lat: -8.394, lng: 112.530, jenis: 'Penyu Lekang', sarang: 12 },
+  { id: 'PNY-002', namaPantai: 'Pantai Sendang Biru', lokasi: 'Sumbermanjing, Kab. Malang', lat: -8.437, lng: 112.620, jenis: 'Penyu Hijau', sarang: 8 },
+  { id: 'PNY-003', namaPantai: 'Pantai Nganteb', lokasi: 'Tirtoyudo, Kab. Malang', lat: -8.466, lng: 112.720, jenis: 'Penyu Lekang', sarang: 5 },
+  { id: 'PNY-004', namaPantai: 'Pantai Wonogoro', lokasi: 'Gedangan, Kab. Malang', lat: -8.381, lng: 112.508, jenis: 'Penyu Sisik', sarang: 3 },
+  { id: 'PNY-005', namaPantai: 'Pantai Lenggoksono', lokasi: 'Tirtoyudo, Kab. Malang', lat: -8.458, lng: 112.750, jenis: 'Penyu Hijau', sarang: 7 },
+  { id: 'PNY-006', namaPantai: 'Pantai Kondang Iwak', lokasi: 'Ampelgading, Kab. Malang', lat: -8.473, lng: 112.794, jenis: 'Penyu Lekang', sarang: 4 },
+];
 
-const STATUS_COLORS: Record<string, string> = {
+const MANGROVE_STATUS_COLORS: Record<string, string> = {
   lebat: '#22c55e',
   sedang: '#eab308',
   jarang: '#f97316',
   kritis: '#ef4444',
 };
+const MANGROVE_RADIUS: Record<string, number> = {
+  lebat: 13, sedang: 10, jarang: 8, kritis: 7,
+};
 
-const STATUS_RADIUS: Record<string, number> = {
-  lebat: 14,
-  sedang: 11,
-  jarang: 9,
-  kritis: 8,
+const ABRASI_PRIORITAS_COLORS: Record<string, string> = {
+  'Tinggi': '#ef4444',
+  'Sedang': '#f97316',
+  'Rendah–Sedang': '#eab308',
+};
+
+const BENTHIC_COLORS: Record<string, string> = {
+  Seagrass: '#22d3ee',
+  Rubble: '#a8a29e',
+  Sand: '#fcd34d',
+  Rock: '#6b7280',
+  'Coral/Algae': '#f472b6',
 };
 
 const MAP_LAYERS = [
-  {
-    id: 'osm',
-    label: 'OpenStreetMap',
-    icon: Map,
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  },
-  {
-    id: 'satellite',
-    label: 'Satelit',
-    icon: Satellite,
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: '&copy; Esri',
-  },
-  {
-    id: 'topo',
-    label: 'Topografi',
-    icon: Mountain,
-    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; OpenTopoMap',
-  },
+  { id: 'osm', label: 'OpenStreetMap', icon: Map, url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
+  { id: 'satellite', label: 'Satelit', icon: Satellite, url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' },
+  { id: 'topo', label: 'Topografi', icon: Mountain, url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', attribution: '&copy; OpenTopoMap' },
 ];
+
+// Custom icons via DivIcon
+function makeMangroveIcon(color = '#15803d') {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4);font-size:14px">🌿</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14],
+  });
+}
+
+function makeTurtleIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:#0d9488;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4);font-size:16px">🐢</div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -15],
+  });
+}
 
 function MapController({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
@@ -55,7 +77,7 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
 
 function TileLayerSwitcher({ activeLayer }: { activeLayer: string }) {
   const layer = MAP_LAYERS.find(l => l.id === activeLayer) ?? MAP_LAYERS[0];
-  return <TileLayer url={layer.url} attribution={layer.attribution} />;
+  return <TileLayer key={activeLayer} url={layer.url} attribution={layer.attribution} />;
 }
 
 export default function PetaPublik() {
@@ -65,53 +87,71 @@ export default function PetaPublik() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterKawasan, setFilterKawasan] = useState('all');
   const [activeLayer, setActiveLayer] = useState('osm');
-  const [selectedLoc, setSelectedLoc] = useState<string | null>(null);
-  const [showLegend, setShowLegend] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<'mangrove' | 'abrasi' | 'penyu' | null>(null);
 
-  const filtered = allLocations.filter(loc => {
+  // Layer visibility
+  const [showMangrove, setShowMangrove] = useState(true);
+  const [showAbrasi, setShowAbrasi] = useState(true);
+  const [showPenyu, setShowPenyu] = useState(true);
+  const [showBenthic, setShowBenthic] = useState(false);
+
+  // Benthic GeoJSON
+  const [benthicData, setBenthicData] = useState<any>(null);
+  const [benthicLoading, setBenthicLoading] = useState(false);
+
+  // Download gate modal
+  const [showDownloadGate, setShowDownloadGate] = useState(false);
+
+  const mangroveFiltered = mangroveLocations.filter(loc => {
     if (filterStatus !== 'all' && loc.status !== filterStatus) return false;
-    if (filterKawasan === 'kkpd') return kkpdLocations.some(k => k.id === loc.id);
     if (filterKawasan !== 'all' && loc.kawasan !== filterKawasan) return false;
     return true;
   });
 
-  const selectedLocation = allLocations.find(l => l.id === selectedLoc);
-  const selectedKKPD = kkpdLocations.find(l => l.id === selectedLoc) as KKPDLocation | undefined;
-  const selectedEco = ekosistemData.find(e => e.locationId === selectedLoc);
+  // Load benthic when toggled on
+  useEffect(() => {
+    if (showBenthic && !benthicData) {
+      setBenthicLoading(true);
+      fetch('/benthic.json')
+        .then(r => r.json())
+        .then(d => { setBenthicData(d); setBenthicLoading(false); })
+        .catch(() => setBenthicLoading(false));
+    }
+  }, [showBenthic, benthicData]);
 
-  const totalLebat = allLocations.filter(l => l.status === 'lebat').length;
-  const totalSedang = allLocations.filter(l => l.status === 'sedang').length;
-  const totalJarang = allLocations.filter(l => l.status === 'jarang').length;
-  const totalKritis = allLocations.filter(l => l.status === 'kritis').length;
+  const selectedMangrove = mangroveLocations.find(l => l.id === selectedId && selectedType === 'mangrove');
+  const selectedAbrasi = titikAbrasiData.find(l => l.id === selectedId && selectedType === 'abrasi');
+  const selectedPenyu = penyuLocations.find(l => l.id === selectedId && selectedType === 'penyu');
+  const selectedEco = ekosistemData.find(e => e.locationId === selectedId);
+
+  const totalLebat = mangroveLocations.filter(l => l.status === 'lebat').length;
+  const totalSedang = mangroveLocations.filter(l => l.status === 'sedang').length;
+  const totalJarang = mangroveLocations.filter(l => l.status === 'jarang').length;
+  const totalKritis = mangroveLocations.filter(l => l.status === 'kritis').length;
+
+  const handleDownload = () => {
+    if (!user) { setShowDownloadGate(true); return; }
+    // TODO: implement actual download
+    alert('Download sedang disiapkan...');
+  };
 
   return (
     <div className="flex flex-col" style={{ height: '100vh', background: '#0d1117', color: '#e2e8f0' }}>
 
       {/* ── TOP BAR ── */}
-      <div
-        className="flex items-center justify-between px-5 py-3 flex-shrink-0 border-b border-white/10"
-        style={{ background: '#111827' }}
-      >
-        {/* Left: branding + title */}
+      <div className="flex items-center justify-between px-5 py-3 flex-shrink-0 border-b border-white/10" style={{ background: '#111827' }}>
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-          >
+          <button onClick={() => navigate('/')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <img src="/logo.svg" alt="ID-MAP" className="h-7 w-auto" />
           </button>
           <div className="w-px h-6 bg-white/20" />
           <div>
-            <h1 className="text-white font-bold text-sm sm:text-base leading-tight">
-              Peta Interaktif Mangrove
-            </h1>
-            <p className="text-white/40 text-[10px] hidden sm:block">
-              Data titik mangrove dari lapangan
-            </p>
+            <h1 className="text-white font-bold text-sm sm:text-base leading-tight">Peta Interaktif Mangrove</h1>
+            <p className="text-white/40 text-[10px] hidden sm:block">Data titik mangrove, abrasi, dan pendaratan penyu</p>
           </div>
         </div>
 
-        {/* Center: stats pills */}
         <div className="hidden md:flex items-center gap-2">
           {[
             { label: 'Lebat', count: totalLebat, color: '#22c55e' },
@@ -119,31 +159,29 @@ export default function PetaPublik() {
             { label: 'Jarang', count: totalJarang, color: '#f97316' },
             { label: 'Kritis', count: totalKritis, color: '#ef4444' },
           ].map(s => (
-            <div
-              key={s.label}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
-              style={{ background: `${s.color}20`, color: s.color, border: `1px solid ${s.color}40` }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
+            <div key={s.label} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+              style={{ background: `${s.color}20`, color: s.color, border: `1px solid ${s.color}40` }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
               {s.count} {s.label}
             </div>
           ))}
         </div>
 
-        {/* Right: login / go to dashboard */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/20 text-white/70 hover:bg-white/10 transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" /> Unduh
+          </button>
           {user ? (
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-teal-600 text-white hover:bg-teal-500 transition-colors"
-            >
+            <button onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-teal-600 text-white hover:bg-teal-500 transition-colors">
               Dashboard <ChevronRight className="w-3 h-3" />
             </button>
           ) : (
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold border border-white/30 text-white hover:bg-white/10 transition-colors"
-            >
+            <button onClick={() => navigate('/')}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold border border-white/30 text-white hover:bg-white/10 transition-colors">
               Login
             </button>
           )}
@@ -151,55 +189,60 @@ export default function PetaPublik() {
       </div>
 
       {/* ── FILTER BAR ── */}
-      <div
-        className="flex items-center gap-3 px-5 py-2.5 flex-wrap border-b border-white/10 flex-shrink-0"
-        style={{ background: '#161b27' }}
-      >
+      <div className="flex items-center gap-3 px-5 py-2.5 flex-wrap border-b border-white/10 flex-shrink-0" style={{ background: '#161b27' }}>
         <div className="flex items-center gap-1.5 text-white/50 text-xs">
           <Filter className="w-3.5 h-3.5" /> Filter
         </div>
-
-        <select
-          value={filterStatus}
-          onChange={e => setFilterStatus(e.target.value)}
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
           className="text-xs rounded-lg px-3 py-1.5 border border-white/15 focus:outline-none focus:border-teal-500"
-          style={{ background: '#1e2533', color: '#e2e8f0' }}
-        >
+          style={{ background: '#1e2533', color: '#e2e8f0' }}>
           <option value="all">Semua Status</option>
           <option value="lebat">Lebat</option>
           <option value="sedang">Sedang</option>
           <option value="jarang">Jarang</option>
           <option value="kritis">Kritis</option>
         </select>
-
-        <select
-          value={filterKawasan}
-          onChange={e => setFilterKawasan(e.target.value)}
+        <select value={filterKawasan} onChange={e => setFilterKawasan(e.target.value)}
           className="text-xs rounded-lg px-3 py-1.5 border border-white/15 focus:outline-none focus:border-teal-500"
-          style={{ background: '#1e2533', color: '#e2e8f0' }}
-        >
+          style={{ background: '#1e2533', color: '#e2e8f0' }}>
           <option value="all">Semua Kawasan</option>
-          <option value="kkpd">KKPD / Kaw. Konservasi</option>
-          <option value="konservasi">Kaw. Konservasi (Umum)</option>
+          <option value="konservasi">Kaw. Konservasi</option>
           <option value="hutan_lindung">Hutan Lindung</option>
           <option value="apl">APL</option>
         </select>
+
+        {/* Layer toggles */}
+        <div className="flex items-center gap-1.5 ml-2 flex-wrap">
+          {[
+            { key: 'mangrove', label: '🌿 Mangrove', val: showMangrove, set: setShowMangrove, color: '#22c55e' },
+            { key: 'abrasi', label: '🌿 Abrasi/Rekomendasi', val: showAbrasi, set: setShowAbrasi, color: '#f97316' },
+            { key: 'penyu', label: '🐢 Penyu', val: showPenyu, set: setShowPenyu, color: '#0d9488' },
+            { key: 'benthic', label: '🪸 Benthic', val: showBenthic, set: setShowBenthic, color: '#22d3ee' },
+          ].map(lyr => (
+            <button key={lyr.key} onClick={() => lyr.set(!lyr.val)}
+              className="text-xs px-2.5 py-1 rounded-full font-medium transition-all"
+              style={{
+                background: lyr.val ? `${lyr.color}25` : 'rgba(255,255,255,0.05)',
+                color: lyr.val ? lyr.color : '#64748b',
+                border: `1px solid ${lyr.val ? lyr.color + '60' : 'rgba(255,255,255,0.1)'}`,
+              }}>
+              {lyr.label}
+            </button>
+          ))}
+        </div>
 
         {/* Map type buttons */}
         <div className="ml-auto flex items-center gap-1">
           {MAP_LAYERS.map(l => {
             const Icon = l.icon;
             return (
-              <button
-                key={l.id}
-                onClick={() => setActiveLayer(l.id)}
+              <button key={l.id} onClick={() => setActiveLayer(l.id)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                 style={{
                   background: activeLayer === l.id ? '#0ea5e9' : 'rgba(255,255,255,0.07)',
                   color: activeLayer === l.id ? '#fff' : '#94a3b8',
                   border: activeLayer === l.id ? '1px solid #0ea5e9' : '1px solid transparent',
-                }}
-              >
+                }}>
                 <Icon className="w-3.5 h-3.5" /> {l.label}
               </button>
             );
@@ -208,7 +251,7 @@ export default function PetaPublik() {
 
         <div className="flex items-center gap-1 text-white/40 text-xs">
           <MapPin className="w-3.5 h-3.5" />
-          <strong className="text-white">{filtered.length}</strong>&nbsp;lokasi
+          <strong className="text-white">{mangroveFiltered.length + titikAbrasiData.length + penyuLocations.length}</strong>&nbsp;titik
         </div>
       </div>
 
@@ -217,58 +260,106 @@ export default function PetaPublik() {
 
         {/* MAP */}
         <div className="flex-1 relative">
-          <MapContainer
-            center={[-2.5, 118]}
-            zoom={5}
-            style={{ height: '100%', width: '100%', background: '#0d1117' }}
-            zoomControl={false}
-          >
-            <MapController center={[-2.5, 118]} zoom={5} />
+          <MapContainer center={[-8.3, 112.6]} zoom={9} style={{ height: '100%', width: '100%', background: '#0d1117' }} zoomControl={true}>
+            <MapController center={[-8.3, 112.6]} zoom={9} />
             <TileLayerSwitcher activeLayer={activeLayer} />
 
-            {filtered.map(loc => {
-              const isKKPD = kkpdLocations.some(k => k.id === loc.id);
-              const eco = ekosistemData.find(e => e.locationId === loc.id);
-              const kkpdInfo = isKKPD ? (loc as KKPDLocation) : null;
-              const isSelected = selectedLoc === loc.id;
-              return (
-                <CircleMarker
-                  key={loc.id}
-                  center={[loc.lat, loc.lng]}
-                  radius={isSelected ? STATUS_RADIUS[loc.status] + 3 : STATUS_RADIUS[loc.status]}
-                  pathOptions={{
-                    color: isSelected ? '#fff' : (isKKPD ? '#38bdf8' : STATUS_COLORS[loc.status]),
-                    fillColor: STATUS_COLORS[loc.status],
-                    fillOpacity: isSelected ? 1 : 0.75,
-                    weight: isSelected ? 2.5 : (isKKPD ? 2 : 1.5),
-                    dashArray: isKKPD && !isSelected ? '4 2' : undefined,
-                  }}
-                  eventHandlers={{ click: () => setSelectedLoc(loc.id === selectedLoc ? null : loc.id) }}
-                >
-                  <Popup>
-                    <div className="min-w-[180px] text-sm">
-                      {isKKPD && (
-                        <span className="inline-block bg-blue-100 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded mb-1">
-                          {kkpdInfo?.tipeKawasan}
-                        </span>
-                      )}
-                      <div className="font-bold text-gray-800">{loc.name}</div>
-                      <div className="text-xs text-gray-500 mb-1">{loc.district}, {loc.province}</div>
-                      <div className="text-xs flex justify-between">
-                        <span className="text-gray-500">Luas</span>
-                        <span className="font-medium">{loc.areaHa.toLocaleString()} ha</span>
-                      </div>
-                      {eco && (
-                        <div className="text-xs flex justify-between">
-                          <span className="text-gray-500">Kesehatan</span>
-                          <span className="font-bold text-green-700">{eco.skorKesehatan}/100</span>
-                        </div>
-                      )}
+            {/* Mangrove markers */}
+            {showMangrove && mangroveFiltered.map(loc => (
+              <CircleMarker
+                key={loc.id}
+                center={[loc.lat, loc.lng]}
+                radius={selectedId === loc.id ? MANGROVE_RADIUS[loc.status] + 3 : MANGROVE_RADIUS[loc.status]}
+                pathOptions={{
+                  color: selectedId === loc.id ? '#fff' : MANGROVE_STATUS_COLORS[loc.status],
+                  fillColor: MANGROVE_STATUS_COLORS[loc.status],
+                  fillOpacity: selectedId === loc.id ? 1 : 0.75,
+                  weight: selectedId === loc.id ? 2.5 : 1.5,
+                }}
+                eventHandlers={{ click: () => { setSelectedId(loc.id); setSelectedType('mangrove'); } }}
+              >
+                <Popup>
+                  <div className="text-sm min-w-[160px]">
+                    <div className="font-bold text-gray-800">{loc.name}</div>
+                    <div className="text-xs text-gray-500">{loc.district}</div>
+                    <div className="text-xs flex justify-between mt-1">
+                      <span className="text-gray-500">Luas</span><span className="font-medium">{loc.areaHa} ha</span>
                     </div>
-                  </Popup>
-                </CircleMarker>
-              );
-            })}
+                    <div className="text-xs flex justify-between">
+                      <span className="text-gray-500">Status</span>
+                      <span className="font-medium capitalize" style={{ color: MANGROVE_STATUS_COLORS[loc.status] }}>{loc.status}</span>
+                    </div>
+                  </div>
+                </Popup>
+              </CircleMarker>
+            ))}
+
+            {/* Abrasi / Rekomendasi Mangrove markers */}
+            {showAbrasi && titikAbrasiData.map(abr => (
+              <Marker
+                key={abr.id}
+                position={[abr.koordinat.lat, abr.koordinat.lng]}
+                icon={makeMangroveIcon(ABRASI_PRIORITAS_COLORS[abr.prioritas] ?? '#f97316')}
+                eventHandlers={{ click: () => { setSelectedId(abr.id); setSelectedType('abrasi'); } }}
+              >
+                <Popup>
+                  <div className="text-sm min-w-[180px]">
+                    <div className="text-[10px] font-bold uppercase mb-0.5" style={{ color: ABRASI_PRIORITAS_COLORS[abr.prioritas] }}>
+                      Titik Rawan Abrasi · {abr.prioritas}
+                    </div>
+                    <div className="font-bold text-gray-800">{abr.namaPantai}</div>
+                    <div className="text-xs text-gray-500">{abr.kecamatan}, {abr.kabKota}</div>
+                    <div className="text-xs mt-1 text-gray-600">Skor risiko: <strong>{abr.skorRisiko}/10</strong></div>
+                    <div className="text-xs text-green-700 mt-0.5">Rekomendasi: {abr.tanamanRekomendasi[0]}</div>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+
+            {/* Penyu markers */}
+            {showPenyu && penyuLocations.map(pny => (
+              <Marker
+                key={pny.id}
+                position={[pny.lat, pny.lng]}
+                icon={makeTurtleIcon()}
+                eventHandlers={{ click: () => { setSelectedId(pny.id); setSelectedType('penyu'); } }}
+              >
+                <Popup>
+                  <div className="text-sm min-w-[160px]">
+                    <div className="text-[10px] font-bold text-teal-700 uppercase mb-0.5">Titik Pendaratan Penyu</div>
+                    <div className="font-bold text-gray-800">{pny.namaPantai}</div>
+                    <div className="text-xs text-gray-500">{pny.lokasi}</div>
+                    <div className="text-xs flex justify-between mt-1">
+                      <span className="text-gray-500">Jenis</span><span className="font-medium">{pny.jenis}</span>
+                    </div>
+                    <div className="text-xs flex justify-between">
+                      <span className="text-gray-500">Sarang</span><span className="font-medium">{pny.sarang} titik</span>
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+
+            {/* Benthic layer */}
+            {showBenthic && benthicData && (
+              <GeoJSON
+                key="benthic"
+                data={benthicData}
+                pointToLayer={(_feature, latlng) => {
+                  const cls = _feature.properties?.class ?? 'Unknown';
+                  return L.circleMarker(latlng, {
+                    radius: 4,
+                    color: BENTHIC_COLORS[cls] ?? '#999',
+                    fillColor: BENTHIC_COLORS[cls] ?? '#999',
+                    fillOpacity: 0.75,
+                    weight: 0,
+                  });
+                }}
+                onEachFeature={(feature, layer) => {
+                  layer.bindPopup(`<div style="font-size:12px"><strong>Benthic</strong><br/>Kelas: ${feature.properties?.class}</div>`);
+                }}
+              />
+            )}
           </MapContainer>
 
           {/* Map mode badge */}
@@ -276,170 +367,271 @@ export default function PetaPublik() {
             style={{ background: 'rgba(0,0,0,0.7)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)' }}>
             {MAP_LAYERS.find(l => l.id === activeLayer)?.label}
           </div>
+
+          {benthicLoading && (
+            <div className="absolute top-14 left-3 z-[999] px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2"
+              style={{ background: 'rgba(0,0,0,0.8)', color: '#22d3ee' }}>
+              <span className="w-3 h-3 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+              Memuat data benthic...
+            </div>
+          )}
         </div>
 
         {/* ── RIGHT SIDEBAR ── */}
-        <div
-          className="w-72 flex-shrink-0 flex flex-col border-l border-white/10 overflow-y-auto"
-          style={{ background: '#111827' }}
-        >
-          {/* Legend toggle */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-            <div className="flex items-center gap-2 text-sm font-semibold text-white">
+        <div className="w-72 flex-shrink-0 flex flex-col border-l border-white/10 overflow-y-auto" style={{ background: '#111827' }}>
+
+          {/* Legend */}
+          <div className="px-4 py-3 border-b border-white/10">
+            <div className="flex items-center gap-2 text-sm font-semibold text-white mb-3">
               <Layers className="w-4 h-4 text-teal-400" /> Legenda
             </div>
-            <button onClick={() => setShowLegend(!showLegend)} className="text-white/30 hover:text-white/60 transition-colors">
-              <ChevronRight className={`w-4 h-4 transition-transform ${showLegend ? 'rotate-90' : ''}`} />
-            </button>
+
+            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Titik Mangrove</p>
+            <div className="space-y-1.5 mb-3">
+              {Object.entries(MANGROVE_STATUS_COLORS).map(([s, color]) => (
+                <div key={s} className="flex items-center gap-2.5">
+                  <div className="rounded-full flex-shrink-0"
+                    style={{ width: MANGROVE_RADIUS[s] * 1.6, height: MANGROVE_RADIUS[s] * 1.6, background: color, opacity: 0.85 }} />
+                  <span className="text-xs capitalize text-white/70">{s}</span>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Titik Abrasi / Rekomendasi</p>
+            <div className="space-y-1.5 mb-3">
+              {Object.entries(ABRASI_PRIORITAS_COLORS).map(([p, color]) => (
+                <div key={p} className="flex items-center gap-2">
+                  <div className="text-sm">🌿</div>
+                  <span className="text-xs text-white/70">{p}</span>
+                  <div className="w-2 h-2 rounded-full ml-auto" style={{ background: color }} />
+                </div>
+              ))}
+            </div>
+
+            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Pendaratan Penyu</p>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="text-sm">🐢</div>
+              <span className="text-xs text-white/70">Titik pendaratan penyu laut</span>
+            </div>
+
+            {showBenthic && (
+              <>
+                <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Kelas Benthic</p>
+                <div className="space-y-1.5">
+                  {Object.entries(BENTHIC_COLORS).map(([cls, color]) => (
+                    <div key={cls} className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: color }} />
+                      <span className="text-xs text-white/70">{cls}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
-          {showLegend && (
-            <div className="px-4 py-3 border-b border-white/10">
-              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Titik ID-MAP</p>
-              <div className="space-y-2">
-                {Object.entries(STATUS_COLORS).map(([s, color]) => (
-                  <div key={s} className="flex items-center gap-2.5">
-                    <div
-                      className="rounded-full flex-shrink-0"
-                      style={{ width: STATUS_RADIUS[s] * 1.6, height: STATUS_RADIUS[s] * 1.6, background: color, opacity: 0.85 }}
-                    />
-                    <span className="text-sm capitalize text-white/70">{s}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full border-2 border-dashed border-sky-400 flex-shrink-0" style={{ background: 'rgba(34,197,94,0.4)' }} />
-                <span className="text-[11px] text-white/50">KKPD (border biru putus)</span>
-              </div>
+          {/* Download section */}
+          <div className="px-4 py-3 border-b border-white/10">
+            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Unduh Data</p>
+            <div className="space-y-1.5">
+              <button onClick={handleDownload}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors text-white/60 border border-white/10">
+                <FileText className="w-3.5 h-3.5 text-teal-400" />
+                Unduh PDF Laporan
+              </button>
+              <button onClick={handleDownload}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors text-white/60 border border-white/10">
+                <Download className="w-3.5 h-3.5 text-green-400" />
+                Unduh Marker KML/GeoJSON
+              </button>
             </div>
-          )}
+            {!user && (
+              <p className="text-[10px] text-white/30 mt-2 text-center">
+                🔒 Perlu login untuk mengunduh
+              </p>
+            )}
+          </div>
 
           {/* Selected location detail */}
-          {selectedLocation ? (
-            <div className="flex-1 px-4 py-3">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  {selectedKKPD && (
-                    <div className="flex items-center gap-1 mb-1">
-                      <Shield className="w-3 h-3 text-sky-400" />
-                      <span className="text-[10px] font-bold text-sky-400">{selectedKKPD.tipeKawasan}</span>
-                    </div>
-                  )}
-                  <h3 className="font-bold text-white text-sm leading-tight">{selectedLocation.name}</h3>
-                  <p className="text-xs text-white/40 mt-0.5">{selectedLocation.district}, {selectedLocation.province}</p>
-                </div>
-                <button onClick={() => setSelectedLoc(null)} className="text-white/30 hover:text-white/60 transition-colors mt-0.5">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                <InfoRow label="Status Tutupan">
-                  <span
-                    className="text-xs font-bold px-2 py-0.5 rounded-full capitalize"
-                    style={{ background: `${STATUS_COLORS[selectedLocation.status]}20`, color: STATUS_COLORS[selectedLocation.status] }}
-                  >
-                    {selectedLocation.status}
+          {selectedMangrove && (
+            <DetailPanel onClose={() => { setSelectedId(null); setSelectedType(null); }}>
+              <div className="font-bold text-white text-sm">{selectedMangrove.name}</div>
+              <div className="text-xs text-white/40 mt-0.5">{selectedMangrove.district}, {selectedMangrove.province}</div>
+              <div className="mt-3 space-y-2">
+                <InfoRow label="Status">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full capitalize"
+                    style={{ background: `${MANGROVE_STATUS_COLORS[selectedMangrove.status]}20`, color: MANGROVE_STATUS_COLORS[selectedMangrove.status] }}>
+                    {selectedMangrove.status}
                   </span>
                 </InfoRow>
-                <InfoRow label="Luas Mangrove">
-                  <span className="text-sm font-semibold text-white">{selectedLocation.areaHa.toLocaleString()} ha</span>
-                </InfoRow>
+                <InfoRow label="Luas"><span className="text-xs text-white/70">{selectedMangrove.areaHa.toLocaleString()} ha</span></InfoRow>
+                <InfoRow label="Kawasan"><span className="text-xs text-white/70 capitalize">{selectedMangrove.kawasan.replace(/_/g, ' ')}</span></InfoRow>
+                <InfoRow label="Survei Terakhir"><span className="text-xs text-white/50">{selectedMangrove.lastSurvey}</span></InfoRow>
                 <InfoRow label="Koordinat">
-                  <span className="text-xs text-white/50 font-mono">{selectedLocation.lat.toFixed(4)}, {selectedLocation.lng.toFixed(4)}</span>
+                  <span className="text-[10px] text-white/40 font-mono">{selectedMangrove.lat.toFixed(4)}, {selectedMangrove.lng.toFixed(4)}</span>
                 </InfoRow>
-
-                {selectedKKPD && (
-                  <div className="mt-3 pt-3 border-t border-white/10">
-                    <p className="text-[10px] font-semibold text-sky-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                      <Shield className="w-3 h-3" /> Info KKPD
-                    </p>
-                    <div className="space-y-1.5">
-                      <InfoRow label="Total Kawasan">
-                        <span className="text-xs text-white/70">{selectedKKPD.luasTotal.toLocaleString()} ha</span>
-                      </InfoRow>
-                      <InfoRow label="Pengelola">
-                        <span className="text-xs text-white/70 text-right max-w-[130px] leading-tight">{selectedKKPD.pengelola}</span>
-                      </InfoRow>
-                      <div className="text-[10px] text-white/30 mt-1">Dasar Hukum:</div>
-                      <div className="text-[11px] text-sky-400 font-medium">{selectedKKPD.nomorSk}</div>
-                    </div>
-                  </div>
-                )}
-
                 {selectedEco && (
-                  <div className="mt-3 pt-3 border-t border-white/10">
-                    <p className="text-[10px] font-semibold text-green-400 uppercase tracking-wider mb-2">Data Ekosistem</p>
-                    <div className="space-y-1.5">
-                      <InfoRow label="Skor Kesehatan">
-                        <span className="text-sm font-bold" style={{
-                          color: selectedEco.skorKesehatan >= 75 ? '#22c55e' : selectedEco.skorKesehatan >= 50 ? '#eab308' : '#ef4444'
-                        }}>
-                          {selectedEco.skorKesehatan}/100
-                        </span>
-                      </InfoRow>
-                      <InfoRow label="Tutupan Tajuk">
-                        <span className="text-xs text-white/70">{selectedEco.tutupanTajuk}%</span>
-                      </InfoRow>
-                      <InfoRow label="Kerapatan Pohon">
-                        <span className="text-xs text-white/70">{selectedEco.kerapatanPohon} pohon/ha</span>
-                      </InfoRow>
-                    </div>
-
-                    <p className="text-[10px] font-semibold text-green-400 uppercase tracking-wider mt-3 mb-2">Komposisi Spesies</p>
-                    <div className="space-y-2">
-                      {selectedEco.komposisiJenis.map(k => (
-                        <div key={k.spesies}>
-                          <div className="flex justify-between mb-0.5">
-                            <span className="text-[11px] text-white/50 italic truncate pr-2">{k.spesies}</span>
-                            <span className="text-[11px] text-white/70 flex-shrink-0">{k.persentase}%</span>
-                          </div>
-                          <div className="w-full rounded-full h-1" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                            <div className="h-1 rounded-full bg-green-500" style={{ width: `${k.persentase}%` }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="pt-2 border-t border-white/10">
+                    <p className="text-[10px] text-green-400 font-semibold uppercase tracking-wider mb-1.5">Ekosistem</p>
+                    <InfoRow label="Skor Kesehatan">
+                      <span className="text-sm font-bold" style={{ color: selectedEco.skorKesehatan >= 75 ? '#22c55e' : selectedEco.skorKesehatan >= 50 ? '#eab308' : '#ef4444' }}>
+                        {selectedEco.skorKesehatan}/100
+                      </span>
+                    </InfoRow>
+                    <InfoRow label="Tutupan Tajuk"><span className="text-xs text-white/70">{selectedEco.tutupanTajuk}%</span></InfoRow>
+                    <InfoRow label="Kerapatan"><span className="text-xs text-white/70">{selectedEco.kerapatanPohon} pohon/ha</span></InfoRow>
                   </div>
                 )}
               </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 text-center">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
-                style={{ background: 'rgba(255,255,255,0.05)' }}>
-                <MapPin className="w-6 h-6 text-white/20" />
-              </div>
-              <p className="text-sm text-white/30">Klik marker di peta untuk melihat detail lokasi</p>
+            </DetailPanel>
+          )}
 
-              {/* Location list */}
-              <div className="w-full mt-6">
-                <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2 text-left">
-                  Daftar Lokasi ({filtered.length})
-                </p>
-                <div className="space-y-0.5 max-h-64 overflow-y-auto">
-                  {filtered.map(loc => {
-                    const isKKPD = kkpdLocations.some(k => k.id === loc.id);
-                    return (
-                      <button
-                        key={loc.id}
-                        onClick={() => setSelectedLoc(loc.id)}
-                        className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors"
-                      >
-                        <div className="w-2 h-2 rounded-full flex-shrink-0"
-                          style={{ background: STATUS_COLORS[loc.status] }} />
-                        <span className="truncate text-white/60">{loc.name}</span>
-                        {isKKPD && <span className="text-[9px] text-sky-500 font-bold flex-shrink-0">KKPD</span>}
-                        <span className="ml-auto text-white/30 flex-shrink-0 text-[10px]">{loc.areaHa.toLocaleString()} ha</span>
-                      </button>
-                    );
-                  })}
+          {selectedAbrasi && (
+            <DetailPanel onClose={() => { setSelectedId(null); setSelectedType(null); }}>
+              <div className="text-[10px] font-bold uppercase mb-1" style={{ color: ABRASI_PRIORITAS_COLORS[selectedAbrasi.prioritas] }}>
+                🌿 Rawan Abrasi · Prioritas {selectedAbrasi.prioritas}
+              </div>
+              <div className="font-bold text-white text-sm">{selectedAbrasi.namaPantai}</div>
+              <div className="text-xs text-white/40 mt-0.5">{selectedAbrasi.kecamatan}, {selectedAbrasi.kabKota}</div>
+              <div className="mt-3 space-y-2">
+                <InfoRow label="Skor Risiko">
+                  <span className="text-sm font-bold" style={{ color: selectedAbrasi.skorRisiko >= 8 ? '#ef4444' : selectedAbrasi.skorRisiko >= 6 ? '#f97316' : '#eab308' }}>
+                    {selectedAbrasi.skorRisiko}/10
+                  </span>
+                </InfoRow>
+                <InfoRow label="Substrat"><span className="text-xs text-white/70 capitalize">{selectedAbrasi.substrat}</span></InfoRow>
+                <InfoRow label="Restorasi"><span className="text-xs text-white/70">{selectedAbrasi.luasanRestorasi.min}–{selectedAbrasi.luasanRestorasi.max} {selectedAbrasi.luasanRestorasi.satuan}</span></InfoRow>
+              </div>
+              <div className="mt-3 pt-2 border-t border-white/10">
+                <p className="text-[10px] text-green-400 font-semibold uppercase tracking-wider mb-1.5">Rekomendasi Tanaman</p>
+                <ul className="space-y-1">
+                  {selectedAbrasi.tanamanRekomendasi.map(t => (
+                    <li key={t} className="text-[11px] text-white/60 italic flex gap-1">
+                      <span className="text-green-500">•</span> {t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="mt-2 pt-2 border-t border-white/10">
+                <p className="text-[10px] text-red-400 font-semibold uppercase tracking-wider mb-1.5">Ancaman Utama</p>
+                <div className="flex flex-wrap gap-1">
+                  {selectedAbrasi.ancamanUtama.map(a => (
+                    <span key={a} className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">{a}</span>
+                  ))}
                 </div>
+              </div>
+            </DetailPanel>
+          )}
+
+          {selectedPenyu && (
+            <DetailPanel onClose={() => { setSelectedId(null); setSelectedType(null); }}>
+              <div className="text-[10px] font-bold text-teal-400 uppercase mb-1">🐢 Titik Pendaratan Penyu</div>
+              <div className="font-bold text-white text-sm">{selectedPenyu.namaPantai}</div>
+              <div className="text-xs text-white/40 mt-0.5">{selectedPenyu.lokasi}</div>
+              <div className="mt-3 space-y-2">
+                <InfoRow label="Jenis Penyu"><span className="text-xs text-white/70">{selectedPenyu.jenis}</span></InfoRow>
+                <InfoRow label="Jumlah Sarang"><span className="text-sm font-bold text-teal-400">{selectedPenyu.sarang} titik</span></InfoRow>
+                <InfoRow label="Koordinat">
+                  <span className="text-[10px] text-white/40 font-mono">{selectedPenyu.lat.toFixed(4)}, {selectedPenyu.lng.toFixed(4)}</span>
+                </InfoRow>
+              </div>
+            </DetailPanel>
+          )}
+
+          {/* No selection: location list */}
+          {!selectedId && (
+            <div className="flex-1 flex flex-col px-4 py-4">
+              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">
+                Daftar Lokasi Mangrove ({mangroveFiltered.length})
+              </p>
+              <div className="space-y-0.5 overflow-y-auto" style={{ maxHeight: '40vh' }}>
+                {mangroveFiltered.map(loc => (
+                  <button key={loc.id}
+                    onClick={() => { setSelectedId(loc.id); setSelectedType('mangrove'); }}
+                    className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: MANGROVE_STATUS_COLORS[loc.status] }} />
+                    <span className="truncate text-white/60">{loc.name}</span>
+                    <span className="ml-auto text-white/30 flex-shrink-0 text-[10px]">{loc.areaHa.toLocaleString()} ha</span>
+                  </button>
+                ))}
+              </div>
+
+              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2 mt-4">
+                Titik Rawan Abrasi ({titikAbrasiData.length})
+              </p>
+              <div className="space-y-0.5 overflow-y-auto" style={{ maxHeight: '25vh' }}>
+                {titikAbrasiData.map(abr => (
+                  <button key={abr.id}
+                    onClick={() => { setSelectedId(abr.id); setSelectedType('abrasi'); }}
+                    className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors">
+                    <span className="flex-shrink-0">🌿</span>
+                    <span className="truncate text-white/60">{abr.namaPantai}</span>
+                    <span className="ml-auto text-[10px] flex-shrink-0 font-bold"
+                      style={{ color: ABRASI_PRIORITAS_COLORS[abr.prioritas] }}>{abr.skorRisiko}/10</span>
+                  </button>
+                ))}
+              </div>
+
+              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2 mt-4">
+                Pendaratan Penyu ({penyuLocations.length})
+              </p>
+              <div className="space-y-0.5">
+                {penyuLocations.map(pny => (
+                  <button key={pny.id}
+                    onClick={() => { setSelectedId(pny.id); setSelectedType('penyu'); }}
+                    className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors">
+                    <span className="flex-shrink-0">🐢</span>
+                    <span className="truncate text-white/60">{pny.namaPantai}</span>
+                    <span className="ml-auto text-teal-500 flex-shrink-0 text-[10px]">{pny.sarang} sarang</span>
+                  </button>
+                ))}
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* ── DOWNLOAD GATE MODAL ── */}
+      {showDownloadGate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={e => { if (e.target === e.currentTarget) setShowDownloadGate(false); }}>
+          <div className="rounded-2xl shadow-2xl w-full max-w-sm p-6 relative" style={{ background: '#1e2533', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <button onClick={() => setShowDownloadGate(false)} className="absolute top-4 right-4 text-white/30 hover:text-white/60">
+              <X className="w-4 h-4" />
+            </button>
+            <div className="text-3xl mb-3 text-center">🔒</div>
+            <h3 className="text-white font-bold text-base text-center mb-1">Perlu Akun untuk Mengunduh</h3>
+            <p className="text-white/50 text-xs text-center mb-5 leading-relaxed">
+              Fitur unduh PDF laporan dan data marker peta tersedia untuk pengguna terdaftar. Daftar gratis atau login untuk melanjutkan.
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => { setShowDownloadGate(false); navigate('/'); }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm text-white"
+                style={{ background: 'linear-gradient(135deg, #0d9488, #0ea5e9)' }}>
+                <UserPlus className="w-4 h-4" /> Daftar Akun Gratis
+              </button>
+              <button
+                onClick={() => { setShowDownloadGate(false); navigate('/'); }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm text-white/70 border border-white/20 hover:bg-white/5 transition-colors">
+                <LogIn className="w-4 h-4" /> Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DetailPanel({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  return (
+    <div className="flex-1 px-4 py-3 border-t border-white/10">
+      <div className="flex justify-end mb-2">
+        <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      {children}
     </div>
   );
 }
@@ -448,7 +640,7 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
   return (
     <div className="flex justify-between items-center">
       <span className="text-xs text-white/40">{label}</span>
-      <div className="flex items-center">{children}</div>
+      <div>{children}</div>
     </div>
   );
 }
