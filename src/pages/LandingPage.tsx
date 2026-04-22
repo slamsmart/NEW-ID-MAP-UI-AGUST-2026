@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LogIn, UserPlus, X, Eye, EyeOff, AlertCircle, CheckCircle,
-  ShieldCheck, Mail, KeyRound, ArrowRight, Loader2, Satellite,
-  ClipboardList, Bot,
+  ShieldCheck, Mail, KeyRound, ArrowRight, Loader2,
 } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
 
@@ -13,28 +12,25 @@ export default function LandingPage() {
   const { login, loginWithEmail, verifyOTP, signUp, user } = useAuth();
   const navigate = useNavigate();
 
-  // Kalau user sudah login (autoconfirm atau session restore) → langsung ke dashboard
   useEffect(() => {
     if (user) { navigate('/dashboard', { replace: true }); }
   }, [user, navigate]);
+
   const [modal, setModal] = useState<ModalMode>('none');
 
-  // Admin login state
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [adminError, setAdminError] = useState('');
 
-  // User (email OTP) state
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [demoOtp, setDemoOtp] = useState(''); // shown for hackathon demo
+  const [demoOtp, setDemoOtp] = useState('');
   const [otpNotice, setOtpNotice] = useState('');
   const [emailError, setEmailError] = useState('');
   const [otpError, setOtpError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Sign up state
   const [suNama, setSuNama] = useState('');
   const [suEmail, setSuEmail] = useState('');
   const [suUnit, setSuUnit] = useState('');
@@ -49,7 +45,6 @@ export default function LandingPage() {
     setLoading(false);
   };
 
-  // ── Admin login ──
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const ok = login(username.trim(), password);
@@ -57,7 +52,6 @@ export default function LandingPage() {
     else setAdminError('Username atau password tidak valid.');
   };
 
-  // ── User email OTP ──
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) { setEmailError('Email wajib diisi.'); return; }
@@ -66,7 +60,6 @@ export default function LandingPage() {
     setLoading(false);
     if (!res.success) { setEmailError(res.error ?? 'Gagal mengirim kode.'); return; }
     setOtpNotice(res.warning ?? '');
-    // Autoconfirm mode: user state akan di-set oleh useEffect
     setDemoOtp(res.demoOtp ?? '');
     setModal('user-otp');
   };
@@ -80,7 +73,6 @@ export default function LandingPage() {
     else setOtpError('Kode verifikasi salah atau sudah kedaluwarsa.');
   };
 
-  // ── Sign up ──
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!suNama.trim() || !suEmail.trim()) { setSuError('Nama dan email wajib diisi.'); return; }
@@ -89,18 +81,7 @@ export default function LandingPage() {
     setLoading(false);
     if (!res.success) { setSuError(res.error ?? 'Gagal mendaftar.'); return; }
     setOtpNotice(res.warning ?? '');
-
-    // Jika ada demoOtp → mode demo, tampilkan OTP screen
-    if (res.demoOtp) {
-      setDemoOtp(res.demoOtp);
-      setSuEmail(suEmail.trim());
-      setModal('signup-otp');
-      return;
-    }
-
-    // Mode production: cek apakah user sudah langsung login (autoconfirm aktif)
-    // useEffect di atas akan handle navigate jika user state berubah
-    // Jika tidak autoconfirm → tampilkan OTP screen
+    if (res.demoOtp) { setDemoOtp(res.demoOtp); setSuEmail(suEmail.trim()); setModal('signup-otp'); return; }
     setSuEmail(suEmail.trim());
     setModal('signup-otp');
   };
@@ -115,81 +96,131 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="w-full min-h-screen bg-white flex flex-col">
+    <div className="w-full min-h-screen flex flex-col">
+
+      {/* ── NAVBAR ── */}
+      <nav
+        className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-6 py-3"
+        style={{ background: 'rgba(10, 60, 40, 0.88)', backdropFilter: 'blur(8px)' }}
+      >
+        <div className="flex items-center gap-3">
+          <img src="/logo.svg" alt="ID-MAP" className="h-9 w-auto" draggable={false} />
+          <span className="text-white font-bold text-base tracking-wide hidden sm:block">ID-MAP</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setModal('login-choice')}
+            className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold text-white border border-white/40 hover:bg-white/15 transition-all"
+          >
+            <LogIn className="w-4 h-4" /> Login
+          </button>
+          <button
+            onClick={() => setModal('signup')}
+            className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold bg-teal-400 text-green-950 hover:bg-teal-300 transition-all"
+          >
+            <UserPlus className="w-4 h-4" /> Daftar
+          </button>
+        </div>
+      </nav>
 
       {/* ── HERO ── */}
       <div
-        className="relative w-full flex flex-col items-center justify-center overflow-hidden"
-        style={{ minHeight: '100vh', background: '#f8fafb' }}
+        className="relative w-full flex flex-col items-center justify-center"
+        style={{
+          minHeight: '100vh',
+          backgroundImage: 'url(/mangrove-hero.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
       >
-        {/* Geometric line background — isometric grid */}
-        <svg
-          className="absolute inset-0 w-full h-full"
-          xmlns="http://www.w3.org/2000/svg"
-          preserveAspectRatio="xMidYMid slice"
-        >
-          <defs>
-            <pattern id="iso-grid" x="0" y="0" width="80" height="46" patternUnits="userSpaceOnUse">
-              {/* isometric diamond lines */}
-              <line x1="0" y1="23" x2="40" y2="0"  stroke="#d1d5db" strokeWidth="0.8" />
-              <line x1="40" y1="0"  x2="80" y2="23" stroke="#d1d5db" strokeWidth="0.8" />
-              <line x1="80" y1="23" x2="40" y2="46" stroke="#d1d5db" strokeWidth="0.8" />
-              <line x1="40" y1="46" x2="0"  y2="23" stroke="#d1d5db" strokeWidth="0.8" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#iso-grid)" opacity="0.5" />
-        </svg>
-        {/* Soft radial glow di tengah */}
-        <div className="absolute inset-0" style={{
-          background: 'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(255,255,255,0.95) 30%, rgba(248,250,251,0.7) 70%, transparent 100%)'
-        }} />
+        {/* Dark overlay */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,30,20,0.55) 0%, rgba(0,20,15,0.70) 60%, rgba(0,10,8,0.85) 100%)' }} />
 
-        {/* Content */}
-        <div className="relative z-10 flex flex-col items-center px-4 text-center py-20">
-          <img src="/logo.svg" alt="ID-MAP" className="h-32 w-auto mb-6 drop-shadow-2xl" draggable={false} />
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-gray-900 leading-tight max-w-2xl drop-shadow-sm">
+        {/* Hero content */}
+        <div className="relative z-10 flex flex-col items-center px-4 text-center pt-24 pb-16">
+          <p className="text-teal-300 text-xs sm:text-sm font-semibold tracking-[0.22em] uppercase mb-4">
+            Sistem Informasi Mangrove &amp; Pesisir
+          </p>
+
+          {/* Decorative underline */}
+          <div className="w-12 h-0.5 bg-teal-400 mb-5 rounded-full" />
+
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white leading-tight max-w-3xl drop-shadow-lg">
             Integrasi Data Mangrove dan Pesisir
           </h1>
-          <p className="mt-4 text-base sm:text-lg text-gray-800 max-w-xl leading-relaxed drop-shadow-sm">
-            Data Monitoring Mangrove/Vegetasi dan Ekosistem Pesisir
+
+          <p className="mt-5 text-sm sm:text-base text-white/80 max-w-xl leading-relaxed">
+            Platform pemantauan ekosistem mangrove dan pesisir secara terpadu — dari data lapangan hingga peta interaktif nasional.
           </p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-3">
+
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 items-center">
             <button
-              onClick={() => setModal('login-choice')}
-              className="flex items-center justify-center gap-2 px-8 py-3 bg-green-800 text-white font-bold rounded-xl shadow-lg hover:bg-green-700 transition-all text-base"
+              onClick={() => navigate('/peta')}
+              className="px-10 py-3 rounded-full font-bold text-green-950 text-base shadow-xl transition-all hover:scale-105"
+              style={{ background: 'linear-gradient(135deg, #6ee7b7, #14b8a6)' }}
             >
-              <LogIn className="w-5 h-5" /> Login
+              Jelajahi
             </button>
-            <button
-              onClick={() => setModal('signup')}
-              className="flex items-center justify-center gap-2 px-8 py-3 bg-white text-gray-800 font-bold rounded-xl shadow-lg border border-gray-200 hover:bg-gray-50 transition-all text-base"
-            >
-              <UserPlus className="w-5 h-5" /> Sign Up
-            </button>
+          </div>
+        </div>
+
+        {/* Bottom wave / scroll hint */}
+        <div className="absolute bottom-6 left-0 right-0 flex flex-col items-center gap-1 z-10">
+          <div className="w-5 h-8 rounded-full border-2 border-white/40 flex items-start justify-center pt-1.5">
+            <div className="w-0.5 h-2 bg-white/60 rounded-full animate-bounce" />
           </div>
         </div>
       </div>
 
-      {/* ── MODULE CARDS ── */}
-      <div className="max-w-4xl mx-auto px-4 pb-16 -mt-8 relative z-10">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            { label: 'SpaceWatch', desc: 'Pantau citra satelit Sentinel & Landsat multi-temporal', badge: 'bg-blue-600', icon: Satellite },
-            { label: 'EcoTrack', desc: 'Input & survei data lapangan berbasis mobile.', badge: 'bg-green-700', icon: ClipboardList },
-            { label: 'RestoreAI', desc: 'Rekomendasi Restorasi & kebijakan berbasis AI', badge: 'bg-orange-500', icon: Bot },
-          ].map(m => (
-            <div key={m.label} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center gap-2 mb-3">
-                <div className={`w-8 h-8 ${m.badge} rounded-lg flex items-center justify-center`}>
-                  <m.icon className="w-4 h-4 text-white" />
+      {/* ── FEATURE CARDS ── */}
+      <div className="bg-green-950 py-14 px-4">
+        <div className="max-w-4xl mx-auto">
+          <p className="text-teal-400 text-xs font-semibold tracking-widest uppercase text-center mb-2">Modul Utama</p>
+          <h2 className="text-white text-2xl font-bold text-center mb-8">Apa yang bisa dilakukan?</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {[
+              {
+                label: 'SpaceWatch',
+                desc: 'Pantau citra satelit Sentinel & Landsat multi-temporal untuk analisis perubahan tutupan mangrove.',
+                color: '#0ea5e9',
+                icon: '🛰️',
+              },
+              {
+                label: 'EcoTrack',
+                desc: 'Input dan survei data lapangan berbasis mobile dengan kemampuan offline.',
+                color: '#22c55e',
+                icon: '📋',
+              },
+              {
+                label: 'RestoreAI',
+                desc: 'Rekomendasi restorasi & kebijakan berbasis kecerdasan buatan dan data spasial.',
+                color: '#f97316',
+                icon: '🤖',
+              },
+            ].map(m => (
+              <div
+                key={m.label}
+                className="rounded-2xl p-6 border border-white/10 hover:border-teal-500/40 transition-all group"
+                style={{ background: 'rgba(255,255,255,0.05)' }}
+              >
+                <div className="text-3xl mb-3">{m.icon}</div>
+                <div
+                  className="text-xs font-bold tracking-widest uppercase mb-2"
+                  style={{ color: m.color }}
+                >
+                  {m.label}
                 </div>
-                <span className={`text-xs text-white font-bold px-2 py-0.5 rounded ${m.badge}`}>{m.label}</span>
+                <p className="text-white/70 text-sm leading-relaxed">{m.desc}</p>
               </div>
-              <p className="text-sm text-gray-600 leading-relaxed">{m.desc}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+      </div>
 
+      {/* ── FOOTER ── */}
+      <div className="bg-green-950 border-t border-white/10 py-5 text-center text-xs text-white/40">
+        © 2025 ID-MAP — Dinas Kelautan dan Perikanan
       </div>
 
       {/* ═══════════════════════════════════════════ */}
@@ -197,10 +228,9 @@ export default function LandingPage() {
       {/* ═══════════════════════════════════════════ */}
       {modal !== 'none' && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={e => { if (e.target === e.currentTarget) closeModal(); }}
         >
-          {/* ── Login choice ── */}
           {modal === 'login-choice' && (
             <ModalBox title="Masuk ke ID-MAP" onClose={closeModal}>
               <p className="text-sm text-gray-500 mb-6 text-center">Pilih jenis akun Anda</p>
@@ -239,7 +269,6 @@ export default function LandingPage() {
             </ModalBox>
           )}
 
-          {/* ── Admin login ── */}
           {modal === 'admin-login' && (
             <ModalBox title="Login Verifikator / Admin" onClose={closeModal}>
               <form onSubmit={handleAdminLogin} className="space-y-4 mt-2">
@@ -275,14 +304,12 @@ export default function LandingPage() {
                   <LogIn className="w-4 h-4" /> Masuk
                 </button>
               </form>
-
               <p className="text-center text-xs text-gray-400 mt-4">
                 <button onClick={() => setModal('login-choice')} className="text-blue-600 hover:underline">← Kembali</button>
               </p>
             </ModalBox>
           )}
 
-          {/* ── User email login ── */}
           {modal === 'user-login' && (
             <ModalBox title="Login dengan Email" onClose={closeModal}>
               <p className="text-xs text-gray-500 mb-5">Kami akan mengirimkan kode verifikasi 6 digit ke email Anda.</p>
@@ -306,14 +333,12 @@ export default function LandingPage() {
               </form>
               <p className="text-center text-xs text-gray-400 mt-4">
                 <button onClick={() => setModal('login-choice')} className="text-blue-600 hover:underline">← Kembali</button>
-                {' · '}
-                Belum terdaftar?{' '}
+                {' · '}Belum terdaftar?{' '}
                 <button onClick={() => setModal('signup')} className="text-green-700 font-semibold hover:underline">Sign Up</button>
               </p>
             </ModalBox>
           )}
 
-          {/* ── OTP verification (login) ── */}
           {modal === 'user-otp' && (
             <ModalBox title="Masukkan Kode Verifikasi" onClose={closeModal}>
               <p className="text-xs text-gray-500 mb-1">Kode dikirim ke <strong>{email}</strong></p>
@@ -352,10 +377,9 @@ export default function LandingPage() {
             </ModalBox>
           )}
 
-          {/* ── Sign up ── */}
           {modal === 'signup' && (
             <ModalBox title="Daftar Akun Baru" onClose={closeModal}>
-              <p className="text-xs text-gray-500 mb-5">Buat akun pengguna untuk mengakses data mangrove Wilker Cabdin KP Kab. Malang.</p>
+              <p className="text-xs text-gray-500 mb-5">Buat akun pengguna untuk mengakses data mangrove.</p>
               <form onSubmit={handleSignUp} className="space-y-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Nama Lengkap <span className="text-red-500">*</span></label>
@@ -383,7 +407,7 @@ export default function LandingPage() {
                 </div>
                 {suError && <ErrorBox msg={suError} />}
                 <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
-                  Akun baru mendapat akses <strong>Viewer</strong> — bisa lihat dashboard, peta & data monitoring. Akses input data lapangan memerlukan role Admin dari Verifikator.
+                  Akun baru mendapat akses <strong>Viewer</strong>. Akses input data lapangan memerlukan role Admin dari Verifikator.
                 </div>
                 <button type="submit"
                   className="w-full flex items-center justify-center gap-2 bg-green-800 text-white font-bold py-2.5 rounded-xl hover:bg-green-700 transition-colors">
@@ -397,7 +421,6 @@ export default function LandingPage() {
             </ModalBox>
           )}
 
-          {/* ── OTP verification (signup) ── */}
           {modal === 'signup-otp' && (
             <ModalBox title="Verifikasi Email" onClose={closeModal}>
               <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl p-3 mb-4">
@@ -442,19 +465,17 @@ export default function LandingPage() {
   );
 }
 
-// ── Shared sub-components ──────────────────────────────────────────────────
-
 function ModalBox({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-7 relative max-h-[90vh] overflow-y-auto">
-      <button onClick={onClose}
-        className="absolute top-4 right-4 text-gray-300 hover:text-gray-600 transition-colors">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative animate-in fade-in slide-in-from-bottom-4 duration-200">
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-gray-300 hover:text-gray-500 transition-colors"
+      >
         <X className="w-5 h-5" />
       </button>
-      <div className="flex items-center gap-3 mb-5">
-        <img src="/logo.svg" alt="ID-MAP" className="h-8 w-auto" draggable={false} />
-        <h2 className="text-lg font-bold text-gray-900">{title}</h2>
-      </div>
+      <h2 className="text-lg font-bold text-gray-800 mb-1">{title}</h2>
+      <div className="w-8 h-0.5 bg-green-500 rounded-full mb-4" />
       {children}
     </div>
   );
@@ -462,10 +483,9 @@ function ModalBox({ title, onClose, children }: { title: string; onClose: () => 
 
 function ErrorBox({ msg }: { msg: string }) {
   return (
-    <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-      <AlertCircle className="w-4 h-4 flex-shrink-0" />
-      {msg}
+    <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+      <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+      <p className="text-xs text-red-600">{msg}</p>
     </div>
   );
 }
-

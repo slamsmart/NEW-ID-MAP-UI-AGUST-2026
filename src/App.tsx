@@ -5,6 +5,7 @@ import { useAuth } from './context/useAuth';
 import Layout from './components/Layout/Layout';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
+const PetaPublik = lazy(() => import('./pages/PetaPublik'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const MonitoringEkosistem = lazy(() => import('./pages/MonitoringEkosistem'));
 const InputLapangan = lazy(() => import('./pages/InputLapangan'));
@@ -62,6 +63,7 @@ function AppRoutes() {
     <Suspense fallback={<AppShellFallback />}>
       <Routes>
         <Route path="/" element={<RootRoute />} />
+        <Route path="/peta" element={<PetaPublik />} />
         <Route path="/login" element={<LoginRedirect />} />
 
         <Route element={<ProtectedLayout />}>
