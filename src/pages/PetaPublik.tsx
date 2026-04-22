@@ -750,6 +750,26 @@ export default function PetaPublik() {
                   </div>
                 </>
               )}
+
+              {/* Download section */}
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Unduh Data</p>
+                <div className="space-y-1.5">
+                  <button onClick={handleDownload}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors text-white/60 border border-white/10">
+                    <FileText className="w-3.5 h-3.5 text-teal-400" />
+                    Unduh PDF Laporan
+                  </button>
+                  <button onClick={handleDownload}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-white/5 transition-colors text-white/60 border border-white/10">
+                    <Download className="w-3.5 h-3.5 text-green-400" />
+                    Unduh Marker KML/GeoJSON
+                  </button>
+                </div>
+                {!user && (
+                  <p className="text-[10px] text-white/30 mt-2 text-center">🔒 Perlu login untuk mengunduh</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
