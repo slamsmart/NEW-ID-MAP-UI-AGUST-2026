@@ -1,9 +1,9 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Leaf,
   ClipboardList, ChevronRight,
   ShieldCheck, User, Globe, Lock, Sprout, Turtle, Trees,
-  ClipboardCheck,
+  ClipboardCheck, X,
 } from 'lucide-react';
 import type { UserRole } from '../../context/authModel';
 import { useAuth } from '../../context/useAuth';
@@ -13,7 +13,7 @@ interface NavItem {
   icon: React.ElementType;
   label: string;
   exact?: boolean;
-  minRole?: UserRole[]; // roles that can see this item
+  minRole?: UserRole[];
 }
 
 const NAV_MAIN: NavItem[] = [
@@ -47,13 +47,23 @@ const ROLE_LABEL: Record<string, string> = {
   viewer: 'Pengguna Umum',
 };
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const canAccess = (item: NavItem) => {
     if (!item.minRole) return true;
     return user ? item.minRole.includes(user.role) : false;
+  };
+
+  const handleNavClick = () => {
+    onClose();
   };
 
   const renderNavItems = (items: NavItem[]) =>
@@ -80,6 +90,7 @@ export default function Sidebar() {
             if (to === '/input-lapangan' && location.pathname === '/input-lapangan') {
               window.dispatchEvent(new CustomEvent('idmap:reset-input-lapangan'));
             }
+            handleNavClick();
           }}
           className={({ isActive }) =>
             `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors group ${
@@ -100,15 +111,22 @@ export default function Sidebar() {
       );
     });
 
-  return (
-    <aside className="w-64 min-h-screen bg-green-950 text-white flex flex-col">
-      <div className="px-4 pt-4 pb-3 border-b border-green-900">
+  const sidebarContent = (
+    <aside className="w-64 h-full bg-green-950 text-white flex flex-col">
+      <div className="px-4 pt-4 pb-3 border-b border-green-900 flex items-center justify-between">
         <img
           src="/logo.svg"
-          alt="ID-MAP - Integrasi Data Mangrove Pesisir"
-          className="w-full h-auto max-h-20 object-contain"
+          alt="ID-MAP"
+          className="h-14 w-auto object-contain cursor-pointer"
           draggable={false}
+          onClick={() => { navigate('/dashboard'); handleNavClick(); }}
         />
+        <button
+          onClick={onClose}
+          className="md:hidden p-1.5 text-green-500 hover:text-white hover:bg-green-800 rounded-lg transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {user && (
@@ -146,11 +164,10 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-2 space-y-0.5">
+      <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
         <p className="text-xs text-green-600 uppercase tracking-widest font-semibold px-3 py-2">Menu Utama</p>
         {renderNavItems(NAV_MAIN)}
 
-        {/* Input Data — admin & verifikator */}
         {user && (user.role === 'verifikator' || user.role === 'admin') && (
           <div className="pt-3">
             <p className="text-xs text-green-600 uppercase tracking-widest font-semibold px-3 py-2">Input Data</p>
@@ -158,7 +175,6 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Monitoring Pesisir — semua user login */}
         {user && (
           <div className="pt-3">
             <p className="text-xs text-green-600 uppercase tracking-widest font-semibold px-3 py-2">Monitoring Pesisir</p>
@@ -166,7 +182,6 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Verifikasi — hanya verifikator */}
         {user && user.role === 'verifikator' && (
           <div className="pt-3">
             <p className="text-xs text-green-600 uppercase tracking-widest font-semibold px-3 py-2">Verifikasi</p>
@@ -179,5 +194,27 @@ export default function Sidebar() {
         <p className="text-xs text-green-800 text-center">ID-MAP v1.0 · Cabdin KP Kab. Malang</p>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* Desktop: always-visible sidebar */}
+      <div className="hidden md:flex w-64 min-h-screen flex-shrink-0">
+        {sidebarContent}
+      </div>
+
+      {/* Mobile: slide-over drawer */}
+      {isOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={onClose}
+          />
+          <div className="relative z-10 h-full flex-shrink-0">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

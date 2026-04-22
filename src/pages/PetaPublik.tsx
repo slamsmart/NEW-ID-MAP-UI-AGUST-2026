@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { mangroveLocations, ekosistemData } from '../data/mockData';
 import { titikAbrasiData } from '../data/abrasiData';
 import { fetchSurveys } from '../data/localStore';
-import { Filter, Layers, MapPin, Map, Satellite, Mountain, ChevronRight, X, Download, FileText, LogIn, UserPlus } from 'lucide-react';
+import { Filter, Layers, MapPin, Map, Satellite, Mountain, ChevronRight, X, Download, FileText, LogIn, UserPlus, PanelRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 
@@ -90,6 +90,7 @@ export default function PetaPublik() {
   const [activeMapLayer, setActiveMapLayer] = useState('osm');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<'mangrove' | 'abrasi' | 'penyu' | null>(null);
+  const [panelOpen, setPanelOpen] = useState(true);
 
   // Derived visibility from single filter
   const showMangrove = activeLayerFilter === 'all' || activeLayerFilter === 'mangrove';
@@ -189,19 +190,19 @@ export default function PetaPublik() {
     <div className="flex flex-col" style={{ height: '100vh', background: '#0d1117', color: '#e2e8f0' }}>
 
       {/* ── TOP BAR ── */}
-      <div className="flex items-center justify-between px-5 py-3 flex-shrink-0 border-b border-white/10" style={{ background: '#111827' }}>
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+      <div className="flex items-center justify-between px-3 sm:px-5 py-2.5 flex-shrink-0 border-b border-white/10 gap-2" style={{ background: '#111827' }}>
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <button onClick={() => navigate('/')} className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0">
             <img src="/logo.svg" alt="ID-MAP" className="h-7 w-auto" />
           </button>
-          <div className="w-px h-6 bg-white/20" />
-          <div>
-            <h1 className="text-white font-bold text-sm sm:text-base leading-tight">Peta Interaktif Mangrove</h1>
-            <p className="text-white/40 text-[10px] hidden sm:block">Data Integrasi Mangrove dan Ekosistem Pesisir berdasarkan hasil ground check dan pengolahan data secara spasial</p>
+          <div className="w-px h-6 bg-white/20 flex-shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-white font-bold text-xs sm:text-sm md:text-base leading-tight truncate">Peta Interaktif Mangrove</h1>
+            <p className="text-white/40 text-[10px] hidden sm:block truncate">Data Integrasi Mangrove dan Ekosistem Pesisir</p>
           </div>
         </div>
 
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
           {[
             { label: 'Lebat', count: totalLebat, color: '#22c55e' },
             { label: 'Sedang', count: totalSedang, color: '#eab308' },
@@ -216,41 +217,50 @@ export default function PetaPublik() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           <button
             onClick={handleDownload}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/20 text-white/70 hover:bg-white/10 transition-colors"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/20 text-white/70 hover:bg-white/10 transition-colors"
           >
-            <Download className="w-3.5 h-3.5" /> Unduh
+            <Download className="w-3.5 h-3.5" /> <span className="hidden md:inline">Unduh</span>
           </button>
           {user ? (
             <button onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold bg-teal-600 text-white hover:bg-teal-500 transition-colors">
-              Dashboard <ChevronRight className="w-3 h-3" />
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold bg-teal-600 text-white hover:bg-teal-500 transition-colors">
+              <span className="hidden sm:inline">Dashboard</span>
+              <ChevronRight className="w-3 h-3" />
             </button>
           ) : (
             <button onClick={() => navigate('/')}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold border border-white/30 text-white hover:bg-white/10 transition-colors">
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold border border-white/30 text-white hover:bg-white/10 transition-colors">
               Login
             </button>
           )}
+          {/* Panel toggle (mobile) */}
+          <button
+            onClick={() => setPanelOpen(o => !o)}
+            className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors sm:hidden"
+            title="Toggle panel"
+          >
+            <PanelRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
       {/* ── FILTER BAR ── */}
-      <div className="flex items-center gap-3 px-5 py-2.5 flex-wrap border-b border-white/10 flex-shrink-0" style={{ background: '#161b27' }}>
-        <div className="flex items-center gap-1.5 text-white/50 text-xs">
-          <Filter className="w-3.5 h-3.5" /> Layer
+      <div className="flex items-center gap-2 px-3 sm:px-5 py-2 border-b border-white/10 flex-shrink-0 overflow-x-auto" style={{ background: '#161b27' }}>
+        <div className="flex items-center gap-1.5 text-white/50 text-xs flex-shrink-0">
+          <Filter className="w-3.5 h-3.5" />
         </div>
 
-        {/* Single layer dropdown */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+        {/* Single layer pills */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           {([ 
-            { val: 'all',     label: 'Semua Layer',         icon: '🗺️',  color: '#94a3b8' },
-            { val: 'mangrove', label: 'Mangrove',            icon: '🌿',  color: '#22c55e' },
-            { val: 'abrasi',   label: 'Abrasi/Rekomendasi',  icon: '🌿',  color: '#f97316' },
-            { val: 'penyu',    label: 'Penyu',               icon: '🐢',  color: '#0d9488' },
-            { val: 'benthic',  label: 'Benthic',             icon: '🪸',  color: '#22d3ee' },
+            { val: 'all',      label: 'Semua',               icon: '🗺️', color: '#94a3b8' },
+            { val: 'mangrove', label: 'Mangrove',             icon: '🌿', color: '#22c55e' },
+            { val: 'abrasi',   label: 'Abrasi',               icon: '🌿', color: '#f97316' },
+            { val: 'penyu',    label: 'Penyu',                icon: '🐢', color: '#0d9488' },
+            { val: 'benthic',  label: 'Benthic',              icon: '🪸', color: '#22d3ee' },
           ] as const).map(opt => {
             const isActive = activeLayerFilter === opt.val;
             return (
@@ -261,49 +271,50 @@ export default function PetaPublik() {
                   setSelectedId(null);
                   setSelectedType(null);
                 }}
-                className="text-xs px-3 py-1.5 rounded-full font-medium transition-all"
+                className="text-xs px-2.5 sm:px-3 py-1.5 rounded-full font-medium transition-all whitespace-nowrap"
                 style={{
                   background: isActive ? `${opt.color}25` : 'rgba(255,255,255,0.05)',
                   color: isActive ? opt.color : '#64748b',
                   border: `1px solid ${isActive ? opt.color + '70' : 'rgba(255,255,255,0.1)'}`,
                 }}
               >
-                {opt.icon} {opt.label}
+                {opt.icon} <span className="hidden xs:inline sm:inline">{opt.label}</span>
               </button>
             );
           })}
         </div>
 
         {/* Map type buttons */}
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-1 flex-shrink-0">
           {MAP_LAYERS.map(l => {
             const Icon = l.icon;
             return (
               <button key={l.id} onClick={() => setActiveMapLayer(l.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                 style={{
                   background: activeMapLayer === l.id ? '#0ea5e9' : 'rgba(255,255,255,0.07)',
                   color: activeMapLayer === l.id ? '#fff' : '#94a3b8',
                   border: activeMapLayer === l.id ? '1px solid #0ea5e9' : '1px solid transparent',
                 }}>
-                <Icon className="w-3.5 h-3.5" /> {l.label}
+                <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="hidden sm:inline">{l.label}</span>
               </button>
             );
           })}
         </div>
 
-        <div className="flex items-center gap-1 text-white/40 text-xs">
+        <div className="flex items-center gap-1 text-white/40 text-xs flex-shrink-0">
           <MapPin className="w-3.5 h-3.5" />
           <strong className="text-white">
             {(showMangrove ? mangroveFiltered.length : 0) +
              (showAbrasi ? allAbrasi.length : 0) +
              (showPenyu ? allPenyu.length : 0)}
-          </strong>&nbsp;titik
+          </strong>
         </div>
       </div>
 
       {/* ── MAP + SIDEBAR ── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
 
         {/* MAP */}
         <div className="flex-1 relative">
@@ -424,8 +435,20 @@ export default function PetaPublik() {
           )}
         </div>
 
-        {/* ── RIGHT SIDEBAR ── */}
-        <div className="w-72 flex-shrink-0 flex flex-col border-l border-white/10 overflow-y-auto" style={{ background: '#111827' }}>
+        {/* ── PANEL TOGGLE BUTTON (floating, desktop) ── */}
+        <button
+          onClick={() => setPanelOpen(o => !o)}
+          className="absolute top-3 right-3 z-[998] hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium"
+          style={{ background: 'rgba(0,0,0,0.7)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.15)' }}
+          title={panelOpen ? 'Sembunyikan panel' : 'Tampilkan panel'}
+        >
+          <PanelRight className={`w-3.5 h-3.5 transition-transform ${panelOpen ? 'rotate-180' : ''}`} />
+          <span className="hidden md:inline">{panelOpen ? 'Tutup' : 'Panel'}</span>
+        </button>
+
+        {/* ── RIGHT SIDEBAR ── Desktop inline */}
+        {panelOpen && (
+        <div className="hidden sm:flex w-64 md:w-72 flex-shrink-0 flex-col border-l border-white/10 overflow-y-auto" style={{ background: '#111827' }}>
 
           {/* Legend */}
           <div className="px-4 py-3 border-b border-white/10">
@@ -647,6 +670,90 @@ export default function PetaPublik() {
             </div>
           )}
         </div>
+        )}
+
+        {/* ── RIGHT SIDEBAR ── Mobile overlay */}
+        {panelOpen && (
+        <div className="sm:hidden fixed inset-0 z-[997] flex justify-end">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setPanelOpen(false)} />
+          <div className="relative z-10 w-72 max-w-[85vw] flex flex-col border-l border-white/10 overflow-y-auto" style={{ background: '#111827' }}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">Panel Info</span>
+              <button onClick={() => setPanelOpen(false)} className="text-white/40 hover:text-white/70">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Legend */}
+            <div className="px-4 py-3 border-b border-white/10">
+              <div className="flex items-center gap-2 text-sm font-semibold text-white mb-3">
+                <Layers className="w-4 h-4 text-teal-400" /> Legenda
+              </div>
+              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Titik Mangrove</p>
+              <div className="space-y-1.5 mb-3">
+                {Object.entries(MANGROVE_STATUS_COLORS).map(([s, color]) => (
+                  <div key={s} className="flex items-center gap-2.5">
+                    <div className="rounded-full flex-shrink-0"
+                      style={{ width: MANGROVE_RADIUS[s] * 1.6, height: MANGROVE_RADIUS[s] * 1.6, background: color, opacity: 0.85 }} />
+                    <span className="text-xs capitalize text-white/70">{s}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Titik Abrasi / Rekomendasi</p>
+              <div className="space-y-1.5 mb-3">
+                {Object.entries(ABRASI_PRIORITAS_COLORS).map(([p, color]) => (
+                  <div key={p} className="flex items-center gap-2">
+                    <div className="text-sm">🌿</div>
+                    <span className="text-xs text-white/70">{p}</span>
+                    <div className="w-2 h-2 rounded-full ml-auto" style={{ background: color }} />
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Pendaratan Penyu</p>
+              <div className="flex items-center gap-2">
+                <div className="text-sm">🐢</div>
+                <span className="text-xs text-white/70">Titik pendaratan penyu laut</span>
+              </div>
+            </div>
+
+            {/* Location list */}
+            <div className="flex-1 flex flex-col px-4 py-4 overflow-y-auto">
+              {(activeLayerFilter === 'all' || activeLayerFilter === 'mangrove') && (
+                <>
+                  <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2">🌿 Mangrove ({mangroveFiltered.length})</p>
+                  <div className="space-y-0.5 overflow-y-auto" style={{ maxHeight: '30vh' }}>
+                    {mangroveFiltered.map(loc => (
+                      <button key={loc.id}
+                        onClick={() => { setSelectedId(loc.id); setSelectedType('mangrove'); setPanelOpen(false); }}
+                        className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors">
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: MANGROVE_STATUS_COLORS[loc.status] }} />
+                        <span className="truncate text-white/60">{loc.name}</span>
+                        <span className="ml-auto text-white/30 flex-shrink-0 text-[10px]">{loc.areaHa.toLocaleString()} ha</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+              {(activeLayerFilter === 'all' || activeLayerFilter === 'penyu') && (
+                <>
+                  <p className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2 mt-4">🐢 Penyu ({allPenyu.length})</p>
+                  <div className="space-y-0.5">
+                    {allPenyu.map(pny => (
+                      <button key={pny.id}
+                        onClick={() => { setSelectedId(pny.id); setSelectedType('penyu'); setPanelOpen(false); }}
+                        className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-white/5 transition-colors">
+                        <span className="flex-shrink-0">🐢</span>
+                        <span className="truncate text-white/60">{pny.namaPantai}</span>
+                        <span className="ml-auto text-teal-500 flex-shrink-0 text-[10px]">{pny.sarang} sarang</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        )}
       </div>
 
       {/* ── DOWNLOAD GATE MODAL ── */}
