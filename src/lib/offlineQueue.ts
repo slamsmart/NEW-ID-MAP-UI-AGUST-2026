@@ -13,8 +13,10 @@
  * → Yang butuh internet: Supabase sync + Cloudinary upload.
  */
 
-import { supabase, isSupabaseConfigured } from './supabase';
+import { isSupabaseConfigured } from './supabase';
 import type { DbSurvey, DbLocation } from './supabase';
+import { convex, isConvexConfigured, dbSurveyToConvexArgs, dbLocationToConvexArgs, convexSurveyToDbSurvey } from './convexClient';
+import { api } from '../../convex/_generated/api';
 
 const QUEUE_KEY = 'idmap_offline_queue';
 const LOCS_QUEUE_KEY = 'idmap_offline_locs';
@@ -54,6 +56,9 @@ export function getPendingCount(): number {
          getLocQueue().length;
 }
 
+// Reference yang masih diekspor untuk backward-compat:
+void isSupabaseConfigured;
+
 /**
  * Simpan survei: coba Supabase dulu, fallback ke localStorage queue
  */
@@ -72,11 +77,11 @@ export async function enqueueSurvey(survey: DbSurvey): Promise<{ success: boolea
   else q.unshift(queued);
   setQueue(q.slice(0, 200));
 
-  if (!navigator.onLine || !isSupabaseConfigured()) {
+  if (!navigator.onLine || !isConvexConfigured()) {
     return { success: true, offline: true };
   }
 
-  return _uploadSurveyToSupabase(queued);
+  return _uploadSurveyToConvex(queued);
 }
 
 /**
@@ -89,23 +94,20 @@ export async function enqueueLocation(loc: DbLocation): Promise<{ success: boole
     setLocQueue(locQueue);
   }
 
-  if (!navigator.onLine || !isSupabaseConfigured()) {
+  if (!navigator.onLine || !isConvexConfigured()) {
     return { success: true, offline: true };
   }
 
-  return _uploadLocationToSupabase(loc);
+  return _uploadLocationToConvex(loc);
 }
 
-async function _uploadSurveyToSupabase(survey: QueuedSurvey): Promise<{ success: boolean; offline: boolean }> {
+async function _uploadSurveyToConvex(survey: QueuedSurvey): Promise<{ success: boolean; offline: boolean }> {
   try {
     const { _queued_at, _offline_photos, ...dbSurvey } = survey;
     void _queued_at;
     void _offline_photos;
-    const { error } = await supabase
-      .from('surveys')
-      .upsert({ ...dbSurvey, sync_status: 'synced' }, { onConflict: 'id' });
-
-    if (error) throw error;
+    const args = dbSurveyToConvexArgs(dbSurvey as DbSurvey);
+    await convex.mutation(api.surveys.upsert, args);
 
     // Update status di queue lokal
     const q = getQueue();
@@ -115,18 +117,14 @@ async function _uploadSurveyToSupabase(survey: QueuedSurvey): Promise<{ success:
 
     return { success: true, offline: false };
   } catch (err) {
-    console.warn('[ID-MAP] Supabase upload gagal, tetap di queue:', err);
+    console.warn('[ID-MAP] Convex upload survey gagal, tetap di queue:', err);
     return { success: true, offline: true };
   }
 }
 
-async function _uploadLocationToSupabase(loc: DbLocation): Promise<{ success: boolean; offline: boolean }> {
+async function _uploadLocationToConvex(loc: DbLocation): Promise<{ success: boolean; offline: boolean }> {
   try {
-    const { error } = await supabase
-      .from('mangrove_locations')
-      .upsert(loc, { onConflict: 'id' });
-
-    if (error) throw error;
+    await convex.mutation(api.locations.upsert, dbLocationToConvexArgs(loc));
 
     // Hapus dari loc queue setelah berhasil
     const q = getLocQueue().filter(l => l.id !== loc.id);
@@ -134,7 +132,7 @@ async function _uploadLocationToSupabase(loc: DbLocation): Promise<{ success: bo
 
     return { success: true, offline: false };
   } catch (err) {
-    console.warn('[ID-MAP] Location upload gagal:', err);
+    console.warn('[ID-MAP] Convex upload location gagal:', err);
     return { success: true, offline: true };
   }
 }
@@ -144,7 +142,7 @@ async function _uploadLocationToSupabase(loc: DbLocation): Promise<{ success: bo
  * Dipanggil dari event listener window 'online'.
  */
 export async function syncPendingQueue(): Promise<{ synced: number; failed: number }> {
-  if (!navigator.onLine || !isSupabaseConfigured()) return { synced: 0, failed: 0 };
+  if (!navigator.onLine || !isConvexConfigured()) return { synced: 0, failed: 0 };
 
   let synced = 0;
   let failed = 0;
@@ -152,7 +150,7 @@ export async function syncPendingQueue(): Promise<{ synced: number; failed: numb
   // Sync lokasi dulu (karena survey bisa referensi lokasi baru)
   const locQueue = getLocQueue();
   for (const loc of locQueue) {
-    const { success } = await _uploadLocationToSupabase(loc);
+    const { success } = await _uploadLocationToConvex(loc);
     if (success) synced++;
     else failed++;
   }
@@ -160,7 +158,7 @@ export async function syncPendingQueue(): Promise<{ synced: number; failed: numb
   // Sync surveys
   const surveyQueue = getQueue().filter(s => s.sync_status === 'pending');
   for (const survey of surveyQueue) {
-    const { offline } = await _uploadSurveyToSupabase(survey);
+    const { offline } = await _uploadSurveyToConvex(survey);
     if (!offline) synced++;
     else failed++;
   }
@@ -174,38 +172,29 @@ export async function syncPendingQueue(): Promise<{ synced: number; failed: numb
 export async function getAllSurveys(): Promise<DbSurvey[]> {
   const localSurveys = getQueue() as DbSurvey[];
 
-  if (!navigator.onLine || !isSupabaseConfigured()) {
+  if (!navigator.onLine || !isConvexConfigured()) {
     return localSurveys;
   }
 
   try {
-    const { data, error } = await supabase
-      .from('surveys')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(200);
-
-    if (error) throw error;
-
-    // Gabung: prioritaskan Supabase, tambah yang hanya ada di lokal
-    const supabaseIds = new Set((data ?? []).map((s: DbSurvey) => s.id));
-    const onlyLocal = localSurveys.filter(s => !supabaseIds.has(s.id));
-    return [...(data ?? []) as DbSurvey[], ...onlyLocal];
+    const rows = await convex.query(api.surveys.list, { limit: 200 });
+    const remote = (rows ?? []).map(r => convexSurveyToDbSurvey(r as unknown as Record<string, unknown>));
+    // Gabung: prioritaskan remote, tambah yang hanya ada di lokal
+    const remoteIds = new Set(remote.map(s => s.id));
+    const onlyLocal = localSurveys.filter(s => !remoteIds.has(s.id));
+    return [...remote, ...onlyLocal];
   } catch {
     return localSurveys;
   }
 }
 
 /**
- * Ambil statistik survei dari Supabase atau hitung dari lokal
+ * Stats agregat dari Convex (digunakan Header EcoTrack badge).
  */
 export async function getStatsFromDB() {
-  if (!isSupabaseConfigured()) return null;
-
+  if (!isConvexConfigured()) return null;
   try {
-    const { data, error } = await supabase.from('survey_stats').select('*').single();
-    if (error) throw error;
-    return data;
+    return await convex.query(api.surveys.stats, {});
   } catch {
     return null;
   }

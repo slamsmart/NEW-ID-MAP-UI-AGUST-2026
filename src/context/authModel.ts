@@ -23,19 +23,17 @@ export interface SignUpData {
 export interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
+  /** Login admin/verifikator (form username+password match ADMIN_ACCOUNTS). */
   login: (username: string, password: string) => boolean;
-  loginWithEmail: (email: string) => Promise<{ success: boolean; demoOtp?: string; error?: string; warning?: string }>;
-  verifyOTP: (email: string, otp: string) => Promise<boolean>;
-  signUp: (data: SignUpData) => Promise<{ success: boolean; demoOtp?: string; error?: string; warning?: string }>;
   logout: () => Promise<void>;
+  /** Set user dari penyedia auth eksternal (mis. Clerk Google sign-in). */
+  signInExternal: (user: AuthUser) => void;
 }
 
 export const AuthContext = createContext<AuthContextValue>({
   user: null,
-  loading: true,
+  loading: false,
   login: () => false,
-  loginWithEmail: async () => ({ success: false }),
-  verifyOTP: async () => false,
-  signUp: async () => ({ success: false }),
   logout: async () => {},
+  signInExternal: () => {},
 });

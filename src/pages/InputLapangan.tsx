@@ -12,7 +12,6 @@ import { useAuth } from '../context/useAuth';
 import { uploadPhoto, fileToDataUrl, isCloudinaryConfigured } from '../lib/cloudinary';
 import { enqueueSurvey } from '../lib/offlineQueue';
 import { extractGpsAuto, preloadOcrWorker, type ExifGpsResult } from '../lib/exifGps';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
 // â"€â"€â"€ Types â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 type TujuanSurvei = 'monitoring_vegetasi' | 'potensi_penanaman' | 'pendaratan_penyu';
@@ -873,16 +872,16 @@ function SarangMultiInput({ sarangList, setSarangList, isOnline }: {
                     </td>
                     <td className="px-2 py-1.5">
                       <input value={s.lat} onChange={e => update(s.id, 'lat', e.target.value)}
-                        placeholder="-8.386..." className="w-full text-xs border border-gray-300 rounded px-1.5 py-1 font-mono bg-white" />
+                        placeholder="-8.386..." className="w-full text-xs border border-gray-300 rounded px-1.5 py-1 font-mono bg-white text-gray-900 placeholder-gray-400" />
                     </td>
                     <td className="px-2 py-1.5">
                       <input value={s.lng} onChange={e => update(s.id, 'lng', e.target.value)}
-                        placeholder="112.77..." className="w-full text-xs border border-gray-300 rounded px-1.5 py-1 font-mono bg-white" />
+                        placeholder="112.77..." className="w-full text-xs border border-gray-300 rounded px-1.5 py-1 font-mono bg-white text-gray-900 placeholder-gray-400" />
                     </td>
                     <td className="px-2 py-1.5 text-center text-gray-500">{s.waktu || '--'}</td>
                     <td className="px-2 py-1.5">
                       <input value={s.catatan} onChange={e => update(s.id, 'catatan', e.target.value)}
-                        placeholder="Catatan..." className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 bg-white" />
+                        placeholder="Catatan..." className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 bg-white text-gray-900 placeholder-gray-400" />
                     </td>
                     <td className="px-2 py-1.5 text-center">
                       <div className="flex items-center justify-center gap-1">
@@ -1021,19 +1020,9 @@ export default function InputLapangan() {
     const handleStorage = () => { void loadHistory(); };
     window.addEventListener('storage', handleStorage);
     const timer = setInterval(() => { void loadHistory(); }, 10000);
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-    if (isSupabaseConfigured()) {
-      channel = supabase
-        .channel('input-lapangan-history')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'surveys' }, () => {
-          void loadHistory();
-        })
-        .subscribe();
-    }
     return () => {
       window.removeEventListener('storage', handleStorage);
       clearInterval(timer);
-      if (channel) supabase.removeChannel(channel);
     };
   }, []);
   const matchedHistory = allHistory.filter(s => {

@@ -1,5 +1,7 @@
 import { getAllSurveys } from '../lib/offlineQueue';
-import { supabase, isSupabaseConfigured, type DbSurvey } from '../lib/supabase';
+import { type DbSurvey } from '../lib/supabase';
+import { convex, isConvexConfigured } from '../lib/convexClient';
+import { api } from '../../convex/_generated/api';
 import type { MangroveLocation } from '../types';
 
 const CUSTOM_LOCS_KEY = 'idmap_custom_locs';
@@ -220,7 +222,7 @@ export function saveSurvey(rec: SurveyRecord): void {
 }
 
 export async function fetchSurveys(): Promise<SurveyRecord[]> {
-  if (!isSupabaseConfigured()) {
+  if (!isConvexConfigured()) {
     return getSurveys();
   }
 
@@ -251,12 +253,9 @@ export function deleteSurvey(id: string): void {
 
 export async function removeSurvey(id: string): Promise<void> {
   deleteSurvey(id);
-  if (!isSupabaseConfigured()) return;
+  if (!isConvexConfigured()) return;
 
-  const { error } = await supabase.from('surveys').delete().eq('id', id);
-  if (error) {
-    throw error;
-  }
+  await convex.mutation(api.surveys.remove, { legacyId: id });
 }
 
 export function verifySurvey(id: string, status: 'approved' | 'rejected', note: string, verifiedBy: string): void {
@@ -273,56 +272,97 @@ export function verifySurvey(id: string, status: 'approved' | 'rejected', note: 
 
 export async function verifySurveyRemote(id: string, status: 'approved' | 'rejected', note: string, verifiedBy: string): Promise<void> {
   verifySurvey(id, status, note, verifiedBy);
-  if (!isSupabaseConfigured()) return;
+  if (!isConvexConfigured()) return;
 
-  const verifiedAt = new Date().toISOString();
-  const { error } = await supabase
-    .from('surveys')
-    .update({
-      verification_status: status,
-      verification_note: note || null,
-      verified_by: verifiedBy,
-      verified_at: verifiedAt,
-    })
-    .eq('id', id);
-
-  if (error) {
-    throw error;
-  }
+  await convex.mutation(api.surveys.verify, {
+    legacyId: id,
+    status,
+    note: note || undefined,
+    verifiedBy,
+  });
 }
 
+/**
+ * Update parsial survei via Convex.
+ * Strategi: ambil dokumen existing dari Convex, merge updates, upsert kembali.
+ * (Convex tidak punya "update partial by legacyId" — pakai upsert idempotent.)
+ */
 export async function updateSurveyRemote(id: string, updates: Partial<SurveyRecord>): Promise<void> {
   updateSurvey(id, updates);
-  if (!isSupabaseConfigured()) return;
+  if (!isConvexConfigured()) return;
 
-  const payload: Record<string, unknown> = {};
-  if (updates.locationName !== undefined) payload.location_name = updates.locationName;
-  if (updates.province !== undefined) payload.province = updates.province;
-  if (updates.substrat !== undefined) payload.substrat = updates.substrat || null;
-  if (updates.salinitas !== undefined) payload.salinitas = updates.salinitas ? Number.parseFloat(updates.salinitas) || null : null;
-  if (updates.tutupanTajuk !== undefined) payload.tutupan_tajuk = updates.tutupanTajuk ? Number.parseFloat(updates.tutupanTajuk) || null : null;
-  if (updates.koordinatLat !== undefined) payload.koordinat_lat = updates.koordinatLat ? Number.parseFloat(updates.koordinatLat) || null : null;
-  if (updates.koordinatLng !== undefined) payload.koordinat_lng = updates.koordinatLng ? Number.parseFloat(updates.koordinatLng) || null : null;
-  if (updates.rekomendasiLapangan !== undefined) payload.rekomendasi_lapangan = updates.rekomendasiLapangan || null;
-  if (updates.kondisiUmum !== undefined) payload.kondisi_umum = updates.kondisiUmum || null;
-  if (updates.namaPantai !== undefined) payload.nama_pantai = updates.namaPantai || null;
-  if (updates.googleMapsUrl !== undefined) payload.google_maps_url = updates.googleMapsUrl || null;
-  if (updates.tingkatAbrasi !== undefined) payload.tingkat_abrasi = updates.tingkatAbrasi || null;
-  if (updates.prioritasAbrasi !== undefined) payload.prioritas_abrasi = updates.prioritasAbrasi || null;
-  if (updates.kondisiSebelum !== undefined) payload.kondisi_sebelum = updates.kondisiSebelum || null;
-  if (updates.kondisiSesudah !== undefined) payload.kondisi_sesudah = updates.kondisiSesudah || null;
-  if (updates.ancamanUtama !== undefined) payload.ancaman_utama = updates.ancamanUtama ?? [];
-  if (updates.jenisPenyu !== undefined) payload.jenis_penyu = updates.jenisPenyu || null;
-  if (updates.statusPerlindungan !== undefined) payload.status_perlindungan = updates.statusPerlindungan || null;
-  if (updates.jumlahSarang !== undefined) payload.jumlah_sarang = updates.jumlahSarang ? Number.parseInt(updates.jumlahSarang, 10) || null : null;
-  if (updates.sarangPoints !== undefined) payload.sarang_points = updates.sarangPoints ?? [];
+  const existing = await convex.query(api.surveys.getByLegacyId, { legacyId: id });
+  if (!existing) return;
 
-  if (Object.keys(payload).length === 0) return;
+  const num = (v: string | undefined) =>
+    v === undefined ? undefined : (v ? Number.parseFloat(v) || undefined : undefined);
+  const int = (v: string | undefined) =>
+    v === undefined ? undefined : (v ? Number.parseInt(v, 10) || undefined : undefined);
 
-  const { error } = await supabase.from('surveys').update(payload).eq('id', id);
-  if (error) {
-    throw error;
-  }
+  const merged = {
+    legacyId: id,
+    tujuanSurvei: existing.tujuanSurvei,
+    petugasNama: existing.petugasNama,
+    petugasNip: existing.petugasNip,
+    petugasUnit: existing.petugasUnit,
+    tanggal: existing.tanggal,
+    locationId: existing.locationId,
+    locationName: updates.locationName ?? existing.locationName,
+    province: updates.province ?? existing.province,
+    kabKota: existing.kabKota,
+    kecamatan: existing.kecamatan,
+    koordinatLat: updates.koordinatLat !== undefined ? num(updates.koordinatLat) : existing.koordinatLat,
+    koordinatLng: updates.koordinatLng !== undefined ? num(updates.koordinatLng) : existing.koordinatLng,
+    gpsAccuracy: existing.gpsAccuracy,
+    googleMapsUrl: updates.googleMapsUrl ?? existing.googleMapsUrl,
+    metodeSurvei: existing.metodeSurvei,
+    tutupanTajuk: updates.tutupanTajuk !== undefined ? num(updates.tutupanTajuk) : existing.tutupanTajuk,
+    kerapatanEstimasi: existing.kerapatanEstimasi,
+    spesiesDominan: existing.spesiesDominan,
+    spesiesLain: existing.spesiesLain,
+    lajuRegenerasi: existing.lajuRegenerasi,
+    kondisiSerasah: existing.kondisiSerasah,
+    salinitas: updates.salinitas !== undefined ? num(updates.salinitas) : existing.salinitas,
+    ph: existing.ph,
+    suhu: existing.suhu,
+    kekeruhan: existing.kekeruhan,
+    substrat: updates.substrat !== undefined ? (updates.substrat || undefined) : existing.substrat,
+    elevasi: existing.elevasi,
+    pasangSurut: existing.pasangSurut,
+    ancamanUtama: updates.ancamanUtama ?? existing.ancamanUtama,
+    jarakPemukiman: existing.jarakPemukiman,
+    luasTambakEstimasi: existing.luasTambakEstimasi,
+    aktivitasManusia: existing.aktivitasManusia,
+    statusTenurial: existing.statusTenurial,
+    namaArea: existing.namaArea,
+    luasanPotensi: existing.luasanPotensi,
+    aksesibilitas: existing.aksesibilitas,
+    pengaruhPasang: existing.pengaruhPasang,
+    skorPotensi: existing.skorPotensi,
+    namaPantai: updates.namaPantai ?? existing.namaPantai,
+    indikasiAbrasi: existing.indikasiAbrasi,
+    kondisiSebelum: updates.kondisiSebelum ?? existing.kondisiSebelum,
+    kondisiSesudah: updates.kondisiSesudah ?? existing.kondisiSesudah,
+    tingkatAbrasi: updates.tingkatAbrasi ?? existing.tingkatAbrasi,
+    panjangTerdampak: existing.panjangTerdampak,
+    luasanTerdampak: existing.luasanTerdampak,
+    prioritasAbrasi: updates.prioritasAbrasi ?? existing.prioritasAbrasi,
+    kondisiUmum: updates.kondisiUmum ?? existing.kondisiUmum,
+    rekomendasiLapangan: updates.rekomendasiLapangan ?? existing.rekomendasiLapangan,
+    jenisPenyu: updates.jenisPenyu ?? existing.jenisPenyu,
+    jumlahSarang: updates.jumlahSarang !== undefined ? int(updates.jumlahSarang) : existing.jumlahSarang,
+    statusPerlindungan: updates.statusPerlindungan ?? existing.statusPerlindungan,
+    sarangPoints: updates.sarangPoints ?? existing.sarangPoints,
+    fotoDokumentasi: existing.fotoDokumentasi,
+    photoUrls: existing.photoUrls,
+    verificationStatus: existing.verificationStatus,
+    verificationNote: existing.verificationNote,
+    verifiedBy: existing.verifiedBy,
+    verifiedAt: existing.verifiedAt,
+    syncStatus: existing.syncStatus,
+  };
+
+  await convex.mutation(api.surveys.upsert, merged);
 }
 
 export async function fetchVerificationStats() {

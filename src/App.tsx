@@ -3,8 +3,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/useAuth';
 import Layout from './components/Layout/Layout';
+import ClerkBridge from './components/ClerkBridge';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
+const Login = lazy(() => import('./pages/Login'));
 const PetaPublik = lazy(() => import('./pages/PetaPublik'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const MonitoringEkosistem = lazy(() => import('./pages/MonitoringEkosistem'));
@@ -48,7 +50,8 @@ function RootRoute() {
 
 function LoginRedirect() {
   const { user } = useAuth();
-  return user ? <Navigate to="/dashboard" replace /> : <Navigate to="/" replace />;
+  // Sudah login → langsung dashboard. Belum login → render form admin/verifikator.
+  return user ? <Navigate to="/dashboard" replace /> : <Login />;
 }
 
 function ProtectedLayout() {
@@ -85,6 +88,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
+      <ClerkBridge />
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>

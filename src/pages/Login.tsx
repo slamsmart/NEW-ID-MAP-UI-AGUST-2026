@@ -19,80 +19,114 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center px-4 py-10">
-      <div className="text-center mb-8">
-        <img
-          src="/logo.svg"
-          alt="ID-MAP"
-          className="h-24 w-auto mx-auto mb-5"
-          draggable={false}
-        />
-        <h1 className="text-base font-semibold text-gray-700">
-          Sistem Pemantauan &amp; Restorasi Mangrove Pesisir Indonesia
-        </h1>
-        <p className="text-xs text-gray-400 mt-1">
-          Basis data untuk Pemantauan dan Restorasi Lingkungan
-        </p>
-      </div>
+    <div
+      className="relative min-h-screen w-full flex items-center justify-center px-4 py-10 font-sans overflow-hidden"
+      style={{
+        background:
+          'radial-gradient(80% 60% at 78% 12%, #155e75 0%, transparent 55%),' +
+          'radial-gradient(75% 65% at 35% 95%, #14b8a6 0%, transparent 55%),' +
+          'linear-gradient(160deg, #0e7490 0%, #0f766e 50%, #115e59 100%)',
+      }}
+    >
 
-      <div className="w-full max-w-sm bg-white border border-gray-200 rounded-2xl shadow-sm p-8 mb-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-0.5">Masuk ke Sistem</h2>
-        <p className="text-xs text-gray-500 mb-6">Gunakan akun yang telah diberikan oleh tim pengelola.</p>
+      <div className="relative z-10 w-full max-w-md">
+        {/* Brand row */}
+        <div className="mb-6 flex flex-col items-center text-center">
+          <img
+            src="/logo.svg"
+            alt="ID-MAP"
+            className="h-16 w-auto mb-3 drop-shadow-lg"
+            draggable={false}
+          />
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/80">
+            Admin · Verifikator
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Username</label>
-            <input
-              type="text"
-              value={username}
-              autoComplete="username"
-              onChange={e => { setUsername(e.target.value); setError(''); }}
-              placeholder="masukkan username"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
-            />
-          </div>
+        {/* Glass card */}
+        <div
+          className="rounded-3xl border border-white/30 p-8 shadow-2xl backdrop-blur-2xl"
+          style={{
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%)',
+            boxShadow: '0 20px 60px -10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
+          }}
+        >
+          <h1 className="text-center text-3xl font-light tracking-[0.3em] text-white mb-1">
+            LOGIN
+          </h1>
+          <p className="text-center text-xs text-white/70 mb-7">
+            Masuk ke ID-MAP
+          </p>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Password</label>
-            <div className="relative">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="rounded-full bg-white/85 backdrop-blur shadow-inner">
+              <input
+                type="text"
+                value={username}
+                autoComplete="username"
+                onChange={e => { setUsername(e.target.value); setError(''); }}
+                placeholder="Username"
+                className="w-full bg-transparent rounded-full px-5 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+              />
+            </div>
+
+            <div className="relative rounded-full bg-white/85 backdrop-blur shadow-inner">
               <input
                 type={showPass ? 'text' : 'password'}
                 value={password}
                 autoComplete="current-password"
                 onChange={e => { setPassword(e.target.value); setError(''); }}
-                placeholder="masukkan password"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 pr-10 text-sm focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600"
+                placeholder="Password"
+                className="w-full bg-transparent rounded-full px-5 py-3 pr-12 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => setShowPass(!showPass)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                aria-label={showPass ? 'Sembunyikan password' : 'Tampilkan password'}
               >
                 {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-          </div>
 
-          {error && (
-            <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="flex items-center gap-2 text-xs text-red-50 bg-red-500/30 border border-red-300/40 rounded-full px-4 py-2 backdrop-blur">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
 
+            <button
+              type="submit"
+              className="mt-2 w-full flex items-center justify-center gap-2 bg-slate-900/85 hover:bg-slate-900 text-white font-medium tracking-[0.2em] py-3 rounded-full transition-all hover:shadow-lg active:scale-[0.99]"
+            >
+              <LogIn className="w-4 h-4" />
+              SIGN IN
+            </button>
+          </form>
+
+          <p className="mt-5 text-center text-xs text-white/70">
+            Lupa password?{' '}
+            <a href="mailto:idmap.cabdinmalang@jatimprov.go.id" className="font-semibold text-white hover:underline">
+              Hubungi Admin
+            </a>
+          </p>
+        </div>
+
+        {/* Footer */}
+        <p className="mt-6 text-center text-[11px] text-white/60">
+          ID-MAP v1.0 · Cabdin KP Kab. Malang
+        </p>
+        <p className="mt-1 text-center text-[11px]">
           <button
-            type="submit"
-            className="w-full flex items-center justify-center gap-2 bg-green-700 text-white font-semibold py-2.5 rounded-lg hover:bg-green-800 transition-colors"
+            type="button"
+            onClick={() => navigate('/')}
+            className="text-white/70 hover:text-white underline-offset-2 hover:underline"
           >
-            <LogIn className="w-4 h-4" />
-            Masuk
+            ← Kembali ke Beranda
           </button>
-        </form>
+        </p>
       </div>
-
-      <p className="text-center text-xs text-gray-400 mt-2">
-        ID-MAP v1.0 · Cabdin KP Kab. Malang
-      </p>
     </div>
   );
 }
