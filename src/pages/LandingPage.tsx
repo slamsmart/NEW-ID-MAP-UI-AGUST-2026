@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { SignInButton, SignUpButton } from '@clerk/clerk-react';
 import { useAuth } from '../context/useAuth';
+import { useAccountNotice } from '../components/AccountRequiredNotice';
 
 const isClerkConfigured = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -19,6 +20,7 @@ const NAV_LINKS = [
 export default function LandingPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { show: showAccountNotice } = useAccountNotice();
   const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
@@ -144,12 +146,20 @@ export default function LandingPage() {
                 </SignUpButton>
               </>
             ) : (
-              <button
-                onClick={() => navigate('/login')}
-                className="flex items-center justify-center gap-2 rounded-full border border-white/40 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-white/15 sm:px-5 sm:text-sm"
-              >
-                <LogIn className="h-4 w-4" /> <span className="hidden sm:inline">Login</span>
-              </button>
+              <>
+                <button
+                  onClick={() => showAccountNotice()}
+                  className="flex items-center justify-center gap-2 rounded-full border border-white/40 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-white/15 sm:px-5 sm:text-sm"
+                >
+                  <LogIn className="h-4 w-4" /> <span className="hidden sm:inline">Login</span>
+                </button>
+                <button
+                  onClick={() => showAccountNotice()}
+                  className="flex items-center justify-center gap-2 rounded-full bg-teal-400 px-3 py-2 text-xs font-semibold text-emerald-950 transition-all hover:bg-teal-300 sm:px-5 sm:text-sm"
+                >
+                  <UserPlus className="h-4 w-4" /> <span className="hidden sm:inline">Daftar</span>
+                </button>
+              </>
             )}
             {/* Mobile burger */}
             <button
@@ -175,6 +185,51 @@ export default function LandingPage() {
               </button>
             ))}
             <div className="my-1 h-px bg-white/10" />
+
+            {/* Public auth — Clerk modals (mobile drawer) */}
+            <div className="flex flex-col gap-2 px-1 py-1">
+              {isClerkConfigured ? (
+                <>
+                  <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
+                    <button
+                      type="button"
+                      onClick={() => setNavOpen(false)}
+                      className="flex w-full items-center justify-center gap-2 rounded-full bg-teal-400 px-4 py-2.5 text-sm font-semibold text-emerald-950 transition-all hover:bg-teal-300"
+                    >
+                      <UserPlus className="h-4 w-4" /> Daftar Akun
+                    </button>
+                  </SignUpButton>
+                  <SignInButton mode="modal" forceRedirectUrl="/dashboard">
+                    <button
+                      type="button"
+                      onClick={() => setNavOpen(false)}
+                      className="flex w-full items-center justify-center gap-2 rounded-full border border-white/40 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white/10"
+                    >
+                      <LogIn className="h-4 w-4" /> Login
+                    </button>
+                  </SignInButton>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => { setNavOpen(false); showAccountNotice(); }}
+                    className="flex w-full items-center justify-center gap-2 rounded-full bg-teal-400 px-4 py-2.5 text-sm font-semibold text-emerald-950 transition-all hover:bg-teal-300"
+                  >
+                    <UserPlus className="h-4 w-4" /> Daftar Akun
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setNavOpen(false); showAccountNotice(); }}
+                    className="flex w-full items-center justify-center gap-2 rounded-full border border-white/40 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white/10"
+                  >
+                    <LogIn className="h-4 w-4" /> Login
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="my-1 h-px bg-white/10" />
             <Link
               to="/login"
               onClick={() => setNavOpen(false)}
@@ -190,9 +245,11 @@ export default function LandingPage() {
       {/* ── HERO (#home) — mangrove photo background with theme gradient overlay ── */}
       <section
         id="home"
-        className="relative flex w-full flex-col items-center justify-center overflow-hidden pt-28 pb-20 sm:pt-32 sm:pb-24"
+        className="relative flex w-full flex-col items-center justify-center overflow-hidden pt-24 pb-16 sm:pt-32 sm:pb-24 scroll-mt-20"
         style={{
-          minHeight: '100dvh',
+          // 88dvh on mobile so a hint of next section peeks through → invites scroll.
+          // Full 100dvh on desktop where vertical space is more abundant.
+          minHeight: 'min(88dvh, 760px)',
           backgroundImage: 'url(/hero-mangrove.jpg)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
@@ -228,22 +285,22 @@ export default function LandingPage() {
           }}
         />
 
-        <div className="relative z-10 flex w-full max-w-5xl flex-col items-center px-4 text-center sm:px-6">
-          <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-300 sm:text-sm sm:tracking-[0.22em]">
+        <div className="relative z-10 flex w-full max-w-5xl flex-col items-center px-5 text-center sm:px-6">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-teal-300 sm:mb-4 sm:text-sm sm:tracking-[0.22em]">
             Platform Monitoring Mangrove dan Ekosistem Pesisir
           </p>
 
-          <div className="mb-5 h-0.5 w-12 rounded-full bg-teal-400" />
+          <div className="mb-4 h-0.5 w-10 rounded-full bg-teal-400 sm:mb-5 sm:w-12" />
 
-          <h1 className="max-w-4xl text-3xl font-extrabold leading-tight text-white drop-shadow-lg sm:text-5xl md:text-6xl tracking-tight">
+          <h1 className="max-w-4xl text-[28px] font-extrabold leading-[1.15] text-white drop-shadow-lg sm:text-5xl md:text-6xl tracking-tight">
             Selamat Datang di ID-MAP
           </h1>
 
-          <p className="mt-5 max-w-2xl text-sm leading-relaxed text-white/80 sm:text-base">
-            Temukan informasi data mangrove dan pesisir dalam satu platform — dari data lapangan hingga visualisasi interaktif untuk memahami kondisi lingkungan secara cepat dan tepat.
+          <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-white/85 sm:mt-5 sm:text-base">
+            Temukan informasi data mangrove dan pesisir dalam satu platform dari data lapangan hingga visualisasi interaktif untuk memahami kondisi lingkungan secara cepat dan tepat.
           </p>
 
-          <div className="mt-8 flex w-full flex-col items-stretch justify-center gap-3 sm:w-auto sm:flex-row sm:items-center">
+          <div className="mt-7 flex w-full flex-col items-stretch justify-center gap-2.5 sm:mt-8 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
             <button
               onClick={() => navigate('/peta')}
               className="w-full rounded-full px-8 py-3 text-base font-bold text-emerald-950 shadow-xl transition-all hover:scale-[1.02] sm:w-auto sm:px-10"
@@ -262,21 +319,21 @@ export default function LandingPage() {
       </section>
 
       {/* ── ABOUT (#about) ── */}
-      <section id="about" className="relative z-10 px-4 py-20 sm:px-6 sm:py-24">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2">
+      <section id="about" className="relative z-10 px-5 py-14 sm:px-6 sm:py-24 scroll-mt-20">
+        <div className="mx-auto grid max-w-6xl items-center gap-8 sm:gap-10 md:grid-cols-2">
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-teal-300">About</p>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-teal-300 sm:text-xs">About</p>
+            <h2 className="text-2xl font-bold tracking-tight leading-tight sm:text-4xl">
               Tentang ID-MAP & Visi Konservasi
             </h2>
-            <div className="my-5 h-0.5 w-12 rounded-full bg-teal-400" />
-            <p className="text-sm leading-relaxed text-white/80 sm:text-base">
+            <div className="my-4 h-0.5 w-10 rounded-full bg-teal-400 sm:my-5 sm:w-12" />
+            <p className="text-[14px] leading-relaxed text-white/80 sm:text-base">
               <strong className="text-white">ID-MAP</strong> (Integrasi Data Mangrove dan Pesisir) adalah platform terpadu yang dikelola oleh Cabang Dinas Kelautan dan Perikanan Kab. Malang untuk memantau, memetakan, serta mendukung restorasi ekosistem mangrove dan pesisir di Indonesia.
             </p>
-            <p className="mt-4 text-sm leading-relaxed text-white/75 sm:text-base">
-              Misi kami: menghadirkan data lapangan, citra satelit, dan kecerdasan buatan dalam satu antarmuka — memungkinkan pemerintah, akademisi, dan masyarakat untuk mengambil keputusan berbasis bukti demi <em>blue economy</em> yang lestari.
+            <p className="mt-3 text-[14px] leading-relaxed text-white/75 sm:mt-4 sm:text-base">
+              Misi kami: menghadirkan data lapangan, citra satelit, dan kecerdasan buatan dalam satu antarmuka memungkinkan pemerintah, akademisi, dan masyarakat untuk mengambil keputusan berbasis bukti demi <em>blue economy</em> yang lestari.
             </p>
-            <ul className="mt-6 space-y-2 text-sm text-white/85">
+            <ul className="mt-5 space-y-2 text-[14px] text-white/85 sm:mt-6 sm:text-sm">
               {[
                 'Pemantauan tutupan mangrove multi-temporal',
                 'Survei lapangan offline-first oleh petugas daerah',
@@ -291,9 +348,9 @@ export default function LandingPage() {
             </ul>
           </div>
 
-          {/* Visual side */}
+          {/* Visual side — slimmer aspect on mobile so it doesn't dominate the scroll */}
           <div
-            className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-white/10 shadow-2xl"
+            className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 shadow-2xl sm:aspect-[4/3] sm:rounded-3xl"
             style={{
               backgroundImage: 'url(/mangrove-hero.jpg)',
               backgroundSize: 'cover',
@@ -318,36 +375,36 @@ export default function LandingPage() {
       </section>
 
       {/* ── FITUR UTAMA (#fitur) ── */}
-      <section id="fitur" className="relative z-10 px-4 py-20 sm:px-6 sm:py-24">
+      <section id="fitur" className="relative z-10 px-5 py-14 sm:px-6 sm:py-24 scroll-mt-20">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-10 text-center">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-teal-300">Modul Utama</p>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Fitur Utama Platform</h2>
-            <div className="mx-auto my-5 h-0.5 w-12 rounded-full bg-teal-400" />
-            <p className="mx-auto max-w-2xl text-sm leading-relaxed text-white/75 sm:text-base">
+          <div className="mb-8 text-center sm:mb-10">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-teal-300 sm:text-xs">Modul Utama</p>
+            <h2 className="text-2xl font-bold tracking-tight sm:text-4xl">Fitur Utama Platform</h2>
+            <div className="mx-auto my-4 h-0.5 w-10 rounded-full bg-teal-400 sm:my-5 sm:w-12" />
+            <p className="mx-auto max-w-2xl text-[14px] leading-relaxed text-white/75 sm:text-base">
               Empat modul yang saling terhubung untuk siklus penuh: <em>observe → record → understand → act</em>.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
             {featureCards.map(m => {
               const Icon = m.icon;
               return (
                 <div
                   key={m.label}
-                  className="group rounded-3xl border border-white/10 p-6 backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-white/20"
+                  className="group rounded-2xl border border-white/10 p-5 backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-white/20 sm:rounded-3xl sm:p-6"
                   style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02))' }}
                 >
                   <div
-                    className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 shadow-lg"
+                    className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 shadow-lg sm:mb-4 sm:h-14 sm:w-14 sm:rounded-2xl"
                     style={{ background: `radial-gradient(circle at 30% 30%, ${m.glow}, rgba(255,255,255,0.04))` }}
                   >
-                    <Icon className="h-7 w-7" style={{ color: m.color }} />
+                    <Icon className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: m.color }} />
                   </div>
-                  <div className="mb-2 text-xs font-bold uppercase tracking-widest" style={{ color: m.color }}>
+                  <div className="mb-1.5 text-[11px] font-bold uppercase tracking-widest sm:mb-2 sm:text-xs" style={{ color: m.color }}>
                     {m.label}
                   </div>
-                  <p className="text-sm leading-relaxed text-white/75">{m.desc}</p>
+                  <p className="text-[13px] leading-relaxed text-white/75 sm:text-sm">{m.desc}</p>
                 </div>
               );
             })}
@@ -356,18 +413,18 @@ export default function LandingPage() {
       </section>
 
       {/* ── CONTACT (#contact) ── */}
-      <section id="contact" className="relative z-10 px-4 py-20 sm:px-6 sm:py-24">
+      <section id="contact" className="relative z-10 px-5 py-14 sm:px-6 sm:py-24 scroll-mt-20">
         <div className="mx-auto max-w-5xl">
-          <div className="mb-10 text-center">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-teal-300">Contact</p>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Hubungi Tim ID-MAP</h2>
-            <div className="mx-auto my-5 h-0.5 w-12 rounded-full bg-teal-400" />
-            <p className="mx-auto max-w-2xl text-sm leading-relaxed text-white/75 sm:text-base">
+          <div className="mb-8 text-center sm:mb-10">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-teal-300 sm:text-xs">Contact</p>
+            <h2 className="text-2xl font-bold tracking-tight sm:text-4xl">Hubungi Tim ID-MAP</h2>
+            <div className="mx-auto my-4 h-0.5 w-10 rounded-full bg-teal-400 sm:my-5 sm:w-12" />
+            <p className="mx-auto max-w-2xl text-[14px] leading-relaxed text-white/75 sm:text-base">
               Pertanyaan, kerja sama, atau usulan integrasi data? Tim kami siap merespons.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
             {[
               {
                 icon: Mail,
@@ -395,15 +452,15 @@ export default function LandingPage() {
                   href={c.href}
                   target={c.href.startsWith('http') ? '_blank' : undefined}
                   rel="noreferrer"
-                  className="group flex flex-col items-start gap-3 rounded-2xl border border-white/10 p-6 backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-teal-400/40"
+                  className="group flex items-start gap-3 rounded-2xl border border-white/10 p-4 backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-teal-400/40 sm:flex-col sm:p-6"
                   style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))' }}
                 >
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-400/15 text-teal-300 group-hover:bg-teal-400/25">
-                    <Icon className="h-5 w-5" />
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-teal-400/15 text-teal-300 group-hover:bg-teal-400/25 sm:h-11 sm:w-11">
+                    <Icon className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
                   </div>
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-white/50">{c.label}</p>
-                    <p className="mt-1 text-sm font-medium text-white">{c.value}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-white/50 sm:text-[11px]">{c.label}</p>
+                    <p className="mt-0.5 text-[13px] font-medium text-white break-words sm:mt-1 sm:text-sm">{c.value}</p>
                   </div>
                 </a>
               );

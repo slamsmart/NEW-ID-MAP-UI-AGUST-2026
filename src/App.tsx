@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/useAuth';
 import Layout from './components/Layout/Layout';
 import ClerkBridge from './components/ClerkBridge';
+import { AccountNoticeProvider } from './components/AccountRequiredNotice';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Login = lazy(() => import('./pages/Login'));
@@ -90,7 +91,9 @@ export default function App() {
     <AuthProvider>
       <ClerkBridge />
       <BrowserRouter>
-        <AppRoutes />
+        <AccountNoticeProvider>
+          <AppRoutes />
+        </AccountNoticeProvider>
       </BrowserRouter>
     </AuthProvider>
   );

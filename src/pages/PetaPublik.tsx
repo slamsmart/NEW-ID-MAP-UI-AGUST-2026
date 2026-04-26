@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, cloneElement } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Marker, Popup, useMap, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -9,6 +9,7 @@ import { Layers, Map, Satellite, Mountain, ChevronRight, ChevronDown, X, Downloa
 import { useNavigate } from 'react-router-dom';
 import { SignInButton, SignUpButton } from '@clerk/clerk-react';
 import { useAuth } from '../context/useAuth';
+import { useAccountNotice } from '../components/AccountRequiredNotice';
 
 const isClerkConfigured = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -38,13 +39,16 @@ const ABRASI_PRIORITAS_COLORS: Record<string, string> = {
   'Rendah–Sedang': '#eab308',
 };
 
+// Benthic class colors — match reference legend (Seagrass green, Rubble brown,
+// Sand tan, Rock slate, Coral/Algae light blue)
 const BENTHIC_COLORS: Record<string, string> = {
-  Seagrass: '#22d3ee',
-  Rubble: '#a8a29e',
-  Sand: '#fcd34d',
-  Rock: '#6b7280',
-  'Coral/Algae': '#f472b6',
+  Seagrass:      '#3f8d6e',
+  Rubble:        '#8a6843',
+  Sand:          '#e0d2a4',
+  Rock:          '#7a8492',
+  'Coral/Algae': '#7dc4d3',
 };
+const BENTHIC_DEFAULT_COLOR = '#999999';
 
 const MAP_LAYERS = [
   { id: 'osm', label: 'OpenStreetMap', icon: Map, url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
@@ -91,6 +95,25 @@ function MapInstanceCapture({ onReady }: { onReady: (m: L.Map) => void }) {
   return null;
 }
 
+// Smoothly fly the map to a selected location. Uses Leaflet's `flyTo` for an
+// animated zoom-in. Zoom level 15 is close enough to read the coastline / beach
+// outline. We re-fly whenever the target lat/lng/zoom changes (React identity
+// changes per selection thanks to the array literal in the parent).
+function FlyToSelected({
+  target,
+  zoom = 15,
+}: {
+  target: [number, number] | null;
+  zoom?: number;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (!target) return;
+    map.flyTo(target, zoom, { duration: 1.2, easeLinearity: 0.25 });
+  }, [target?.[0], target?.[1], zoom, map]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+}
+
 // Layer filter options used by the floating dropdown.
 const LAYER_OPTIONS = [
   { val: 'all',      label: 'Semua Layer', color: '#64748b' },
@@ -103,6 +126,7 @@ const LAYER_OPTIONS = [
 export default function PetaPublik() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { show: showAccountNotice } = useAccountNotice();
 
   // Single layer filter: 'all' | 'mangrove' | 'abrasi' | 'penyu' | 'benthic'
   const [activeLayerFilter, setActiveLayerFilter] = useState<'all' | 'mangrove' | 'abrasi' | 'penyu' | 'benthic'>('all');
@@ -183,17 +207,40 @@ export default function PetaPublik() {
   useEffect(() => {
     if (showBenthic && !benthicData) {
       setBenthicLoading(true);
-      fetch('/benthic.json')
+      fetch('/benthic.geojson')
         .then(r => r.json())
         .then(d => { setBenthicData(d); setBenthicLoading(false); })
         .catch(() => setBenthicLoading(false));
     }
   }, [showBenthic, benthicData]);
 
+  // Aggregate benthic class counts for the legend
+  const benthicCounts = useMemo<Record<string, number> | null>(() => {
+    if (!benthicData?.features) return null;
+    const counts: Record<string, number> = {};
+    for (const f of benthicData.features) {
+      const cls = (f.properties?.class as string) ?? 'Unknown';
+      counts[cls] = (counts[cls] ?? 0) + 1;
+    }
+    return counts;
+  }, [benthicData]);
+
+  // Render order matches the reference legend
+  const BENTHIC_ORDER = ['Seagrass', 'Rubble', 'Sand', 'Rock', 'Coral/Algae'];
+
   const selectedMangrove = mangroveLocations.find(l => l.id === selectedId && selectedType === 'mangrove');
   const selectedAbrasi = allAbrasi.find(l => l.id === selectedId && selectedType === 'abrasi');
   const selectedPenyu = allPenyu.find(l => l.id === selectedId && selectedType === 'penyu');
   const selectedEco = ekosistemData.find(e => e.locationId === selectedId);
+
+  // Target for animated fly-to whenever a location is selected
+  const flyTarget: [number, number] | null = selectedMangrove
+    ? [selectedMangrove.lat, selectedMangrove.lng]
+    : selectedAbrasi
+      ? [selectedAbrasi.koordinat.lat, selectedAbrasi.koordinat.lng]
+      : selectedPenyu
+        ? [selectedPenyu.lat, selectedPenyu.lng]
+        : null;
 
   const doDownload = () => {
     // TODO: implement actual download
@@ -209,7 +256,7 @@ export default function PetaPublik() {
     children,
     mode = 'signin',
   }: {
-    children: React.ReactElement;
+    children: React.ReactElement<{ onClick?: (e: React.MouseEvent) => void }>;
     mode?: 'signin' | 'signup';
   }) => {
     if (user) return children;
@@ -227,8 +274,23 @@ export default function PetaPublik() {
         </SignInButton>
       );
     }
-    // Fallback: Clerk belum ter-config → arahkan langsung ke form login admin
-    return <span onClick={() => navigate('/login')}>{children}</span>;
+    // Fallback: Clerk belum ter-config → tampilkan notice modal yang friendly
+    // (bukan redirect senyap ke form admin login). cloneElement memasang
+    // onClick langsung ke <button>, lebih reliable di mobile.
+    return cloneElement(children, {
+      onClick: (e: React.MouseEvent) => {
+        e.preventDefault();
+        showAccountNotice(
+          mode === 'signup'
+            ? {
+                title: 'Daftar Akun Baru',
+                message:
+                  'Untuk mengakses fitur unduh data dan kontribusi survei, silakan daftar akun ID-MAP. Pendaftaran publik via Google sedang dalam persiapan — sementara hubungi admin untuk mendapat akses.',
+              }
+            : undefined,
+        );
+      },
+    });
   };
 
   return (
@@ -244,10 +306,10 @@ export default function PetaPublik() {
             <Home className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Beranda</span>
           </button>
-          <div className="hidden sm:block w-px h-6 bg-slate-200 flex-shrink-0" />
-          <div className="min-w-0 hidden sm:block">
+          <div className="w-px h-6 bg-slate-200 flex-shrink-0" />
+          <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-widest font-semibold text-emerald-700">ID-MAP</p>
-            <h1 className="text-slate-800 font-bold text-xs md:text-sm leading-tight truncate">Peta Interaktif Mangrove dan Ekosistem Pesisir</h1>
+            <h1 className="text-slate-800 font-bold text-xs md:text-sm leading-tight truncate hidden sm:block">Peta Interaktif Mangrove dan Ekosistem Pesisir</h1>
           </div>
         </div>
 
@@ -275,7 +337,7 @@ export default function PetaPublik() {
               {/* Daftar → Clerk Sign Up modal | Login → Clerk Sign In modal */}
               <AuthRequired mode="signup">
                 <button
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white shadow-sm transition-all hover:brightness-110"
+                  className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold text-white shadow-sm transition-all hover:brightness-110"
                   style={{ background: 'linear-gradient(90deg, #059669, #0ea5e9)' }}
                 >
                   <UserPlus className="w-3.5 h-3.5" />
@@ -284,7 +346,7 @@ export default function PetaPublik() {
               </AuthRequired>
               <AuthRequired>
                 <button
-                  className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:border-emerald-400 hover:text-emerald-700 transition-colors shadow-sm"
+                  className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:border-emerald-400 hover:text-emerald-700 transition-colors shadow-sm"
                 >
                   <LogIn className="w-3.5 h-3.5" />
                   Login
@@ -313,6 +375,7 @@ export default function PetaPublik() {
           <MapContainer center={[-8.3, 112.6]} zoom={9} style={{ height: '100%', width: '100%', background: '#0d1117' }} zoomControl={false}>
             <MapController center={[-8.3, 112.6]} zoom={9} />
             <MapInstanceCapture onReady={setMapInstance} />
+            <FlyToSelected target={flyTarget} zoom={15} />
             <TileLayerSwitcher activeLayer={activeMapLayer} />
 
             {/* Mangrove markers */}
@@ -391,23 +454,26 @@ export default function PetaPublik() {
               </Marker>
             ))}
 
-            {/* Benthic layer */}
+            {/* Benthic layer — Polygon GeoJSON colored per class */}
             {showBenthic && benthicData && (
               <GeoJSON
                 key="benthic"
                 data={benthicData}
-                pointToLayer={(_feature, latlng) => {
-                  const cls = _feature.properties?.class ?? 'Unknown';
-                  return L.circleMarker(latlng, {
-                    radius: 4,
-                    color: BENTHIC_COLORS[cls] ?? '#999',
-                    fillColor: BENTHIC_COLORS[cls] ?? '#999',
-                    fillOpacity: 0.75,
-                    weight: 0,
-                  });
+                style={(feature) => {
+                  const cls = feature?.properties?.class ?? 'Unknown';
+                  const color = BENTHIC_COLORS[cls] ?? BENTHIC_DEFAULT_COLOR;
+                  return {
+                    color,
+                    fillColor: color,
+                    fillOpacity: 0.65,
+                    weight: 0.4,
+                    opacity: 0.8,
+                  };
                 }}
                 onEachFeature={(feature, layer) => {
-                  layer.bindPopup(`<div style="font-size:12px"><strong>Benthic</strong><br/>Kelas: ${feature.properties?.class}</div>`);
+                  layer.bindPopup(
+                    `<div style="font-size:12px"><strong>Benthic</strong><br/>Kelas: ${feature.properties?.class}</div>`,
+                  );
                 }}
               />
             )}
@@ -564,10 +630,33 @@ export default function PetaPublik() {
             </div>
 
             <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Pendaratan Penyu</p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-3">
               <div className="text-sm">🐢</div>
               <span className="text-xs text-slate-700">Titik pendaratan penyu laut</span>
             </div>
+
+            {/* Kelas Benthic legend (visible when benthic layer active or 'all') */}
+            {showBenthic && (
+              <>
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Kelas Benthic</p>
+                <div className="space-y-1.5">
+                  {BENTHIC_ORDER.map((cls) => (
+                    <div key={cls} className="flex items-center gap-2">
+                      <span
+                        className="w-3 h-3 rounded-sm flex-shrink-0"
+                        style={{ background: BENTHIC_COLORS[cls] ?? BENTHIC_DEFAULT_COLOR }}
+                      />
+                      <span className="text-xs text-slate-700 flex-1">{cls}</span>
+                      {benthicCounts && (
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {(benthicCounts[cls] ?? 0).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Download section */}
@@ -789,11 +878,89 @@ export default function PetaPublik() {
                 ))}
               </div>
               <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Pendaratan Penyu</p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-3">
                 <div className="text-sm">🐢</div>
                 <span className="text-xs text-slate-700">Titik pendaratan penyu laut</span>
               </div>
+
+              {showBenthic && (
+                <>
+                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Kelas Benthic</p>
+                  <div className="space-y-1.5">
+                    {BENTHIC_ORDER.map((cls) => (
+                      <div key={cls} className="flex items-center gap-2">
+                        <span
+                          className="w-3 h-3 rounded-sm flex-shrink-0"
+                          style={{ background: BENTHIC_COLORS[cls] ?? BENTHIC_DEFAULT_COLOR }}
+                        />
+                        <span className="text-xs text-slate-700 flex-1">{cls}</span>
+                        {benthicCounts && (
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {(benthicCounts[cls] ?? 0).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
+
+            {/* Unduh Data — mobile (mirrors desktop sidebar) */}
+            <div className="px-4 py-3 border-b border-slate-200">
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Unduh Data</p>
+              <div className="space-y-1.5">
+                <AuthRequired mode="signup">
+                  <button
+                    onClick={user ? doDownload : undefined}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-slate-50 transition-colors text-slate-600 border border-slate-200"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-teal-400" />
+                    Unduh PDF Laporan
+                  </button>
+                </AuthRequired>
+                <AuthRequired mode="signup">
+                  <button
+                    onClick={user ? doDownload : undefined}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-slate-50 transition-colors text-slate-600 border border-slate-200"
+                  >
+                    <Download className="w-3.5 h-3.5 text-green-400" />
+                    Unduh Marker KML/GeoJSON
+                  </button>
+                </AuthRequired>
+              </div>
+              {!user && (
+                <p className="text-[10px] text-slate-400 mt-2 text-center">
+                  🔒 Perlu login untuk mengunduh
+                </p>
+              )}
+            </div>
+
+            {/* Auth shortcut — mobile (Daftar / Login) */}
+            {!user && (
+              <div className="px-4 py-3 border-b border-slate-200">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Akun</p>
+                <div className="space-y-1.5">
+                  <AuthRequired mode="signup">
+                    <button
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-white shadow-sm transition-all hover:brightness-110"
+                      style={{ background: 'linear-gradient(90deg, #059669, #0ea5e9)' }}
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      Daftar Akun Baru
+                    </button>
+                  </AuthRequired>
+                  <AuthRequired>
+                    <button
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:border-emerald-400 hover:text-emerald-700 transition-colors"
+                    >
+                      <LogIn className="w-3.5 h-3.5" />
+                      Login
+                    </button>
+                  </AuthRequired>
+                </div>
+              </div>
+            )}
 
             {/* Location list — collapsible */}
             <div className="flex-1 flex flex-col px-3 py-3 overflow-y-auto">
