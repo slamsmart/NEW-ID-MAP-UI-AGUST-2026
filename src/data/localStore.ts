@@ -228,7 +228,35 @@ export async function fetchSurveys(): Promise<SurveyRecord[]> {
 
   try {
     const rows = await getAllSurveys();
-    const merged = rows.map(row => mapDbSurveyToSurveyRecord(row as Partial<DbSurvey> & Record<string, unknown>));
+    const localSurveys = getSurveys();
+
+    // FIX: Buat map dari data lokal untuk preserve status verifikasi
+    // yang sudah diupdate tapi belum committed di Convex
+    const localMap = new Map(localSurveys.map(s => [s.id, s]));
+
+    const merged = rows.map(row => {
+      const record = mapDbSurveyToSurveyRecord(row as Partial<DbSurvey> & Record<string, unknown>);
+      const local = localMap.get(record.id);
+
+      // Jika Convex masih return 'pending' tapi lokal sudah approved/rejected,
+      // berarti mutation Convex belum committed — pakai data lokal yang lebih baru
+      if (
+        local &&
+        (record.verificationStatus === 'pending' || !record.verificationStatus) &&
+        (local.verificationStatus === 'approved' || local.verificationStatus === 'rejected')
+      ) {
+        return {
+          ...record,
+          verificationStatus: local.verificationStatus,
+          verificationNote: local.verificationNote,
+          verifiedAt: local.verifiedAt,
+          verifiedBy: local.verifiedBy,
+        };
+      }
+
+      return record;
+    });
+
     localStorage.setItem(SURVEYS_KEY, JSON.stringify(merged.slice(0, 200)));
     return merged;
   } catch {
@@ -282,11 +310,6 @@ export async function verifySurveyRemote(id: string, status: 'approved' | 'rejec
   });
 }
 
-/**
- * Update parsial survei via Convex.
- * Strategi: ambil dokumen existing dari Convex, merge updates, upsert kembali.
- * (Convex tidak punya "update partial by legacyId" — pakai upsert idempotent.)
- */
 export async function updateSurveyRemote(id: string, updates: Partial<SurveyRecord>): Promise<void> {
   updateSurvey(id, updates);
   if (!isConvexConfigured()) return;

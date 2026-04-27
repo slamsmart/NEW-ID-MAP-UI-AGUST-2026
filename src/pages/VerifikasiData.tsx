@@ -38,7 +38,6 @@ function buildMultiPointMapsUrl(points: Array<{ lat: string; lng: string }>): st
 
 export default function VerifikasiData() {
   const { user } = useAuth();
-  const isVerifikator = user?.role === 'verifikator';
 
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('semua');
@@ -48,6 +47,7 @@ export default function VerifikasiData() {
   const [verifyNote, setVerifyNote] = useState('');
   const [allSurveys, setAllSurveys] = useState<SurveyRecord[]>([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const refresh = async () => {
     const [loadedSurveys, loadedStats] = await Promise.all([fetchSurveys(), fetchVerificationStats()]);
@@ -64,7 +64,7 @@ export default function VerifikasiData() {
 
   const surveys = (() => {
     let filtered = [...allSurveys];
-    if (filterStatus !== 'semua') filtered = filtered.filter(s => s.verificationStatus === filterStatus);
+    if (filterStatus !== 'semua') filtered = filtered.filter(s => (s.verificationStatus ?? 'pending') === filterStatus);
     if (filterTujuan !== 'semua') filtered = filtered.filter(s => s.tujuanSurvei === filterTujuan);
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -79,11 +79,42 @@ export default function VerifikasiData() {
   })();
 
   const handleVerify = async (id: string, status: 'approved' | 'rejected') => {
-    if (!isVerifikator) return;
-    await verifySurveyRemote(id, status, verifyNote, user?.nama ?? 'Verifikator');
-    setVerifyId(null);
-    setVerifyNote('');
-    await refresh();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      // 1. Optimistic update surveys — UI langsung berubah
+      setAllSurveys(prev => prev.map(s => s.id === id
+        ? {
+            ...s,
+            verificationStatus: status,
+            verificationNote: verifyNote,
+            verifiedAt: new Date().toISOString(),
+            verifiedBy: user?.nama ?? 'Verifikator',
+          }
+        : s
+      ));
+      // 2. Optimistic update stats
+      setStats(prev => ({
+        ...prev,
+        pending: Math.max(0, prev.pending - 1),
+        approved: status === 'approved' ? prev.approved + 1 : prev.approved,
+        rejected: status === 'rejected' ? prev.rejected + 1 : prev.rejected,
+      }));
+      setVerifyId(null);
+      setVerifyNote('');
+
+      // 3. Sync ke backend — TANPA refresh() setelahnya
+      // karena Convex belum tentu langsung return data terbaru
+      // dan akan overwrite optimistic state yang sudah benar
+      await verifySurveyRemote(id, status, verifyNote, user?.nama ?? 'Verifikator');
+
+    } catch (err) {
+      console.error('Verifikasi gagal:', err);
+      alert('Gagal verifikasi: ' + String(err));
+      await refresh(); // rollback hanya jika error
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -189,9 +220,11 @@ export default function VerifikasiData() {
         {surveys.map(s => {
           const tujuanCfg = TUJUAN_CONFIG[s.tujuanSurvei ?? 'monitoring'];
           const Icon = tujuanCfg.icon;
-          const statusCfg = STATUS_CONFIG[s.verificationStatus ?? 'pending'];
+          const resolvedStatus = s.verificationStatus ?? 'pending';
+          const statusCfg = STATUS_CONFIG[resolvedStatus];
           const isExpanded = expandedId === s.id;
           const isVerifying = verifyId === s.id;
+          const isPending = resolvedStatus === 'pending';
 
           return (
             <div key={s.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-sm transition-shadow">
@@ -218,7 +251,7 @@ export default function VerifikasiData() {
                         <span>{s.unit}</span>
                         <span>{new Date(s.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                       </div>
-                      {s.verificationStatus === 'rejected' && s.verificationNote && (
+                      {resolvedStatus === 'rejected' && s.verificationNote && (
                         <p className="text-xs text-red-600 mt-1 bg-red-50 border border-red-100 rounded-lg px-2 py-1">
                           <X className="w-3 h-3 inline mr-1" />{s.verificationNote}
                         </p>
@@ -227,9 +260,11 @@ export default function VerifikasiData() {
                   </div>
 
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {s.verificationStatus === 'pending' && (
-                      <button onClick={() => { setVerifyId(s.id); setVerifyNote(''); }}
-                        className="flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
+                    {isPending && (
+                      <button
+                        onClick={() => { setVerifyId(isVerifying ? null : s.id); setVerifyNote(''); }}
+                        className="flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
+                      >
                         <Check className="w-3.5 h-3.5" /> Verifikasi
                       </button>
                     )}
@@ -244,7 +279,6 @@ export default function VerifikasiData() {
               {/* Expanded Detail */}
               {isExpanded && (
                 <div className="border-t border-gray-100 p-4 bg-gray-50/50 space-y-3">
-                  {/* Location & GPS */}
                   {s.koordinatLat && s.koordinatLng && (
                     <div className="flex items-center gap-3 flex-wrap">
                       <div className="flex items-center gap-1.5 text-xs text-gray-600">
@@ -258,7 +292,6 @@ export default function VerifikasiData() {
                     </div>
                   )}
 
-                  {/* Data fields based on type */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {s.substrat && (
                       <div className="bg-white border border-gray-200 rounded-lg p-2">
@@ -316,14 +349,10 @@ export default function VerifikasiData() {
                       <div className="flex items-center justify-between gap-3 mb-2">
                         <p className="text-xs font-semibold text-gray-600">Titik Sarang Terinput</p>
                         {(() => {
-                          const mapsUrl = buildMultiPointMapsUrl(s.sarangPoints);
+                          const mapsUrl = buildMultiPointMapsUrl(s.sarangPoints!);
                           return mapsUrl ? (
-                            <a
-                              href={mapsUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-lg hover:bg-blue-100 transition-colors"
-                            >
+                            <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-lg hover:bg-blue-100 transition-colors">
                               <ExternalLink className="w-3 h-3" /> Lihat semua titik di peta
                             </a>
                           ) : null;
@@ -342,12 +371,8 @@ export default function VerifikasiData() {
                             <div className="min-w-0 flex-1">
                               <p className="text-xs font-semibold text-gray-700 mb-1">Titik {idx + 1}</p>
                               {point.lat && point.lng ? (
-                                <a
-                                  href={`https://www.google.com/maps?q=${point.lat},${point.lng}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-mono break-all"
-                                >
+                                <a href={`https://www.google.com/maps?q=${point.lat},${point.lng}`} target="_blank" rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-mono break-all">
                                   <Navigation className="w-3 h-3 flex-shrink-0" />
                                   <span>{point.lat}, {point.lng}</span>
                                 </a>
@@ -372,12 +397,11 @@ export default function VerifikasiData() {
                     </div>
                   )}
 
-                  {/* Verification History */}
                   {s.verifiedAt && (
-                    <div className={`border rounded-lg p-3 ${s.verificationStatus === 'approved' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                    <div className={`border rounded-lg p-3 ${resolvedStatus === 'approved' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
                       <p className="text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1.5">
-                        {s.verificationStatus === 'approved' ? <Check className="w-3.5 h-3.5 text-green-600" /> : <X className="w-3.5 h-3.5 text-red-600" />}
-                        Status Verifikasi: <span className={s.verificationStatus === 'approved' ? 'text-green-700' : 'text-red-700'}>{statusCfg.label}</span>
+                        {resolvedStatus === 'approved' ? <Check className="w-3.5 h-3.5 text-green-600" /> : <X className="w-3.5 h-3.5 text-red-600" />}
+                        Status Verifikasi: <span className={resolvedStatus === 'approved' ? 'text-green-700' : 'text-red-700'}>{statusCfg.label}</span>
                       </p>
                       <p className="text-xs text-gray-500">Oleh: {s.verifiedBy} · {new Date(s.verifiedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                       {s.verificationNote && <p className="text-xs text-gray-600 mt-1">Catatan: {s.verificationNote}</p>}
@@ -387,7 +411,7 @@ export default function VerifikasiData() {
               )}
 
               {/* Verification Panel */}
-              {isVerifying && s.verificationStatus === 'pending' && (
+              {isVerifying && isPending && (
                 <div className="border-t border-blue-200 bg-blue-50 p-4 space-y-3">
                   <p className="text-sm font-semibold text-blue-800">Verifikasi Data Survei</p>
                   <p className="text-xs text-blue-700">Periksa detail data di atas, kemudian pilih tindakan verifikasi:</p>
@@ -399,17 +423,26 @@ export default function VerifikasiData() {
                     className="w-full text-sm border border-blue-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-blue-500 resize-none"
                   />
                   <div className="flex items-center gap-2 justify-end">
-                    <button onClick={() => { setVerifyId(null); setVerifyNote(''); }}
-                      className="px-4 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors">
+                    <button
+                      onClick={() => { setVerifyId(null); setVerifyNote(''); }}
+                      disabled={isSubmitting}
+                      className="px-4 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-50"
+                    >
                       Batal
                     </button>
-                    <button onClick={() => handleVerify(s.id, 'rejected')}
-                      className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-red-700 bg-white border border-red-200 hover:bg-red-50 rounded-lg transition-colors">
-                      <X className="w-3.5 h-3.5" /> Tolak
+                    <button
+                      onClick={() => void handleVerify(s.id, 'rejected')}
+                      disabled={isSubmitting}
+                      className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-red-700 bg-white border border-red-200 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      <X className="w-3.5 h-3.5" /> {isSubmitting ? 'Memproses...' : 'Tolak'}
                     </button>
-                    <button onClick={() => handleVerify(s.id, 'approved')}
-                      className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
-                      <Check className="w-3.5 h-3.5" /> Setujui
+                    <button
+                      onClick={() => void handleVerify(s.id, 'approved')}
+                      disabled={isSubmitting}
+                      className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      <Check className="w-3.5 h-3.5" /> {isSubmitting ? 'Memproses...' : 'Setujui'}
                     </button>
                   </div>
                 </div>

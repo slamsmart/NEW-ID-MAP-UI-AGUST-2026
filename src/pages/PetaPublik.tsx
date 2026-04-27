@@ -10,6 +10,8 @@ import { useNavigate } from 'react-router-dom';
 import { SignInButton, SignUpButton } from '@clerk/clerk-react';
 import { useAuth } from '../context/useAuth';
 import { useAccountNotice } from '../components/AccountRequiredNotice';
+import DownloadDropdown from '../components/DownloadDropdown';
+import { recordVisit } from '../lib/statsClient';
 
 const isClerkConfigured = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -155,6 +157,11 @@ export default function PetaPublik() {
 
   const mangroveFiltered = mangroveLocations;
 
+  // Track visit (Convex stats — best-effort, dedup via sessionStorage)
+  useEffect(() => {
+    void recordVisit();
+  }, []);
+
   // Load survey data (field officer input → map)
   useEffect(() => {
     fetchSurveys().then(surveys => {
@@ -242,9 +249,198 @@ export default function PetaPublik() {
         ? [selectedPenyu.lat, selectedPenyu.lng]
         : null;
 
-  const doDownload = () => {
-    // TODO: implement actual download
-    alert('Download sedang disiapkan...');
+  /**
+   * Trigger a Blob download in the browser.
+   * Creates an <a> with Object URL, clicks it, and revokes the URL afterward
+   * so memory is reclaimed. Works in all evergreen browsers.
+   */
+  const triggerBlobDownload = (filename: string, mime: string, content: string) => {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  /**
+   * Build a GeoJSON FeatureCollection from currently visible markers
+   * (mangrove + abrasi + penyu) honoring the active layer filter, then
+   * download as `.geojson`.
+   */
+  const downloadMarkerGeoJSON = () => {
+    const features: Array<Record<string, unknown>> = [];
+
+    if (showMangrove) {
+      for (const m of mangroveFiltered) {
+        features.push({
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [m.lng, m.lat] },
+          properties: {
+            kategori: 'mangrove',
+            id: m.id,
+            nama: m.name,
+            kecamatan: (m as any).kecamatan ?? '',
+            kabupaten: (m as any).kabupaten ?? '',
+            luasHa: (m as any).luasHa ?? null,
+          },
+        });
+      }
+    }
+    if (showAbrasi) {
+      for (const a of allAbrasi) {
+        features.push({
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [a.koordinat.lng, a.koordinat.lat] },
+          properties: {
+            kategori: 'abrasi',
+            id: a.id,
+            namaPantai: a.namaPantai,
+            kecamatan: a.kecamatan,
+            kabKota: a.kabKota,
+            prioritas: a.prioritas,
+            skorRisiko: a.skorRisiko,
+          },
+        });
+      }
+    }
+    if (showPenyu) {
+      for (const p of allPenyu) {
+        features.push({
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+          properties: {
+            kategori: 'penyu',
+            id: p.id,
+            namaPantai: p.namaPantai,
+            lokasi: p.lokasi,
+            jenis: p.jenis,
+            sarang: p.sarang,
+          },
+        });
+      }
+    }
+
+    if (features.length === 0) {
+      alert('Tidak ada marker untuk diunduh. Aktifkan layer terlebih dulu.');
+      return;
+    }
+
+    const fc = {
+      type: 'FeatureCollection',
+      generator: 'ID-MAP · Cabdin KP Kab. Malang',
+      generatedAt: new Date().toISOString(),
+      features,
+    };
+    const stamp = new Date().toISOString().slice(0, 10);
+    triggerBlobDownload(
+      `idmap-marker-${stamp}.geojson`,
+      'application/geo+json;charset=utf-8',
+      JSON.stringify(fc, null, 2),
+    );
+  };
+
+  /**
+   * Open a print-ready HTML report in a new window, then trigger the system
+   * print dialog. User can choose "Save as PDF" to obtain a PDF file.
+   * No external library required.
+   */
+  const downloadReportPDF = () => {
+    const counts = {
+      mangrove: showMangrove ? mangroveFiltered.length : 0,
+      abrasi: showAbrasi ? allAbrasi.length : 0,
+      penyu: showPenyu ? allPenyu.length : 0,
+    };
+    const total = counts.mangrove + counts.abrasi + counts.penyu;
+    if (total === 0) {
+      alert('Tidak ada data untuk dilaporkan. Aktifkan minimal satu layer.');
+      return;
+    }
+
+    const now = new Date();
+    const tanggal = now.toLocaleString('id-ID', {
+      day: '2-digit', month: 'long', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+    const esc = (s: unknown) =>
+      String(s ?? '').replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!),
+      );
+
+    const rowsMangrove = showMangrove
+      ? mangroveFiltered.map((m, i) => `
+          <tr>
+            <td>${i + 1}</td><td>${esc(m.name)}</td>
+            <td>${esc((m as any).kecamatan ?? '-')}</td>
+            <td>${esc((m as any).luasHa ?? '-')}</td>
+            <td>${m.lat.toFixed(5)}, ${m.lng.toFixed(5)}</td>
+          </tr>`).join('')
+      : '';
+    const rowsAbrasi = showAbrasi
+      ? allAbrasi.map((a, i) => `
+          <tr>
+            <td>${i + 1}</td><td>${esc(a.namaPantai)}</td>
+            <td>${esc(a.kecamatan)}</td><td>${esc(a.prioritas)}</td>
+            <td>${a.koordinat.lat.toFixed(5)}, ${a.koordinat.lng.toFixed(5)}</td>
+          </tr>`).join('')
+      : '';
+    const rowsPenyu = showPenyu
+      ? allPenyu.map((p, i) => `
+          <tr>
+            <td>${i + 1}</td><td>${esc(p.namaPantai)}</td>
+            <td>${esc(p.jenis)}</td><td>${esc(p.sarang)}</td>
+            <td>${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</td>
+          </tr>`).join('')
+      : '';
+
+    const html = `<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8" />
+<title>Laporan ID-MAP · Peta Interaktif</title>
+<style>
+  @page { size: A4; margin: 18mm 15mm; }
+  body { font-family: 'Inter', system-ui, sans-serif; color: #0f172a; margin: 0; }
+  h1 { font-size: 20pt; color: #064e3b; margin: 0 0 4px; }
+  h2 { font-size: 13pt; color: #065f46; border-bottom: 2px solid #14b8a6; padding-bottom: 4px; margin-top: 22px; }
+  .meta { color: #475569; font-size: 9pt; margin-bottom: 16px; }
+  .summary { display: flex; gap: 12px; margin: 14px 0 6px; }
+  .card { flex: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; background: #f8fafc; }
+  .card .n { font-size: 18pt; font-weight: 800; color: #0f766e; }
+  .card .l { font-size: 9pt; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; }
+  table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 6px; }
+  th, td { border: 1px solid #e2e8f0; padding: 5px 7px; text-align: left; vertical-align: top; }
+  thead th { background: #ecfeff; color: #0e7490; font-weight: 700; }
+  tbody tr:nth-child(even) td { background: #f8fafc; }
+  footer { margin-top: 24px; font-size: 8pt; color: #64748b; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+</style></head>
+<body>
+  <h1>Laporan Peta Interaktif ID-MAP</h1>
+  <p class="meta">Wilker Cabdin KP Kab. Malang · Dicetak ${esc(tanggal)}</p>
+  <div class="summary">
+    <div class="card"><div class="n">${counts.mangrove}</div><div class="l">Mangrove</div></div>
+    <div class="card"><div class="n">${counts.abrasi}</div><div class="l">Titik Abrasi</div></div>
+    <div class="card"><div class="n">${counts.penyu}</div><div class="l">Pendaratan Penyu</div></div>
+  </div>
+  ${showMangrove && rowsMangrove ? `<h2>Lokasi Mangrove (${counts.mangrove})</h2>
+    <table><thead><tr><th>#</th><th>Nama</th><th>Kecamatan</th><th>Luas (ha)</th><th>Koordinat</th></tr></thead><tbody>${rowsMangrove}</tbody></table>` : ''}
+  ${showAbrasi && rowsAbrasi ? `<h2>Titik Abrasi (${counts.abrasi})</h2>
+    <table><thead><tr><th>#</th><th>Pantai</th><th>Kecamatan</th><th>Prioritas</th><th>Koordinat</th></tr></thead><tbody>${rowsAbrasi}</tbody></table>` : ''}
+  ${showPenyu && rowsPenyu ? `<h2>Pendaratan Penyu (${counts.penyu})</h2>
+    <table><thead><tr><th>#</th><th>Pantai</th><th>Jenis</th><th>Sarang</th><th>Koordinat</th></tr></thead><tbody>${rowsPenyu}</tbody></table>` : ''}
+  <footer>© ${now.getFullYear()} ID-MAP · Dinas Kelautan dan Perikanan Provinsi Jawa Timur · Cabdin KP Kab. Malang</footer>
+  <script>window.addEventListener('load', () => setTimeout(() => window.print(), 250));</script>
+</body></html>`;
+
+    const win = window.open('', '_blank', 'width=900,height=1000');
+    if (!win) {
+      alert('Pop-up diblokir. Izinkan pop-up untuk situs ini agar laporan PDF bisa dibuat.');
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
   };
 
   /**
@@ -315,16 +511,36 @@ export default function PetaPublik() {
 
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {/* Tombol Unduh — belum login → buka modal Clerk Sign Up */}
-          <AuthRequired mode="signup">
-            <button
-              onClick={user ? doDownload : undefined}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-emerald-300 transition-colors shadow-sm"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Unduh</span>
-            </button>
-          </AuthRequired>
+          {/* Tombol Unduh — dropdown PDF / GeoJSON. Belum login → modal SignUp. */}
+          {user ? (
+            <DownloadDropdown
+              className="hidden sm:block"
+              items={[
+                {
+                  kind: 'pdf',
+                  label: 'Unduh PDF Laporan',
+                  icon: FileText,
+                  onSelect: downloadReportPDF,
+                },
+                {
+                  kind: 'geojson',
+                  label: 'Unduh Marker GeoJSON',
+                  icon: Download,
+                  onSelect: downloadMarkerGeoJSON,
+                },
+              ]}
+            />
+          ) : (
+            <AuthRequired mode="signup">
+              <button
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-emerald-300 transition-colors shadow-sm"
+                title="Login untuk unduh"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Unduh</span>
+              </button>
+            </AuthRequired>
+          )}
 
           {user ? (
             <button onClick={() => navigate('/dashboard')}
@@ -659,35 +875,15 @@ export default function PetaPublik() {
             )}
           </div>
 
-          {/* Download section */}
-          <div className="px-4 py-3 border-b border-slate-200">
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Unduh Data</p>
-            <div className="space-y-1.5">
-              <AuthRequired mode="signup">
-                <button
-                  onClick={user ? doDownload : undefined}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-slate-50 transition-colors text-slate-600 border border-slate-200"
-                >
-                  <FileText className="w-3.5 h-3.5 text-teal-400" />
-                  Unduh PDF Laporan
-                </button>
-              </AuthRequired>
-              <AuthRequired mode="signup">
-                <button
-                  onClick={user ? doDownload : undefined}
-                  className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-slate-50 transition-colors text-slate-600 border border-slate-200"
-                >
-                  <Download className="w-3.5 h-3.5 text-green-400" />
-                  Unduh Marker KML/GeoJSON
-                </button>
-              </AuthRequired>
-            </div>
-            {!user && (
-              <p className="text-[10px] text-slate-400 mt-2 text-center">
-                🔒 Perlu login untuk mengunduh
+          {/* Unduh Data — sudah dipindah ke tombol dropdown di top toolbar.
+              Hint kecil untuk user yang belum login agar tahu fitur tersedia. */}
+          {!user && (
+            <div className="px-4 py-3 border-b border-slate-200">
+              <p className="text-[11px] text-slate-500 text-center leading-relaxed">
+                🔒 Login dulu untuk mengunduh data peta (PDF / GeoJSON).
               </p>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Selected location detail */}
           {selectedMangrove && (
@@ -906,33 +1102,33 @@ export default function PetaPublik() {
               )}
             </div>
 
-            {/* Unduh Data — mobile (mirrors desktop sidebar) */}
+            {/* Unduh Data — mobile. Tombol khusus karena top toolbar
+                menyembunyikan dropdown di mobile (`hidden sm:block`). */}
             <div className="px-4 py-3 border-b border-slate-200">
               <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Unduh Data</p>
-              <div className="space-y-1.5">
-                <AuthRequired mode="signup">
+              {user ? (
+                <div className="space-y-1.5">
                   <button
-                    onClick={user ? doDownload : undefined}
+                    onClick={() => { void import('../lib/statsClient').then(m => m.recordDownload('pdf')); downloadReportPDF(); }}
                     className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-slate-50 transition-colors text-slate-600 border border-slate-200"
                   >
                     <FileText className="w-3.5 h-3.5 text-teal-400" />
                     Unduh PDF Laporan
                   </button>
-                </AuthRequired>
-                <AuthRequired mode="signup">
                   <button
-                    onClick={user ? doDownload : undefined}
+                    onClick={() => { void import('../lib/statsClient').then(m => m.recordDownload('geojson')); downloadMarkerGeoJSON(); }}
                     className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs hover:bg-slate-50 transition-colors text-slate-600 border border-slate-200"
                   >
                     <Download className="w-3.5 h-3.5 text-green-400" />
-                    Unduh Marker KML/GeoJSON
+                    Unduh Marker GeoJSON
+                  </button>
+                </div>
+              ) : (
+                <AuthRequired mode="signup">
+                  <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs bg-slate-50 text-slate-500 border border-slate-200">
+                    🔒 Login untuk mengunduh
                   </button>
                 </AuthRequired>
-              </div>
-              {!user && (
-                <p className="text-[10px] text-slate-400 mt-2 text-center">
-                  🔒 Perlu login untuk mengunduh
-                </p>
               )}
             </div>
 

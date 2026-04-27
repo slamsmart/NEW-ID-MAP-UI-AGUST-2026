@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Turtle, MapPin, Search, Plus, AlertTriangle, FileDown, Pencil, Check, X, Trash2, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Turtle, MapPin, Search, Plus, AlertTriangle, FileDown, Pencil, Check, X, Trash2, Clock, CheckCircle, XCircle, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { fetchSurveys, updateSurveyRemote, removeSurvey } from '../data/localStore';
+import { downloadCSV, downloadGeoJSON, dateStamp } from '../lib/exportUtils';
 
 interface PenyuEntry {
   id: string;
@@ -243,6 +244,57 @@ export default function PendaratanPenyu() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() =>
+              downloadCSV(
+                `idmap-pendaratan-penyu-${dateStamp()}.csv`,
+                filtered,
+                [
+                  { key: 'id', label: 'ID' },
+                  { key: 'namaPantai', label: 'Nama Pantai' },
+                  { key: 'lokasi', label: 'Lokasi' },
+                  { key: 'koordinat', label: 'Koordinat' },
+                  { key: 'jenisPenyu', label: 'Jenis Penyu' },
+                  { key: 'jumlahSarang', label: 'Jumlah Sarang' },
+                  { key: 'statusPerlindungan', label: 'Status Perlindungan' },
+                  { key: 'ancaman', label: 'Ancaman' },
+                  { key: 'tanggalSurvei', label: 'Tanggal Survei' },
+                ],
+              )
+            }
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors border bg-white text-teal-700 border-teal-300 hover:bg-teal-50"
+            title="Unduh data CSV"
+          >
+            <Download className="w-3.5 h-3.5" /> CSV
+          </button>
+          <button
+            onClick={() => {
+              const points = filtered
+                .map(d => {
+                  const [latStr, lngStr] = (d.koordinat || '').split(',').map(s => s.trim());
+                  return {
+                    lat: Number.parseFloat(latStr),
+                    lng: Number.parseFloat(lngStr),
+                    properties: {
+                      id: d.id,
+                      kategori: 'pendaratan_penyu',
+                      namaPantai: d.namaPantai,
+                      lokasi: d.lokasi,
+                      jenisPenyu: d.jenisPenyu,
+                      jumlahSarang: d.jumlahSarang,
+                      statusPerlindungan: d.statusPerlindungan,
+                      ancaman: d.ancaman,
+                      tanggalSurvei: d.tanggalSurvei,
+                    },
+                  };
+                });
+              downloadGeoJSON(`idmap-pendaratan-penyu-${dateStamp()}.geojson`, points);
+            }}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors border bg-white text-teal-700 border-teal-300 hover:bg-teal-50"
+            title="Unduh GeoJSON (peta)"
+          >
+            <Download className="w-3.5 h-3.5" /> GeoJSON
+          </button>
           {isAdmin && (
             <button
               onClick={() => setShowPdfPanel(p => !p)}

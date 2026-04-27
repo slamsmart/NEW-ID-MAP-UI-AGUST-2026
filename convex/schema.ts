@@ -244,4 +244,20 @@ export default defineSchema({
     delivered: v.boolean(),
     verifiedAt: v.optional(v.number()),
   }).index('by_email', ['email']),
+
+  // ─────────────────────────────────────────────────────────────
+  // siteStats — counter agregat untuk panel Stats di Dashboard.
+  // Single-document pattern: satu row dengan key='global'.
+  // Counter ditambahkan via mutation `stats.recordVisit` /
+  // `stats.recordDownload`. Akumulasi ringan, query super cepat.
+  // ─────────────────────────────────────────────────────────────
+  siteStats: defineTable({
+    key: v.string(),               // selalu 'global' untuk MVP
+    totalVisits: v.number(),
+    totalDownloads: v.number(),
+    downloadsPDF: v.number(),
+    downloadsGeoJSON: v.number(),
+    downloadsCSV: v.number(),
+    updatedAt: v.number(),
+  }).index('by_key', ['key']),
 });

@@ -13,6 +13,8 @@ import {
 } from '../data/mockData';
 import { fetchSurveyStats, fetchSurveys, getSurveyStats, getSurveys } from '../data/localStore';
 import StatusBadge from '../components/shared/StatusBadge';
+import StatsPanel from '../components/StatsPanel';
+import { useAuth } from '../context/useAuth';
 
 const STATUS_COLORS: Record<string, string> = {
   lebat: '#16a34a',
@@ -60,6 +62,8 @@ function HeroKPI({ label, value, unit, trend, data, color }: HeroKPIProps) {
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const isStaff = user?.role === 'admin' || user?.role === 'verifikator';
   const totalArea = mangroveLocations.reduce((s, l) => s + l.areaHa, 0);
   const avgHealth = Math.round(ekosistemData.reduce((s, e) => s + e.skorKesehatan, 0) / ekosistemData.length);
   const kritisCount = mangroveLocations.filter(l => l.status === 'kritis').length;
@@ -118,6 +122,9 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
 
+      {/* Stats Panel — admin/verifikator only (Convex-backed) */}
+      {isStaff && <StatsPanel />}
+
       {/* Identity Banner */}
       <div
         className="rounded-xl overflow-hidden border border-white/15 shadow-lg shadow-emerald-900/20"
@@ -126,14 +133,11 @@ export default function Dashboard() {
             'linear-gradient(120deg, #064e3b 0%, #047857 30%, #0e7490 70%, #0369a1 100%)',
         }}
       >
-        <div className="flex items-center gap-6 px-6 py-4">
-          <div className="flex-shrink-0">
-            <img src="/logo.svg" alt="ID-MAP" className="h-18 w-auto object-contain drop-shadow" style={{height:'72px'}} draggable={false} />
-          </div>
+        <div className="flex items-center gap-4 px-5 py-4 sm:gap-6 sm:px-6">
           <div className="flex-1 min-w-0">
-            <p className="text-emerald-200 text-xs font-semibold uppercase tracking-widest mb-0.5">Wilker Cabdin KP Kab. Malang</p>
-            <h2 className="text-white text-xl font-bold drop-shadow-sm">Integrasi Data Mangrove dan Pesisir</h2>
-            <p className="text-white/80 text-sm mt-0.5">Data Monitoring Mangrove/Vegetasi dan Ekosistem Pesisir</p>
+            <p className="text-emerald-200 text-[11px] font-semibold uppercase tracking-widest mb-0.5 sm:text-xs">Wilker Cabdin KP Kab. Malang</p>
+            <h2 className="text-white text-lg font-bold drop-shadow-sm sm:text-xl">Integrasi Data Mangrove dan Pesisir</h2>
+            <p className="text-white/80 text-[13px] mt-0.5 sm:text-sm">Data Monitoring Mangrove/Vegetasi dan Ekosistem Pesisir</p>
           </div>
           <div className="flex-shrink-0 hidden lg:flex flex-col gap-2 items-end">
             <div className="border border-white/25 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 text-center">

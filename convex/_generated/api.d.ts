@@ -12,6 +12,7 @@ import type * as locations from "../locations.js";
 import type * as nurseries from "../nurseries.js";
 import type * as otpLogs from "../otpLogs.js";
 import type * as profiles from "../profiles.js";
+import type * as stats from "../stats.js";
 import type * as surveyPhotos from "../surveyPhotos.js";
 import type * as surveys from "../surveys.js";
 
@@ -26,6 +27,7 @@ declare const fullApi: ApiFromModules<{
   nurseries: typeof nurseries;
   otpLogs: typeof otpLogs;
   profiles: typeof profiles;
+  stats: typeof stats;
   surveyPhotos: typeof surveyPhotos;
   surveys: typeof surveys;
 }>;

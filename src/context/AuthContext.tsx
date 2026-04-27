@@ -9,6 +9,20 @@ import { useState, useCallback } from 'react';
 import { ADMIN_ACCOUNTS } from './authAccounts';
 import { AuthContext, type AuthUser } from './authModel';
 
+/**
+ * Dispatched after a successful login (admin form OR external/Clerk).
+ * `LoginSuccessToast` listens for this event and shows a transient toast.
+ * Decoupled via window event to avoid a tight provider chain.
+ */
+function dispatchLoginSuccess(u: AuthUser) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(
+    new CustomEvent('idmap:login-success', {
+      detail: { nama: u.nama, role: u.role },
+    }),
+  );
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
     try {
@@ -35,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setUser(authUser);
     localStorage.setItem('idmap_auth', JSON.stringify(authUser));
+    dispatchLoginSuccess(authUser);
     return true;
   }, []);
 
@@ -44,7 +59,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInExternal = useCallback((u: AuthUser) => {
-    setUser(u);
+    // Hindari toast duplikat saat re-hydrate sesi yang sudah aktif (user.id sama).
+    setUser(prev => {
+      const isNewSession = !prev || prev.id !== u.id;
+      if (isNewSession) dispatchLoginSuccess(u);
+      return u;
+    });
     localStorage.setItem('idmap_auth', JSON.stringify(u));
   }, []);
 

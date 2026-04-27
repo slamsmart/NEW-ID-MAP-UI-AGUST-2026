@@ -23,21 +23,24 @@ export default function Layout() {
 
   return (
     <div
-      className="flex min-h-screen text-white"
+      // Outer pakai h-dvh saja (mobile-aware). Hindari mix `min-h-screen` di
+      // sini karena konflik antara `height` & `min-height` bikin scroll
+      // kontainer turunan tidak konsisten (mouse wheel kadang tidak nyambung).
+      className="flex h-dvh text-white"
       style={{
         background:
           'linear-gradient(135deg, #064e3b 0%, #047857 25%, #0e7490 60%, #0369a1 100%)',
       }}
     >
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col min-h-screen min-w-0 p-0 md:p-3 md:pl-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 p-0 md:p-3 md:pl-0">
         <div className="flex-1 flex flex-col min-h-0 bg-slate-50 md:rounded-3xl md:shadow-2xl md:shadow-black/20 overflow-hidden md:border md:border-green-900/40">
           <Header
             title={pageInfo.title}
             subtitle={pageInfo.subtitle}
             onMenuClick={() => setSidebarOpen(true)}
           />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
             <Outlet />
           </main>
         </div>

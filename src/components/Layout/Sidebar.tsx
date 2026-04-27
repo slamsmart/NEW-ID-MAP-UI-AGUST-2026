@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Leaf,
   ClipboardList, ChevronRight,
   Lock, Sprout, Turtle, Trees,
-  ClipboardCheck, X,
+  ClipboardCheck, X, Map as MapIcon,
 } from 'lucide-react';
 import type { UserRole } from '../../context/authModel';
 import { useAuth } from '../../context/useAuth';
@@ -18,6 +18,7 @@ interface NavItem {
 
 const NAV_MAIN: NavItem[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+  { to: '/peta', icon: MapIcon, label: 'Lihat Peta Interaktif' },
   { to: '/ekosistem', icon: Leaf, label: 'Kondisi Ekosistem' },
 ];
 
@@ -167,8 +168,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* Desktop: always-visible sidebar */}
-      <div className="hidden md:flex w-64 min-h-screen flex-shrink-0">
+      {/* Desktop: always-visible sidebar (h-full = match parent h-dvh) */}
+      <div className="hidden md:flex w-64 h-full flex-shrink-0">
         {sidebarContent}
       </div>
 

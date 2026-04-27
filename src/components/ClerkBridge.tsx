@@ -35,6 +35,11 @@ function ClerkBridgeInner() {
   const { user: clerkUser } = useUser();
   const { user: localUser, signInExternal, logout } = useAuth();
   const syncedRef = useRef<string | null>(null);
+  // True only AFTER signInExternal has been called at least once for the
+  // current Clerk session. Prevents the second effect from racing the first
+  // effect's async upsert and prematurely calling signOut() — which would
+  // bounce the user straight back to the landing page on first sign-in.
+  const initialSyncDone = useRef(false);
 
   // Sync Clerk → AuthContext + Convex
   useEffect(() => {
@@ -46,6 +51,7 @@ function ClerkBridgeInner() {
         void logout();
         syncedRef.current = null;
       }
+      initialSyncDone.current = false;
       return;
     }
 
@@ -89,15 +95,19 @@ function ClerkBridgeInner() {
         }
       }
       signInExternal(baseUser);
+      initialSyncDone.current = true;
     })();
   }, [isLoaded, isSignedIn, clerkUser, localUser?.id, logout, signInExternal]);
 
   // Bila user logout dari AuthContext (mis. tombol Logout app), juga signOut dari Clerk.
+  // GUARD: hanya jalan kalau initialSyncDone — supaya tidak race dengan effect
+  // pertama yang sedang async menyiapkan localUser saat baru sign-in.
   useEffect(() => {
     if (!isLoaded) return;
-    if (!localUser && isSignedIn) {
+    if (!localUser && isSignedIn && initialSyncDone.current) {
       void signOut();
       syncedRef.current = null;
+      initialSyncDone.current = false;
     }
   }, [isLoaded, isSignedIn, localUser, signOut]);
 

@@ -27,6 +27,14 @@ export default function LandingPage() {
     if (user) { navigate('/dashboard', { replace: true }); }
   }, [user, navigate]);
 
+  // Tutup drawer saat back button Android ditekan
+  useEffect(() => {
+    if (!navOpen) return;
+    const handler = () => setNavOpen(false);
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, [navOpen]);
+
   const featureCards = [
     {
       label: 'SpaceWatch',
@@ -64,8 +72,9 @@ export default function LandingPage() {
   };
 
   return (
+    // ROOT: tidak ada overflow hidden/clip sama sekali
     <div
-      className="relative w-full min-h-screen flex flex-col font-sans text-white overflow-x-hidden"
+      className="relative w-full min-h-screen flex flex-col font-sans text-white"
       style={{
         background:
           'radial-gradient(70% 55% at 12% 10%, rgba(45,212,191,0.35) 0%, transparent 60%),' +
@@ -75,23 +84,29 @@ export default function LandingPage() {
           'linear-gradient(135deg, #042f2e 0%, #064e3b 30%, #0c4a6e 70%, #0f172a 100%)',
       }}
     >
-      {/* Subtle noise + glow orbs */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
-          background:
-            'radial-gradient(circle at 50% 30%, rgba(20,184,166,0.10) 0%, transparent 50%)',
+          background: 'radial-gradient(circle at 50% 30%, rgba(20,184,166,0.10) 0%, transparent 50%)',
           mixBlendMode: 'screen',
+          zIndex: 0,
         }}
       />
 
-      {/* ── NAV ── */}
+      {/* ── NAV ──
+          FIX: backdrop-blur pada fixed element adalah penyebab utama Chrome Android
+          total freeze. GPU compositor tidak bisa handle fixed+blur+scroll bersamaan
+          di kebanyakan device Android. Diganti background solid semi-transparan.
+          transform:translateZ(0) memaksa nav ke GPU layer tersendiri.
+      */}
       <nav
-        className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-6 py-3 backdrop-blur-md"
+        className="fixed top-0 left-0 right-0 z-40 px-4 sm:px-6 py-3"
         style={{
-          background: 'linear-gradient(180deg, rgba(4,47,46,0.85) 0%, rgba(4,47,46,0.55) 100%)',
+          background: 'rgba(4,47,46,0.95)',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
+          transform: 'translateZ(0)',
+          WebkitTransform: 'translateZ(0)',
         }}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
@@ -100,7 +115,6 @@ export default function LandingPage() {
             <span className="truncate text-sm font-bold tracking-wide text-white sm:text-base">ID-MAP</span>
           </button>
 
-          {/* Desktop menu */}
           <ul className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map(link => (
               <li key={link.id}>
@@ -115,7 +129,6 @@ export default function LandingPage() {
           </ul>
 
           <div className="flex items-center gap-2">
-            {/* Admin / Verifikator — subtle ghost link, separate from Clerk public auth */}
             <Link
               to="/login"
               title="Login khusus admin / verifikator"
@@ -125,43 +138,31 @@ export default function LandingPage() {
               Admin
             </Link>
             <span className="hidden sm:block h-5 w-px bg-white/15" aria-hidden />
-            {/* Login & Daftar (Clerk modal) */}
+
             {isClerkConfigured ? (
               <>
                 <SignInButton mode="modal" forceRedirectUrl="/dashboard">
-                  <button
-                    type="button"
-                    className="flex items-center justify-center gap-2 rounded-full border border-white/40 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-white/15 sm:px-5 sm:text-sm"
-                  >
+                  <button type="button" className="flex items-center justify-center gap-2 rounded-full border border-white/40 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-white/15 sm:px-5 sm:text-sm">
                     <LogIn className="h-4 w-4" /> <span className="hidden sm:inline">Login</span>
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
-                  <button
-                    type="button"
-                    className="flex items-center justify-center gap-2 rounded-full bg-teal-400 px-3 py-2 text-xs font-semibold text-emerald-950 transition-all hover:bg-teal-300 sm:px-5 sm:text-sm"
-                  >
+                  <button type="button" className="flex items-center justify-center gap-2 rounded-full bg-teal-400 px-3 py-2 text-xs font-semibold text-emerald-950 transition-all hover:bg-teal-300 sm:px-5 sm:text-sm">
                     <UserPlus className="h-4 w-4" /> <span className="hidden sm:inline">Daftar</span>
                   </button>
                 </SignUpButton>
               </>
             ) : (
               <>
-                <button
-                  onClick={() => showAccountNotice()}
-                  className="flex items-center justify-center gap-2 rounded-full border border-white/40 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-white/15 sm:px-5 sm:text-sm"
-                >
+                <button onClick={() => showAccountNotice()} className="flex items-center justify-center gap-2 rounded-full border border-white/40 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-white/15 sm:px-5 sm:text-sm">
                   <LogIn className="h-4 w-4" /> <span className="hidden sm:inline">Login</span>
                 </button>
-                <button
-                  onClick={() => showAccountNotice()}
-                  className="flex items-center justify-center gap-2 rounded-full bg-teal-400 px-3 py-2 text-xs font-semibold text-emerald-950 transition-all hover:bg-teal-300 sm:px-5 sm:text-sm"
-                >
+                <button onClick={() => showAccountNotice()} className="flex items-center justify-center gap-2 rounded-full bg-teal-400 px-3 py-2 text-xs font-semibold text-emerald-950 transition-all hover:bg-teal-300 sm:px-5 sm:text-sm">
                   <UserPlus className="h-4 w-4" /> <span className="hidden sm:inline">Daftar</span>
                 </button>
               </>
             )}
-            {/* Mobile burger */}
+
             <button
               onClick={() => setNavOpen(o => !o)}
               className="md:hidden rounded-full p-2 text-white/85 hover:bg-white/10"
@@ -172,9 +173,12 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Mobile menu drawer */}
+        {/* Mobile drawer — backdrop-blur dihapus, pakai solid bg */}
         {navOpen && (
-          <div className="md:hidden mt-3 mx-2 rounded-2xl border border-white/10 bg-emerald-950/85 backdrop-blur-md p-2">
+          <div
+            className="md:hidden mt-3 mx-2 rounded-2xl border border-white/10 p-2"
+            style={{ background: 'rgba(4,47,46,0.98)' }}
+          >
             {NAV_LINKS.map(link => (
               <button
                 key={link.id}
@@ -185,56 +189,33 @@ export default function LandingPage() {
               </button>
             ))}
             <div className="my-1 h-px bg-white/10" />
-
-            {/* Public auth — Clerk modals (mobile drawer) */}
             <div className="flex flex-col gap-2 px-1 py-1">
               {isClerkConfigured ? (
                 <>
                   <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
-                    <button
-                      type="button"
-                      onClick={() => setNavOpen(false)}
-                      className="flex w-full items-center justify-center gap-2 rounded-full bg-teal-400 px-4 py-2.5 text-sm font-semibold text-emerald-950 transition-all hover:bg-teal-300"
-                    >
+                    <button type="button" onClick={() => setNavOpen(false)} className="flex w-full items-center justify-center gap-2 rounded-full bg-teal-400 px-4 py-2.5 text-sm font-semibold text-emerald-950 transition-all hover:bg-teal-300">
                       <UserPlus className="h-4 w-4" /> Daftar Akun
                     </button>
                   </SignUpButton>
                   <SignInButton mode="modal" forceRedirectUrl="/dashboard">
-                    <button
-                      type="button"
-                      onClick={() => setNavOpen(false)}
-                      className="flex w-full items-center justify-center gap-2 rounded-full border border-white/40 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white/10"
-                    >
+                    <button type="button" onClick={() => setNavOpen(false)} className="flex w-full items-center justify-center gap-2 rounded-full border border-white/40 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white/10">
                       <LogIn className="h-4 w-4" /> Login
                     </button>
                   </SignInButton>
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => { setNavOpen(false); showAccountNotice(); }}
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-teal-400 px-4 py-2.5 text-sm font-semibold text-emerald-950 transition-all hover:bg-teal-300"
-                  >
+                  <button type="button" onClick={() => { setNavOpen(false); showAccountNotice(); }} className="flex w-full items-center justify-center gap-2 rounded-full bg-teal-400 px-4 py-2.5 text-sm font-semibold text-emerald-950 transition-all hover:bg-teal-300">
                     <UserPlus className="h-4 w-4" /> Daftar Akun
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => { setNavOpen(false); showAccountNotice(); }}
-                    className="flex w-full items-center justify-center gap-2 rounded-full border border-white/40 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white/10"
-                  >
+                  <button type="button" onClick={() => { setNavOpen(false); showAccountNotice(); }} className="flex w-full items-center justify-center gap-2 rounded-full border border-white/40 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white/10">
                     <LogIn className="h-4 w-4" /> Login
                   </button>
                 </>
               )}
             </div>
-
             <div className="my-1 h-px bg-white/10" />
-            <Link
-              to="/login"
-              onClick={() => setNavOpen(false)}
-              className="flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-left text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white"
-            >
+            <Link to="/login" onClick={() => setNavOpen(false)} className="flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-left text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white">
               <ShieldCheck className="h-4 w-4" />
               Login admin / verifikator
             </Link>
@@ -242,64 +223,32 @@ export default function LandingPage() {
         )}
       </nav>
 
-      {/* ── HERO (#home) — mangrove photo background with theme gradient overlay ── */}
+      {/* ── HERO ── */}
       <section
         id="home"
         className="relative flex w-full flex-col items-center justify-center overflow-hidden pt-24 pb-16 sm:pt-32 sm:pb-24 scroll-mt-20"
         style={{
-          // 88dvh on mobile so a hint of next section peeks through → invites scroll.
-          // Full 100dvh on desktop where vertical space is more abundant.
           minHeight: 'min(88dvh, 760px)',
-          backgroundImage: 'url(/hero-mangrove.jpg)',
+          backgroundImage: 'url(/hero-mangrove.webp)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
       >
-        {/* Layer 1 — color overlay tinting the photo to match theme */}
-        <div
-          aria-hidden
-          className="absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(135deg, rgba(4,47,46,0.78) 0%, rgba(13,148,136,0.55) 45%, rgba(15,23,42,0.78) 100%)',
-          }}
-        />
-        {/* Layer 2 — soft diffuse glow orbs for depth */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(60% 50% at 12% 10%, rgba(45,212,191,0.30) 0%, transparent 60%),' +
-              'radial-gradient(55% 50% at 90% 18%, rgba(20,184,166,0.25) 0%, transparent 60%),' +
-              'radial-gradient(70% 60% at 80% 95%, rgba(13,148,136,0.30) 0%, transparent 65%)',
-          }}
-        />
-        {/* Layer 3 — bottom fade so next section blends smoothly */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-40"
-          style={{
-            background:
-              'linear-gradient(180deg, transparent 0%, rgba(4,47,46,0.85) 100%)',
-          }}
-        />
+        <div aria-hidden className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(4,47,46,0.78) 0%, rgba(13,148,136,0.55) 45%, rgba(15,23,42,0.78) 100%)' }} />
+        <div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(60% 50% at 12% 10%, rgba(45,212,191,0.30) 0%, transparent 60%),radial-gradient(55% 50% at 90% 18%, rgba(20,184,166,0.25) 0%, transparent 60%),radial-gradient(70% 60% at 80% 95%, rgba(13,148,136,0.30) 0%, transparent 65%)' }} />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-40" style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(4,47,46,0.85) 100%)' }} />
 
         <div className="relative z-10 flex w-full max-w-5xl flex-col items-center px-5 text-center sm:px-6">
           <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-teal-300 sm:mb-4 sm:text-sm sm:tracking-[0.22em]">
             Platform Monitoring Mangrove dan Ekosistem Pesisir
           </p>
-
           <div className="mb-4 h-0.5 w-10 rounded-full bg-teal-400 sm:mb-5 sm:w-12" />
-
           <h1 className="max-w-4xl text-[28px] font-extrabold leading-[1.15] text-white drop-shadow-lg sm:text-5xl md:text-6xl tracking-tight">
             Selamat Datang di ID-MAP
           </h1>
-
-          <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-white/85 sm:mt-5 sm:text-base">
+          <p className="lp-justify mt-4 max-w-2xl text-[14px] leading-relaxed text-white/85 sm:mt-5 sm:text-base">
             Temukan informasi data mangrove dan pesisir dalam satu platform dari data lapangan hingga visualisasi interaktif untuk memahami kondisi lingkungan secara cepat dan tepat.
           </p>
-
           <div className="mt-7 flex w-full flex-col items-stretch justify-center gap-2.5 sm:mt-8 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
             <button
               onClick={() => navigate('/peta')}
@@ -318,19 +267,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── ABOUT (#about) ── */}
+      {/* ── ABOUT ── */}
       <section id="about" className="relative z-10 px-5 py-14 sm:px-6 sm:py-24 scroll-mt-20">
         <div className="mx-auto grid max-w-6xl items-center gap-8 sm:gap-10 md:grid-cols-2">
           <div>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-teal-300 sm:text-xs">About</p>
-            <h2 className="text-2xl font-bold tracking-tight leading-tight sm:text-4xl">
-              Tentang ID-MAP & Visi Konservasi
-            </h2>
+            <h2 className="text-2xl font-bold tracking-tight leading-tight sm:text-4xl">Tentang ID-MAP & Visi Konservasi</h2>
             <div className="my-4 h-0.5 w-10 rounded-full bg-teal-400 sm:my-5 sm:w-12" />
-            <p className="text-[14px] leading-relaxed text-white/80 sm:text-base">
+            <p className="lp-justify text-[14px] leading-relaxed text-white/80 sm:text-base">
               <strong className="text-white">ID-MAP</strong> (Integrasi Data Mangrove dan Pesisir) adalah platform terpadu yang dikelola oleh Cabang Dinas Kelautan dan Perikanan Kab. Malang untuk memantau, memetakan, serta mendukung restorasi ekosistem mangrove dan pesisir di Indonesia.
             </p>
-            <p className="mt-3 text-[14px] leading-relaxed text-white/75 sm:mt-4 sm:text-base">
+            <p className="lp-justify mt-3 text-[14px] leading-relaxed text-white/75 sm:mt-4 sm:text-base">
               Misi kami: menghadirkan data lapangan, citra satelit, dan kecerdasan buatan dalam satu antarmuka memungkinkan pemerintah, akademisi, dan masyarakat untuk mengambil keputusan berbasis bukti demi <em>blue economy</em> yang lestari.
             </p>
             <ul className="mt-5 space-y-2 text-[14px] text-white/85 sm:mt-6 sm:text-sm">
@@ -348,33 +295,21 @@ export default function LandingPage() {
             </ul>
           </div>
 
-          {/* Visual side — slimmer aspect on mobile so it doesn't dominate the scroll */}
           <div
             className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 shadow-2xl sm:aspect-[4/3] sm:rounded-3xl"
-            style={{
-              backgroundImage: 'url(/mangrove-hero.jpg)',
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
+            style={{ backgroundImage: 'url(/mangrove-hero.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }}
           >
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  'linear-gradient(135deg, rgba(20,184,166,0.30) 0%, rgba(15,23,42,0.55) 100%)',
-              }}
-            />
-            <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/15 bg-emerald-950/55 backdrop-blur-md p-4">
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(20,184,166,0.30) 0%, rgba(15,23,42,0.55) 100%)' }} />
+            {/* FIX: backdrop-blur dihapus, pakai solid bg */}
+            <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/15 p-4" style={{ background: 'rgba(4,47,46,0.88)' }}>
               <p className="text-[11px] font-semibold uppercase tracking-widest text-teal-300">Visi 2030</p>
-              <p className="mt-1 text-sm font-semibold text-white">
-                Indonesia menjadi pusat data dan riset mangrove tropis terdepan di Asia Tenggara.
-              </p>
+              <p className="mt-1 text-sm font-semibold text-white">Indonesia menjadi pusat data dan riset mangrove tropis terdepan di Asia Tenggara.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── FITUR UTAMA (#fitur) ── */}
+      {/* ── FITUR UTAMA ── */}
       <section id="fitur" className="relative z-10 px-5 py-14 sm:px-6 sm:py-24 scroll-mt-20">
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 text-center sm:mb-10">
@@ -385,26 +320,24 @@ export default function LandingPage() {
               Empat modul yang saling terhubung untuk siklus penuh: <em>observe → record → understand → act</em>.
             </p>
           </div>
-
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
             {featureCards.map(m => {
               const Icon = m.icon;
               return (
                 <div
                   key={m.label}
-                  className="group rounded-2xl border border-white/10 p-5 backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-white/20 sm:rounded-3xl sm:p-6"
+                  className="group rounded-2xl border border-white/10 p-5 transition-all hover:-translate-y-1 hover:border-white/20 sm:rounded-3xl sm:p-6"
+                  // FIX: backdrop-blur-sm dihapus dari semua cards
                   style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02))' }}
                 >
                   <div
-                    className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 shadow-lg sm:mb-4 sm:h-14 sm:w-14 sm:rounded-2xl"
+                    className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 sm:mb-4 sm:h-14 sm:w-14 sm:rounded-2xl"
                     style={{ background: `radial-gradient(circle at 30% 30%, ${m.glow}, rgba(255,255,255,0.04))` }}
                   >
                     <Icon className="h-6 w-6 sm:h-7 sm:w-7" style={{ color: m.color }} />
                   </div>
-                  <div className="mb-1.5 text-[11px] font-bold uppercase tracking-widest sm:mb-2 sm:text-xs" style={{ color: m.color }}>
-                    {m.label}
-                  </div>
-                  <p className="text-[13px] leading-relaxed text-white/75 sm:text-sm">{m.desc}</p>
+                  <div className="mb-1.5 text-[11px] font-bold uppercase tracking-widest sm:mb-2 sm:text-xs" style={{ color: m.color }}>{m.label}</div>
+                  <p className="lp-justify text-[13px] leading-relaxed text-white/75 sm:text-sm">{m.desc}</p>
                 </div>
               );
             })}
@@ -412,7 +345,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CONTACT (#contact) ── */}
+      {/* ── CONTACT ── */}
       <section id="contact" className="relative z-10 px-5 py-14 sm:px-6 sm:py-24 scroll-mt-20">
         <div className="mx-auto max-w-5xl">
           <div className="mb-8 text-center sm:mb-10">
@@ -423,27 +356,11 @@ export default function LandingPage() {
               Pertanyaan, kerja sama, atau usulan integrasi data? Tim kami siap merespons.
             </p>
           </div>
-
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
             {[
-              {
-                icon: Mail,
-                label: 'Email',
-                value: 'idmap.cabdinmalang@jatimprov.go.id',
-                href: 'mailto:idmap.cabdinmalang@jatimprov.go.id',
-              },
-              {
-                icon: Phone,
-                label: 'Telepon',
-                value: '(0341) 123-4567',
-                href: 'tel:+62341123456',
-              },
-              {
-                icon: MapPin,
-                label: 'Alamat',
-                value: 'Cabdin KP Kab. Malang, Jl. Raya Sumberpucung, Jawa Timur',
-                href: 'https://maps.google.com/?q=Cabdin+KP+Kab+Malang',
-              },
+              { icon: Mail, label: 'Email', value: 'id.map.admin@gmail.com', href: 'mailto:id.map.admin@gmail.com' },
+              { icon: Phone, label: 'Telepon', value: '(0341) 395059', href: 'tel:+6234395059' },
+              { icon: MapPin, label: 'Alamat', value: 'Cabdin KP Kab. Malang\nJl. Trunojoyo 12 Kepanjen Malang 65153', href: 'https://maps.app.goo.gl/Av23rVxdUS2v4JvW9' },
             ].map(c => {
               const Icon = c.icon;
               return (
@@ -452,7 +369,7 @@ export default function LandingPage() {
                   href={c.href}
                   target={c.href.startsWith('http') ? '_blank' : undefined}
                   rel="noreferrer"
-                  className="group flex items-start gap-3 rounded-2xl border border-white/10 p-4 backdrop-blur-sm transition-all hover:-translate-y-1 hover:border-teal-400/40 sm:flex-col sm:p-6"
+                  className="group flex items-start gap-3 rounded-2xl border border-white/10 p-4 transition-all hover:-translate-y-1 hover:border-teal-400/40 sm:flex-col sm:p-6"
                   style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))' }}
                 >
                   <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-teal-400/15 text-teal-300 group-hover:bg-teal-400/25 sm:h-11 sm:w-11">
@@ -473,10 +390,7 @@ export default function LandingPage() {
       <footer className="relative z-10 border-t border-white/10 px-4 py-6 text-center text-xs text-white/50">
         <p>© 2025 ID-MAP — Dinas Kelautan dan Perikanan Provinsi Jawa Timur</p>
         <p className="mt-1.5">
-          <Link
-            to="/login"
-            className="inline-flex items-center gap-1 text-white/60 hover:text-white transition-colors"
-          >
+          <Link to="/login" className="inline-flex items-center gap-1 text-white/60 hover:text-white transition-colors">
             <ShieldCheck className="h-3 w-3" />
             Login admin / verifikator
           </Link>
@@ -485,4 +399,3 @@ export default function LandingPage() {
     </div>
   );
 }
-

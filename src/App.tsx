@@ -5,6 +5,7 @@ import { useAuth } from './context/useAuth';
 import Layout from './components/Layout/Layout';
 import ClerkBridge from './components/ClerkBridge';
 import { AccountNoticeProvider } from './components/AccountRequiredNotice';
+import LoginSuccessToast from './components/LoginSuccessToast';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Login = lazy(() => import('./pages/Login'));
@@ -92,6 +93,7 @@ export default function App() {
       <ClerkBridge />
       <BrowserRouter>
         <AccountNoticeProvider>
+          <LoginSuccessToast />
           <AppRoutes />
         </AccountNoticeProvider>
       </BrowserRouter>

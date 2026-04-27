@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Trees, MapPin, Search, Plus, FileDown, Pencil, Check, X, Trash2 } from 'lucide-react';
+import { Trees, MapPin, Search, Plus, FileDown, Pencil, Check, X, Trash2, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
+import { downloadCSV, dateStamp } from '../lib/exportUtils';
 
 interface VegetasiEntry {
   id: string;
@@ -181,6 +182,28 @@ export default function VegetasiMangrove() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() =>
+              downloadCSV(
+                `idmap-vegetasi-mangrove-${dateStamp()}.csv`,
+                filtered,
+                [
+                  { key: 'id', label: 'ID' },
+                  { key: 'nama', label: 'Nama' },
+                  { key: 'jenis', label: 'Jenis Vegetasi' },
+                  { key: 'lokasi', label: 'Lokasi' },
+                  { key: 'koordinat', label: 'Koordinat' },
+                  { key: 'luasArea', label: 'Luas Area' },
+                  { key: 'kondisi', label: 'Kondisi' },
+                  { key: 'tanggal', label: 'Tanggal' },
+                ],
+              )
+            }
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors border bg-white text-green-700 border-green-300 hover:bg-green-50"
+            title="Unduh data CSV"
+          >
+            <Download className="w-3.5 h-3.5" /> Unduh
+          </button>
           {isAdmin && (
             <button
               onClick={() => setShowPdfPanel(p => !p)}

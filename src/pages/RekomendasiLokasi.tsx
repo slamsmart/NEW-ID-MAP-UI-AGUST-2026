@@ -3,8 +3,9 @@ import {
   Sprout, AlertTriangle, MapPin, Filter, ChevronDown, ChevronUp,
   Leaf, Droplets, Layers, Camera, ClipboardCheck, BarChart2, Info,
   TrendingUp, CheckCircle2, Clock, Search, FileDown, ExternalLink,
-  Pencil, Check, X, Trash2,
+  Pencil, Check, X, Trash2, Download,
 } from 'lucide-react';
+import { downloadCSV, downloadGeoJSON, dateStamp } from '../lib/exportUtils';
 import {
   titikAbrasiData as abrasiDataImport, getPrioritasColor, getSkorColor,
   rekomendasiSpesiesBySubstrat, hitungSkorPotensi,
@@ -543,9 +544,76 @@ export default function RekomendasiLokasi() {
   return (
     <div className="space-y-6">
 
-      {/* PDF Export Toggle — admin only */}
-      {isAdmin && (
-        <div className="flex items-center justify-end">
+      {/* Download / Export toolbar — CSV & GeoJSON untuk semua user, PDF khusus admin */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          onClick={() =>
+            downloadCSV(
+              `idmap-rekomendasi-abrasi-${dateStamp()}.csv`,
+              filteredAbrasi.map(r => ({
+                id: r.id,
+                namaPantai: r.namaPantai,
+                kecamatan: r.kecamatan,
+                kabKota: r.kabKota,
+                provinsi: r.provinsi,
+                lat: r.koordinat.lat,
+                lng: r.koordinat.lng,
+                indikasi: r.indikasi,
+                prioritas: r.prioritas,
+                substrat: r.substrat,
+                skorRisiko: r.skorRisiko,
+                ancamanUtama: (r.ancamanUtama ?? []).join('; '),
+                tanamanRekomendasi: (r.tanamanRekomendasi ?? []).join('; '),
+              })),
+              [
+                { key: 'id', label: 'ID' },
+                { key: 'namaPantai', label: 'Nama Pantai' },
+                { key: 'kecamatan', label: 'Kecamatan' },
+                { key: 'kabKota', label: 'Kab/Kota' },
+                { key: 'provinsi', label: 'Provinsi' },
+                { key: 'lat', label: 'Lat' },
+                { key: 'lng', label: 'Lng' },
+                { key: 'indikasi', label: 'Indikasi' },
+                { key: 'prioritas', label: 'Prioritas' },
+                { key: 'substrat', label: 'Substrat' },
+                { key: 'skorRisiko', label: 'Skor Risiko' },
+                { key: 'ancamanUtama', label: 'Ancaman Utama' },
+                { key: 'tanamanRekomendasi', label: 'Tanaman Rekomendasi' },
+              ],
+            )
+          }
+          className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors border bg-white text-green-700 border-green-300 hover:bg-green-50"
+          title="Unduh data CSV"
+        >
+          <Download className="w-3.5 h-3.5" /> CSV
+        </button>
+        <button
+          onClick={() =>
+            downloadGeoJSON(
+              `idmap-rekomendasi-abrasi-${dateStamp()}.geojson`,
+              filteredAbrasi.map(r => ({
+                lat: r.koordinat.lat,
+                lng: r.koordinat.lng,
+                properties: {
+                  id: r.id,
+                  kategori: 'rekomendasi_abrasi',
+                  namaPantai: r.namaPantai,
+                  kecamatan: r.kecamatan,
+                  kabKota: r.kabKota,
+                  prioritas: r.prioritas,
+                  substrat: r.substrat,
+                  skorRisiko: r.skorRisiko,
+                  tanamanRekomendasi: r.tanamanRekomendasi,
+                },
+              })),
+            )
+          }
+          className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors border bg-white text-green-700 border-green-300 hover:bg-green-50"
+          title="Unduh GeoJSON (peta)"
+        >
+          <Download className="w-3.5 h-3.5" /> GeoJSON
+        </button>
+        {isAdmin && (
           <button
             onClick={() => setShowPdfPanel(p => !p)}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all shadow-sm ${
@@ -557,8 +625,8 @@ export default function RekomendasiLokasi() {
             <FileDown className="w-4 h-4" />
             {showPdfPanel ? 'Tutup Panel PDF' : 'Export PDF'}
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* PDF Export Panel */}
       {showPdfPanel && (
