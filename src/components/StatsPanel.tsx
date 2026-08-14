@@ -118,6 +118,72 @@ export default function StatsPanel() {
       })
     : '—';
 
+  const handleExportPDF = () => {
+    const now = new Date();
+    const dateStr = now.toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' });
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`
+      <!DOCTYPE html>
+      <html lang="id">
+      <head>
+        <meta charset="utf-8"/>
+        <title>Laporan Statistik Visitor - ID-MAP</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Inter', system-ui, sans-serif; padding: 40px; color: #191c1e; }
+          .header { text-align: center; margin-bottom: 32px; border-bottom: 2px solid #006a61; padding-bottom: 20px; }
+          .header h1 { font-size: 22px; font-weight: 700; color: #003527; }
+          .header p { font-size: 13px; color: #404944; margin-top: 4px; }
+          .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+          .stat-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; }
+          .stat-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; font-weight: 600; }
+          .stat-card .value { font-size: 28px; font-weight: 600; color: #111827; margin-top: 4px; }
+          .stat-card .hint { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+          .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 11px; color: #9ca3af; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Laporan Statistik Visitor</h1>
+          <p>ID-MAP — Integrasi Data Mangrove & Pesisir</p>
+          <p>Wilker Cabdin KP Kab. Malang</p>
+          <p style="margin-top:8px;font-size:12px;color:#006a61;font-weight:600;">Dicetak: ${dateStr}</p>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="label">Total Kunjungan</div>
+            <div class="value">${stats.totalVisits.toLocaleString('id-ID')}</div>
+            <div class="hint">Semua halaman (termasuk kunjungan berulang)</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">User Terdaftar</div>
+            <div class="value">${stats.totalUsers.toLocaleString('id-ID')}</div>
+            <div class="hint">Profil tersinkron via Clerk</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Total Unduhan</div>
+            <div class="value">${stats.totalDownloads.toLocaleString('id-ID')}</div>
+            <div class="hint">Semua format (PDF + GeoJSON + CSV)</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Rincian Unduhan</div>
+            <div class="value" style="font-size:18px;">PDF: ${stats.downloadsPDF} · GeoJSON: ${stats.downloadsGeoJSON} · CSV: ${stats.downloadsCSV}</div>
+            <div class="hint">Per format file</div>
+          </div>
+        </div>
+        <div class="footer">
+          <p>Dokumen ini dicetak dari sistem ID-MAP — Integrasi Data Mangrove dan Pesisir</p>
+          <p>Cabang Dinas Kelautan dan Perikanan Kab. Malang · ${now.getFullYear()}</p>
+        </div>
+        <script>window.onload=function(){window.print();}</script>
+      </body>
+      </html>
+    `);
+    win.document.close();
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -127,6 +193,13 @@ export default function StatsPanel() {
             Update terakhir: {lastUpdate}
           </p>
         </div>
+        <button
+          onClick={handleExportPDF}
+          className="flex items-center gap-1.5 bg-[#006a61] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-[#005049] transition-colors"
+        >
+          <FileText className="w-3.5 h-3.5" />
+          Export PDF
+        </button>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard

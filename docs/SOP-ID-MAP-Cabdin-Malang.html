@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOP ID MAP Cabdin KP Malang</title>
+<style>
+  @page { margin: 2.5cm 2cm; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 12pt;
+    line-height: 1.6;
+    color: #1a1a1a;
+    max-width: 21cm;
+    margin: 0 auto;
+    padding: 2cm 2.5cm;
+    background: #fff;
+  }
+  .cover {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+    text-align: center;
+    page-break-after: always;
+    padding: 3cm 2cm;
+  }
+  .cover img { max-height: 120px; margin-bottom: 20px; }
+  .cover h1 { font-size: 24pt; font-weight: bold; margin: 15px 0; text-transform: uppercase; }
+  .cover h2 { font-size: 18pt; font-weight: bold; margin: 10px 0; }
+  .cover .sub { font-size: 14pt; margin: 30px 0; }
+  .cover .info { font-size: 12pt; margin-top: 50px; line-height: 2; }
+
+  h1 { font-size: 18pt; margin: 25px 0 15px; page-break-before: avoid; }
+  h2 { font-size: 14pt; margin: 20px 0 10px; page-break-before: avoid; }
+  h3 { font-size: 12pt; margin: 15px 0 8px; page-break-before: avoid; }
+  p { margin: 8px 0; text-align: justify; }
+  ol, ul { margin: 8px 0 8px 30px; }
+  li { margin: 4px 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 11pt; }
+  th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: #e8e8e8; font-weight: bold; }
+
+  .kop {
+    text-align: center;
+    border-bottom: 3px solid #1a3a5c;
+    padding-bottom: 10px;
+    margin-bottom: 25px;
+  }
+  .kop h3 { font-size: 14pt; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
+  .kop p { font-size: 10pt; margin: 2px 0; text-align: center; }
+
+  .meta-table td:first-child { width: 160px; font-weight: bold; border: none; padding: 3px 5px; }
+  .meta-table td:last-child { border: none; padding: 3px 5px; }
+
+  .page-break { page-break-before: always; }
+  .no-break { page-break-inside: avoid; }
+
+  .flow { display: flex; flex-direction: column; gap: 8px; margin: 15px 0; }
+  .flow-step {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 15px; border: 1px solid #ccc; border-radius: 6px; background: #fafafa;
+  }
+  .flow-step .num {
+    width: 30px; height: 30px; border-radius: 50%; background: #1a3a5c; color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;
+  }
+  .flow-step .desc { flex: 1; }
+  .flow-step .role {
+    display: inline-block; font-size: 10pt; padding: 2px 8px; border-radius: 3px; font-weight: bold;
+  }
+  .role-pengunjung { background: #e3f2fd; color: #1565c0; }
+  .role-admin { background: #fce4ec; color: #c62828; }
+  .role-verifikator { background: #e8f5e9; color: #2e7d32; }
+  .role-sistem { background: #f3e5f5; color: #6a1b9a; }
+
+  .note { background: #fff8e1; border-left: 4px solid #f9a825; padding: 10px 15px; margin: 10px 0; font-size: 11pt; }
+  .warning { background: #ffebee; border-left: 4px solid #c62828; padding: 10px 15px; margin: 10px 0; font-size: 11pt; }
+  .info-box { background: #e3f2fd; border-left: 4px solid #1565c0; padding: 10px 15px; margin: 10px 0; font-size: 11pt; }
+
+  @media print {
+    body { padding: 0; margin: 0 auto; }
+    .cover { min-height: 100vh; }
+    .no-break { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== COVER ==================== -->
+<div class="cover">
+  <div style="width:100px;height:100px;border:3px solid #1a3a5c;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:bold;color:#1a3a5c;margin-bottom:20px;">ID</div>
+  <h1>STANDAR OPERASIONAL PROSEDUR</h1>
+  <h2>SISTEM INFORMASI GEOGRAFIS</h2>
+  <h2 style="font-size:16pt;margin-top:5px;">INTEGRATED DATABASE — MAP OF CONSERVATION AREA</h2>
+  <h2 style="font-size:16pt;color:#1a3a5c;margin-top:5px;">(ID MAP) Cabdin KP Malang</h2>
+
+  <div class="sub" style="margin-top:40px;">
+    <p>Pengelolaan Data Kawasan Konservasi</p>
+    <p>Perairan, Pesisir, dan Pulau-Pulau Kecil (KP3K)</p>
+    <p>Kabupaten Malang</p>
+  </div>
+
+  <div class="info">
+    <p><strong>Disusun oleh:</strong> Cabang Dinas Kelautan dan Perikanan Malang</p>
+    <p><strong>Versi:</strong> 1.0</p>
+    <p><strong>Tanggal Berlaku:</strong> Juli 2026</p>
+    <p><strong>Status:</strong> Final</p>
+  </div>
+
+  <div style="margin-top:60px;font-size:10pt;color:#666;">
+    <p>Dokumen ini milik Cabang Dinas Kelautan dan Perikanan Malang</p>
+    <p>Dilarang memperbanyak tanpa izin</p>
+  </div>
+</div>
+
+<!-- ==================== HALAMAN PENGESAHAN ==================== -->
+<div class="page-break cover" style="min-height:80vh;">
+  <h1>LEMBAR PENGESAHAN</h1>
+  <div style="width:120px;height:3px;background:#1a3a5c;margin:15px auto;"></div>
+
+  <table style="width:80%;margin:40px auto;border:none;">
+    <tr><td style="border:none;padding:6px;text-align:right;width:40%;">Judul Dokumen</td><td style="border:none;padding:6px;">: SOP ID MAP Cabdin KP Malang</td></tr>
+    <tr><td style="border:none;padding:6px;text-align:right;">Nomor Dokumen</td><td style="border:none;padding:6px;">: SOP/ID-MAP/001/VII/2026</td></tr>
+    <tr><td style="border:none;padding:6px;text-align:right;">Revisi Ke-</td><td style="border:none;padding:6px;">: 0</td></tr>
+    <tr><td style="border:none;padding:6px;text-align:right;">Tanggal Berlaku</td><td style="border:none;padding:6px;">: Juli 2026</td></tr>
+  </table>
+
+  <div style="margin-top:50px;display:flex;justify-content:space-around;text-align:center;">
+    <div>
+      <p><strong>Ditetapkan oleh,</strong></p>
+      <br><br><br>
+      <p style="text-decoration:underline;">Kepala Cabang Dinas KP Malang</p>
+      <p>_________________________</p>
+    </div>
+    <div>
+      <p><strong>Diperiksa oleh,</strong></p>
+      <br><br><br>
+      <p style="text-decoration:underline;">Ketua Tim ID MAP</p>
+      <p>_________________________</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== DAFTAR ISI ==================== -->
+<div class="page-break">
+  <h1>DAFTAR ISI</h1>
+  <div style="width:80px;height:2px;background:#1a3a5c;margin:8px 0 20px;"></div>
+  <ol style="list-style:none;counter-reset:toc;">
+    <li style="counter-increment:toc;margin:8px 0;"><strong style="counter(toc)">1. </strong>Pendahuluan &nbsp;<span style="float:right;">1</span></li>
+    <li style="counter-increment:toc;margin:8px 0;"><strong style="counter(toc)">2. </strong>Tujuan &nbsp;<span style="float:right;">1</span></li>
+    <li style="counter-increment:toc;margin:8px 0;"><strong style="counter(toc)">3. </strong>Ruang Lingkup &nbsp;<span style="float:right;">2</span></li>
+    <li style="counter-increment:toc;margin:8px 0;"><strong style="counter(toc)">4. </strong>Definisi &nbsp;<span style="float:right;">2</span></li>
+    <li style="counter-increment:toc;margin:8px 0;"><strong style="counter(toc)">5. </strong>Prosedur untuk Pengunjung (Publik) &nbsp;<span style="float:right;">3</span></li>
+    <li style="counter-increment:toc;margin:8px 0;"><strong style="counter(toc)">6. </strong>Prosedur untuk Admin &nbsp;<span style="float:right;">5</span></li>
+    <li style="counter-increment:toc;margin:8px 0;"><strong style="counter(toc)">7. </strong>Prosedur untuk Verifikator &nbsp;<span style="float:right;">8</span></li>
+    <li style="counter-increment:toc;margin:8px 0;"><strong style="counter(toc)">8. </strong>Alur Kerja End-to-End &nbsp;<span style="float:right;">10</span></li>
+    <li style="counter-increment:toc;margin:8px 0;"><strong style="counter(toc)">9. </strong>Diagram Alir (Flowchart) &nbsp;<span style="float:right;">11</span></li>
+    <li style="counter-increment:toc;margin:8px 0;"><strong style="counter(toc)">10. </strong>Lampiran &nbsp;<span style="float:right;">12</span></li>
+  </ol>
+</div>
+
+<!-- ==================== 1. PENDAHULUAN ==================== -->
+<div class="page-break">
+  <div class="kop"><h3>STANDAR OPERASIONAL PROSEDUR</h3><p>Sistem Informasi Geografis Integrated Database — Map of Conservation Area (ID MAP) Cabdin KP Malang</p></div>
+
+  <h1>1. Pendahuluan</h1>
+
+  <p><strong>ID MAP (Integrated Database — Map of Conservation Area) Cabdin KP Malang</strong> adalah sistem informasi geografis berbasis web yang dikembangkan oleh Cabang Dinas Kelautan dan Perikanan (Cabdin KP) Malang untuk mendukung pengelolaan data kawasan konservasi perairan, pesisir, dan pulau-pulau kecil (KP3K) di wilayah Kabupaten Malang.</p>
+
+  <p>Sistem ini dibangun menggunakan teknologi React (TypeScript), Vite, Tailwind CSS, dan Convex sebagai backend, serta menyediakan peta interaktif berbasis Leaflet. ID MAP memungkinkan pengelolaan data survei lapangan secara <em>offline-first</em> dengan sinkronisasi otomatis saat perangkat terhubung ke internet.</p>
+
+  <p>Terdapat tiga jenis pengguna (role) dalam sistem ini, yaitu:</p>
+  <ol>
+    <li><strong>Pengunjung (Publik)</strong> — dapat mengakses peta publik dan informasi umum tanpa login.</li>
+    <li><strong>Admin</strong> — memiliki akses penuh untuk input data, kelola data, dan generate laporan.</li>
+    <li><strong>Verifikator</strong> — bertugas memverifikasi dan memvalidasi data survei yang masuk.</li>
+  </ol>
+</div>
+
+<!-- ==================== 2. TUJUAN ==================== -->
+<div class="no-break page-break">
+  <h1>2. Tujuan</h1>
+
+  <p>SOP ini bertujuan untuk:</p>
+  <ol>
+    <li>Memberikan panduan yang jelas dan terstruktur bagi seluruh pengguna ID MAP Cabdin KP Malang.</li>
+    <li>Menstandarisasi alur pengelolaan data survei mulai dari input, verifikasi, hingga publikasi.</li>
+    <li>Memastikan kualitas dan keakuratan data kawasan konservasi yang tersimpan dalam sistem.</li>
+    <li>Menjaga konsistensi penggunaan fitur oleh setiap role pengguna.</li>
+    <li>Memudahkan pelatihan dan orientasi pengguna baru.</li>
+  </ol>
+</div>
+
+<!-- ==================== 3. RUANG LINGKUP ==================== -->
+<div class="page-break">
+  <h1>3. Ruang Lingkup</h1>
+
+  <p>SOP ini mencakup seluruh aktivitas penggunaan sistem ID MAP Cabdin KP Malang, meliputi:</p>
+  <ol>
+    <li><strong>Manajemen Akun dan Autentikasi</strong> — Login, role-based access control.</li>
+    <li><strong>Eksplorasi Peta Publik</strong> — Fitur peta interaktif untuk masyarakat umum.</li>
+    <li><strong>Input Data Lapangan</strong> — Pengisian formulir survei (vegetasi, potensi, penyu) oleh admin.</li>
+    <li><strong>Verifikasi Data</strong> — Proses validasi dan approval data oleh verifikator.</li>
+    <li><strong>Monitoring Dashboard</strong> — Pantauan KPI dan statistik.</li>
+    <li><strong>Laporan dan Ekspor Data</strong> — Generate laporan, CSV, dan GeoJSON.</li>
+  </ol>
+</div>
+
+<!-- ==================== 4. DEFINISI ==================== -->
+<div class="page-break">
+  <h1>4. Definisi</h1>
+
+  <table>
+    <tr><th style="width:30%;">Istilah</th><th>Definisi</th></tr>
+    <tr><td>ID MAP</td><td>Integrated Database — Map of Conservation Area, sistem informasi geografis kawasan konservasi.</td></tr>
+    <tr><td>Cabdin KP</td><td>Cabang Dinas Kelautan dan Perikanan Provinsi Jawa Timur wilayah Malang.</td></tr>
+    <tr><td>KP3K</td><td>Kawasan Konservasi Perairan, Pesisir, dan Pulau-Pulau Kecil.</td></tr>
+    <tr><td>Survei Lapangan</td><td>Kegiatan pengumpulan data primer di lokasi kawasan konservasi.</td></tr>
+    <tr><td>Berita Acara (BA)</td><td>Dokumen resi hasil survei yang dicetak dan ditandatangani.</td></tr>
+    <tr><td>Verifikasi</td><td>Proses pemeriksaan dan pengesahan data survei oleh verifikator.</td></tr>
+    <tr><td>Pokmaswas</td><td>Kelompok Masyarakat Pengawas sumber daya kelautan dan perikanan.</td></tr>
+    <tr><td>Offline Mode</td><td>Mode penggunaan aplikasi tanpa koneksi internet; data disimpan lokal dan disinkronkan saat online.</td></tr>
+    <tr><td>Geotagging</td><td>Pelabelan koordinat geografis (GPS) pada foto dan data survei.</td></tr>
+    <tr><td>GeoJSON</td><td>Format data geospasial berbasis JSON untuk pertukaran data peta.</td></tr>
+  </table>
+</div>
+
+<!-- ==================== 5. PROSEDUR UNTUK PENGUNJUNG (PUBLIK) ==================== -->
+<div class="page-break">
+  <h1>5. Prosedur untuk Pengunjung (Publik)</h1>
+
+  <div class="note">
+    <strong>Karakteristik Pengunjung:</strong> Tidak perlu login. Dapat mengakses halaman publik dan peta interaktif.
+  </div>
+
+  <!-- 5.1 -->
+  <div class="no-break">
+    <h2>5.1. Mengakses Halaman Utama</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Buka browser dan akses URL aplikasi ID MAP Cabdin KP Malang.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Sistem akan menampilkan <strong>Landing Page</strong> yang berisi informasi umum tentang kawasan konservasi di Malang, statistik, dan fitur unggulan.</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Gulir halaman untuk melihat ringkasan data, lokasi, dan informasi kontak.</div></div>
+    </div>
+    <div class="info-box">Fitur yang tersedia di Landing Page: statistik KPI (luas kawasan, jumlah titik monitoring, dll), galeri, dan navigasi ke halaman peta publik.</div>
+  </div>
+
+  <!-- 5.2 -->
+  <div class="no-break">
+    <h2>5.2. Melihat Peta Publik</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Klik tombol "Peta Publik" atau "Jelajahi Peta" pada Landing Page atau navigasi.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Sistem menampilkan <strong>Peta Interaktif Publik</strong> berbasis Leaflet dengan berbagai <em>layer</em> peta:</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#546e7a;">2a</div><div class="desc">Layer Kawasan Konservasi (KKPD, MHI Mangrove, dll)</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#546e7a;">2b</div><div class="desc">Layer Pemanfaatan Ruang Laut</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#546e7a;">2c</div><div class="desc">Layer Titik Monitoring dan Survei (dengan status verifikasi)</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Navigasi peta: gunakan <em>scroll</em> untuk zoom, <em>drag</em> untuk geser peta.</div></div>
+      <div class="flow-step"><div class="num">4</div><div class="desc">Klik <em>marker</em> atau area pada peta untuk melihat informasi detail lokasi.</div></div>
+      <div class="flow-step"><div class="num">5</div><div class="desc">Gunakan panel samping untuk melihat daftar lokasi dan kategori.</div></div>
+    </div>
+  </div>
+
+  <!-- 5.3 -->
+  <div class="no-break">
+    <h2>5.3. Mengunduh Data Publik</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Pada halaman Peta Publik, klik tombol <strong>Download</strong>.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Pilih format unduhan yang tersedia: <em>GeoJSON</em> (data geospasial) atau <em>CSV</em> (data tabular).</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Sistem akan mengunduh file data publik yang dapat digunakan secara terbuka.</div></div>
+    </div>
+  </div>
+
+  <!-- 5.4 -->
+  <div class="no-break">
+    <h2>5.4. Registrasi / Login (Opsional)</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Jika pengunjung ingin mengakses fitur lebih lanjut, klik tombol <strong>Login</strong> atau <strong>Daftar</strong>.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Masukkan email dan password, atau gunakan akun demo yang disediakan.</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Setelah login, pengguna akan diarahkan ke halaman Dashboard (jika memiliki role Admin/Verifikator).</div></div>
+    </div>
+    <div class="warning">
+      <strong>Catatan:</strong> Akun demo hanya untuk tujuan demonstrasi. Data yang dimasukkan menggunakan akun demo bersifat sementara.
+    </div>
+  </div>
+
+  <table>
+    <tr><th colspan="2">Ringkasan Fitur Pengunjung</th></tr>
+    <tr><th>Fitur</th><th>Deskripsi</th></tr>
+    <tr><td>Landing Page</td><td>Informasi umum, statistik, pengantar sistem</td></tr>
+    <tr><td>Peta Publik</td><td>Peta interaktif kawasan konservasi dengan layer berganda</td></tr>
+    <tr><td>Download Data Publik</td><td>Unduh data dalam format GeoJSON dan CSV</td></tr>
+    <tr><td>Login</td><td>Akses ke halaman terproteksi sesuai role</td></tr>
+  </table>
+</div>
+
+<!-- ==================== 6. PROSEDUR UNTUK ADMIN ==================== -->
+<div class="page-break">
+  <h1>6. Prosedur untuk Admin</h1>
+
+  <div class="note">
+    <strong>Karakteristik Admin:</strong> Memiliki akses penuh ke seluruh fitur sistem. Dapat melakukan input data, kelola data, melihat dashboard, mencetak laporan, dan mengelola peta interaktif.
+  </div>
+
+  <!-- 6.1 -->
+  <div class="no-break">
+    <h2>6.1. Login dan Dashboard</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Buka halaman Login dan masukkan kredensial akun Admin.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Setelah login, sistem menampilkan <strong>Dashboard</strong> utama.</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Dashboard menyajikan KPI (Key Performance Indicators):</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#546e7a;">3a</div><div class="desc">Total luas kawasan konservasi (ha)</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#546e7a;">3b</div><div class="desc">Jumlah titik monitoring</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#546e7a;">3c</div><div class="desc">Jumlah survei yang telah dilakukan</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#546e7a;">3d</div><div class="desc">Status verifikasi data (pending / approved / rejected)</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#546e7a;">3e</div><div class="desc">Data Pokmaswas aktif</div></div>
+    </div>
+  </div>
+
+  <!-- 6.2 -->
+  <div class="no-break">
+    <h2>6.2. Input Data Lapangan (Survei)</h2>
+
+    <p>Admin melakukan input data hasil survei lapangan melalui halaman <strong>Input Lapangan</strong>. Formulir survei mencakup tiga jenis data utama:</p>
+
+    <h3>6.2.1. Monitoring Vegetasi</h3>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Pilih tujuan survei: <strong>Monitoring Vegetasi</strong>.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Isi data lokasi: provinsi, kabupaten/kota, kecamatan, desa, titik koordinat (latitude/longitude).</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Masukkan data vegetasi: jenis vegetasi, jumlah, tinggi rata-rata (m), diameter batang (cm).</div></div>
+      <div class="flow-step"><div class="num">4</div><div class="desc">Ambil foto lokasi dengan fitur <em>geotagging</em> (koordinat otomatis dari foto).</div></div>
+      <div class="flow-step"><div class="num">5</div><div class="desc">Lengkapi data pendukung: kondisi lingkungan, ancaman yang teridentifikasi.</div></div>
+    </div>
+
+    <h3>6.2.2. Data Potensi</h3>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Pilih tujuan survei: <strong>Potensi</strong>.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Isi data lokasi dan titik koordinat.</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Masukkan informasi potensi: jenis potensi, perkiraan luas, volume, dan catatan lapangan.</div></div>
+      <div class="flow-step"><div class="num">4</div><div class="desc">Dokumentasikan dengan foto dan catatan GPS.</div></div>
+    </div>
+
+    <h3>6.2.3. Data Penyu</h3>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Pilih tujuan survei: <strong>Penyu</strong>.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Isi data lokasi dan titik koordinat pantai pendaratan.</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Masukkan data spesies penyu: jenis penyu, jumlah sarang, jumlah telur, jumlah jejak, panjang karapas.</div></div>
+      <div class="flow-step"><div class="num">4</div><div class="desc">Data sarang dapat dimasukkan manual atau melalui GPS (multi-point).</div></div>
+      <div class="flow-step"><div class="num">5</div><div class="desc">Upload foto dokumentasi.</div></div>
+    </div>
+  </div>
+
+  <!-- 6.3 -->
+  <div class="no-break">
+    <h2>6.3. Pengelolaan Data Survei</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Setelah submit, data tersimpan di <strong>local storage</strong> (offline-first) dan antrean sinkronisasi.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Saat perangkat terhubung internet, data otomatis disinkronkan ke server Convex.</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Admin dapat melihat riwayat survei yang pernah dimasukkan melalui halaman Input Lapangan (tab Riwayat).</div></div>
+      <div class="flow-step"><div class="num">4</div><div class="desc">Data yang sudah pernah diverifikasi tidak dapat diubah. Hubungi verifikator untuk koreksi.</div></div>
+    </div>
+    <div class="info-box">
+      <strong>Offline Mode:</strong> ID MAP mendukung input data secara offline. Data akan tersimpan di browser lokal dan secara otomatis dikirim ke server saat koneksi internet tersedia. Antrean sinkronisasi dapat dipantau melalui indikator di halaman Input Lapangan.
+    </div>
+  </div>
+
+  <!-- 6.4 -->
+  <div class="no-break">
+    <h2>6.4. Cetak Berita Acara (BA)</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Setelah submit survei, klik tombol <strong>Cetak BA</strong>.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Sistem akan membuka jendela cetak browser dengan format Berita Acara resmi.</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Dokumen BA mencakup: identitas pelaksana, data lokasi, hasil pengukuran, foto, dan tanda tangan.</div></div>
+      <div class="flow-step"><div class="num">4</div><div class="desc">Cetak atau simpan sebagai PDF untuk arsip.</div></div>
+    </div>
+  </div>
+
+  <!-- 6.5 -->
+  <div class="no-break">
+    <h2>6.5. Dashboard dan Monitoring</h2>
+    <p>Admin dapat memantau seluruh aktivitas melalui Dashboard yang menampilkan:</p>
+    <ul>
+      <li>Statistik real-time kawasan konservasi</li>
+      <li>Status verifikasi data (menunggu, disetujui, ditolak)</li>
+      <li>Jumlah survei per periode waktu</li>
+      <li>Data Pokmaswas aktif</li>
+      <li>Tren data dari waktu ke waktu</li>
+    </ul>
+  </div>
+
+  <!-- 6.6 -->
+  <div class="no-break">
+    <h2>6.6. Peta Interaktif (Login)</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Akses halaman <strong>Peta Interaktif</strong> (memerlukan login).</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Fitur tambahan dibanding peta publik: menampilkan data Pokmaswas, titik survei dengan detail verifikasi.</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Filter data berdasarkan kategori dan status verifikasi.</div></div>
+    </div>
+  </div>
+
+  <!-- 6.7 -->
+  <div class="no-break">
+    <h2>6.7. Laporan dan Ekspor Data</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Buka halaman <strong>Laporan</strong>.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Pilih jenis laporan yang ingin di-generate: data vegetasi, data penyu, data potensi, atau ringkasan.</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Klik tombol <strong>Cetak</strong> untuk mencetak laporan.</div></div>
+      <div class="flow-step"><div class="num">4</div><div class="desc">Gunakan fitur ekspor untuk mengunduh data dalam format <strong>CSV</strong> atau <strong>GeoJSON</strong>.</div></div>
+    </div>
+  </div>
+
+  <!-- 6.8 -->
+  <div class="no-break">
+    <h2>6.8. Kelola Data Pokmaswas</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Buka halaman <strong>Data Pokmaswas</strong>.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Lihat daftar kelompok masyarakat pengawas yang terdaftar.</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Tambah/edit data Pokmaswas melalui form yang tersedia.</div></div>
+    </div>
+  </div>
+
+  <!-- Ringkasan Fitur Admin -->
+  <table>
+    <tr><th colspan="2">Ringkasan Fitur Admin</th></tr>
+    <tr><th>Fitur</th><th>Deskripsi</th></tr>
+    <tr><td>Dashboard</td><td>KPI dan statistik real-time</td></tr>
+    <tr><td>Input Lapangan</td><td>Formulir survei (Vegetasi, Potensi, Penyu) dengan offline mode</td></tr>
+    <tr><td>Cetak Berita Acara</td><td>Generate dokumen BA survei</td></tr>
+    <tr><td>Peta Interaktif</td><td>Peta dengan data terverifikasi dan Pokmaswas</td></tr>
+    <tr><td>Laporan & Ekspor</td><td>Cetak laporan, unduh CSV/GeoJSON</td></tr>
+    <tr><td>Data Pokmaswas</td><td>Kelola data kelompok masyarakat pengawas</td></tr>
+    <tr><td>Manajemen Data</td><td>Lihat riwayat, edit data belum diverifikasi</td></tr>
+  </table>
+</div>
+
+<!-- ==================== 7. PROSEDUR UNTUK VERIFIKATOR ==================== -->
+<div class="page-break">
+  <h1>7. Prosedur untuk Verifikator</h1>
+
+  <div class="note">
+    <strong>Karakteristik Verifikator:</strong> Bertugas memeriksa, memvalidasi, dan menyetujui/menolak data survei yang dimasukkan oleh Admin. Memiliki akses ke Dashboard, Verifikasi Data, Peta Interaktif, dan Laporan.
+  </div>
+
+  <!-- 7.1 -->
+  <div class="no-break">
+    <h2>7.1. Login dan Akses Halaman Verifikasi</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Login menggunakan akun Verifikator yang telah ditentukan.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Dashboard menampilkan ringkasan jumlah data yang menunggu verifikasi (pending).</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Klik menu <strong>Verifikasi Data</strong> untuk masuk ke halaman verifikasi.</div></div>
+    </div>
+  </div>
+
+  <!-- 7.2 -->
+  <div class="no-break">
+    <h2>7.2. Melakukan Verifikasi Data</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Halaman Verifikasi Data menampilkan daftar seluruh data survei yang telah masuk.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Gunakan <strong>filter</strong> untuk menyaring data berdasarkan:</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#546e7a;">2a</div><div class="desc">Status verifikasi (Pending / Approved / Rejected)</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#546e7a;">2b</div><div class="desc">Tujuan survei (Vegetasi / Potensi / Penyu)</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Klik salah satu data survei untuk melihat detail lengkap, termasuk:</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#546e7a;">3a</div><div class="desc">Data lokasi dan koordinat GPS</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#546e7a;">3b</div><div class="desc">Data pengukuran (vegetasi/potensi/penyu sesuai jenis survei)</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#546e7a;">3c</div><div class="desc">Dokumentasi foto</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#546e7a;">3d</div><div class="desc">Catatan ancaman yang teridentifikasi</div></div>
+      <div class="flow-step"><div class="num">4</div><div class="desc">Periksa kelengkapan dan keakuratan data. Verifikator dapat membuka tautan Google Maps untuk verifikasi koordinat lokasi.</div></div>
+      <div class="flow-step"><div class="num">5</div><div class="desc">Putuskan status verifikasi:</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#2e7d32;">5a</div><div class="desc"><strong>Approved (Disetujui)</strong> — data lengkap, akurat, dan dapat dipublikasikan. Klik tombol <strong>Setuju</strong>.</div></div>
+      <div class="flow-step" style="margin-left:30px;"><div class="num" style="background:#c62828;">5b</div><div class="desc"><strong>Rejected (Ditolak)</strong> — data tidak lengkap atau tidak akurat. Klik tombol <strong>Tolak</strong> dan berikan catatan/alasan penolakan.</div></div>
+      <div class="flow-step"><div class="num">6</div><div class="desc">Sistem akan menyimpan status verifikasi beserta nama verifikator dan timestamp.</div></div>
+    </div>
+  </div>
+
+  <!-- 7.3 -->
+  <div class="no-break">
+    <h2>7.3. Memantau Status Verifikasi</h2>
+    <div class="flow">
+      <div class="flow-step"><div class="num">1</div><div class="desc">Dashboard menampilkan statistik verifikasi secara real-time.</div></div>
+      <div class="flow-step"><div class="num">2</div><div class="desc">Data yang sudah diverifikasi akan muncul di Peta Publik dan Peta Interaktif dengan <em>badge</em> status.</div></div>
+      <div class="flow-step"><div class="num">3</div><div class="desc">Data yang ditolak dapat diperbaiki oleh Admin dan diajukan kembali untuk verifikasi ulang.</div></div>
+    </div>
+  </div>
+
+  <!-- 7.4 -->
+  <div class="no-break">
+    <h2>7.4. Kriteria Verifikasi</h2>
+    <div class="no-break">
+      <h3>7.4.1. Kelengkapan Data</h3>
+      <ul>
+        <li>Lokasi: provinsi, kab/kota, kecamatan, desa terisi lengkap.</li>
+        <li>Koordinat GPS valid (lat: -90 s.d 90, lng: -180 s.d 180).</li>
+        <li>Data pengukuran sesuai jenis survei (vegetasi/potensi/penyu).</li>
+        <li>Minimal 1 foto dokumentasi.</li>
+      </ul>
+    </div>
+    <div class="no-break">
+      <h3>7.4.2. Keakuratan Data</h3>
+      <ul>
+        <li>Koordinat sesuai dengan lokasi survei di lapangan (diverifikasi melalui peta).</li>
+        <li>Data pengukuran masuk akal (contoh: tinggi vegetasi tidak negatif, diameter dalam rentang wajar).</li>
+        <li>Jenis spesies yang dipilih sesuai dengan klasifikasi yang tersedia di sistem.</li>
+      </ul>
+    </div>
+    <div class="no-break">
+      <h3>7.4.3. Konsistensi</h3>
+      <ul>
+        <li>Unit kerja (Unit Kerja) terisi sesuai dengan wilayah tugas.</li>
+        <li>Data ancaman yang dipilih relevan dengan lokasi survei.</li>
+        <li>Foto dokumentasi sesuai dengan lokasi dan objek survei.</li>
+      </ul>
+    </div>
+  </div>
+
+  <table>
+    <tr><th colspan="2">Ringkasan Fitur Verifikator</th></tr>
+    <tr><th>Fitur</th><th>Deskripsi</th></tr>
+    <tr><td>Dashboard</td><td>Statistik verifikasi dan KPI</td></tr>
+    <tr><td>Verifikasi Data</td><td>Filter, detail, approve/reject data survei</td></tr>
+    <tr><td>Peta Interaktif</td><td>Lihat data terverifikasi di peta</td></tr>
+    <tr><td>Laporan</td><td>Lihat dan cetak laporan data terverifikasi</td></tr>
+  </table>
+</div>
+
+<!-- ==================== 8. ALUR KERJA END-TO-END ==================== -->
+<div class="page-break">
+  <h1>8. Alur Kerja End-to-End</h1>
+
+  <p>Berikut adalah alur kerja lengkap dari awal (pengguna datang) hingga akhir (data terpublikasi):</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="num">1</div>
+      <div class="desc">
+        <span class="role role-admin">Admin</span>
+        <strong>Login</strong> — Admin login ke sistem menggunakan akun yang terdaftar.
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="num">2</div>
+      <div class="desc">
+        <span class="role role-admin">Admin</span>
+        <strong>Input Data Survei</strong> — Admin melakukan input data hasil survei lapangan (Vegetasi / Potensi / Penyu) lengkap dengan koordinat GPS, foto, dan catatan. Data disimpan di local storage (offline) dan disinkronkan ke server.
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="num">3</div>
+      <div class="desc">
+        <span class="role role-admin">Admin</span>
+        <strong>Cetak Berita Acara</strong> — Admin mencetak BA sebagai dokumen resi hasil survei.
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="num">4</div>
+      <div class="desc">
+        <span class="role role-sistem">Sistem</span>
+        <strong>Sinkronisasi</strong> — Data secara otomatis dikirim ke server Convex. Status awal: <em>Pending</em>.
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="num">5</div>
+      <div class="desc">
+        <span class="role role-verifikator">Verifikator</span>
+        <strong>Verifikasi Data</strong> — Verifikator membuka halaman Verifikasi Data, memeriksa detail survei, dan memutuskan: <em>Approved</em> atau <em>Rejected</em>.
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="num">6</div>
+      <div class="desc" style="display:flex;flex-direction:column;gap:4px;">
+        <div><span class="role role-sistem">Sistem</span> <strong>Update Status</strong>:</div>
+        <div>→ Jika <strong>Approved</strong>: data tampil di Peta Publik & Peta Interaktif dengan badge "Terverifikasi".</div>
+        <div>→ Jika <strong>Rejected</strong>: data kembali ke Admin untuk perbaikan dengan catatan penolakan.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="num">7</div>
+      <div class="desc">
+        <span class="role role-admin">Admin</span>
+        <strong>Perbaikan Data (Jika Ditolak)</strong> — Admin memperbaiki data berdasarkan catatan verifikator dan mengirimkan ulang.
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="num">8</div>
+      <div class="desc">
+        <span class="role role-verifikator">Verifikator</span>
+        <strong>Verifikasi Ulang</strong> — Verifikator memeriksa ulang data yang telah diperbaiki.
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="num">9</div>
+      <div class="desc">
+        <span class="role role-pengunjung">Publik</span>
+        <strong>Akses Data Publik</strong> — Data yang sudah <em>Approved</em> dapat diakses oleh publik melalui Peta Publik dan diunduh dalam format GeoJSON/CSV.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 9. DIAGRAM ALIR ==================== -->
+<div class="page-break">
+  <h1>9. Diagram Alir (Flowchart)</h1>
+
+  <div style="font-family:'Courier New',monospace;font-size:11pt;line-height:1.4;background:#f8f9fa;padding:20px;border:1px solid #ddd;border-radius:8px;overflow-x:auto;white-space:pre;">
+    ┌──────────────────────────────────┐
+    │            MULAI                  │
+    └──────────┬───────────────────────┘
+               ▼
+    ┌──────────────────────────────────┐
+    │  PENGUNJUNG: Akses Landing Page  │
+    │  → Lihat info publik             │
+    │  → Akses Peta Publik             │
+    │  → Download data publik          │
+    └──────────┬───────────────────────┘
+               ▼
+    ┌──────────────────────────────────┐
+    │  Login?                          │
+    │  (Opsional untuk publik)         │
+    └──────────┬───────────────────────┘
+               ▼
+       ┌───────┴───────┐
+       ▼               ▼
+    ┌─────────┐  ┌──────────────┐
+    │ADMIN    │  │VERIFIKATOR   │
+    │Dashboard│  │Dashboard     │
+    └──┬──────┘  └──┬───────────┘
+       ▼            ▼
+    ┌─────────┐  ┌──────────────────┐
+    │Input    │  │Verifikasi Data   │
+    │Lapangan │  │→ Cek detail      │
+    │→ Isi    │  │→ Approve/Reject  │
+    │  survei │  │→ Kirim notifikasi│
+    │→ Foto   │  └────────┬─────────┘
+    │→ GPS    │           ▼
+    │→ Submit │     ┌──────────┐
+    └──┬──────┘     │Approved? │
+       ▼           └────┬─────┘
+    ┌─────────┐    ┌────┴────┐
+    │Simpan   │    ▼         ▼
+    │(Pending)│  ┌─────┐ ┌──────┐
+    │Sinkron  │  │Ya   │ │Tidak │
+    │Cetak BA │  │Pub  │ │Kembali│
+    └──┬──────┘  │lik  │ │ke    │
+       ▼         │asi  │ │Admin │
+    ┌─────────┐  └─────┘ └──────┘
+    │Monitoring│
+    │Dashboard │
+    │Laporan   │
+    │Ekspor    │
+    └──────────┘
+  </div>
+</div>
+
+<!-- ==================== 10. LAMPIRAN ==================== -->
+<div class="page-break">
+  <h1>10. Lampiran</h1>
+
+  <h2>10.1. Daftar Halaman / Fitur Aplikasi</h2>
+  <table>
+    <tr><th>No</th><th>Halaman</th><th>Akses</th><th>Deskripsi</th></tr>
+    <tr><td>1</td><td>Landing Page</td><td>Publik</td><td>Halaman utama informasi sistem</td></tr>
+    <tr><td>2</td><td>Login</td><td>Publik</td><td>Halaman autentikasi</td></tr>
+    <tr><td>3</td><td>Dashboard</td><td>Admin, Verifikator</td><td>KPI dan statistik real-time</td></tr>
+    <tr><td>4</td><td>Peta Publik</td><td>Publik</td><td>Peta interaktif terbuka</td></tr>
+    <tr><td>5</td><td>Peta Interaktif</td><td>Admin, Verifikator</td><td>Peta dengan data detail & Pokmaswas</td></tr>
+    <tr><td>6</td><td>Input Lapangan</td><td>Admin</td><td>Form survei (Vegetasi/Potensi/Penyu)</td></tr>
+    <tr><td>7</td><td>Verifikasi Data</td><td>Verifikator</td><td>Approve/reject data survei</td></tr>
+    <tr><td>8</td><td>Laporan</td><td>Admin, Verifikator</td><td>Cetak & ekspor laporan</td></tr>
+    <tr><td>9</td><td>Vegetasi Mangrove</td><td>Admin, Verifikator</td><td>Data vegetasi mangrove</td></tr>
+    <tr><td>10</td><td>Monitoring Ekosistem</td><td>Admin, Verifikator</td><td>Data monitoring ekosistem</td></tr>
+    <tr><td>11</td><td>Pembibitan Mangrove</td><td>Admin, Verifikator</td><td>Data pembibitan mangrove</td></tr>
+    <tr><td>12</td><td>Pendaratan Penyu</td><td>Admin, Verifikator</td><td>Data pendaratan penyu</td></tr>
+    <tr><td>13</td><td>Analisis Lingkungan</td><td>Admin, Verifikator</td><td>Data analisis lingkungan</td></tr>
+    <tr><td>14</td><td>Tekanan Sosial</td><td>Admin, Verifikator</td><td>Data tekanan sosial</td></tr>
+    <tr><td>15</td><td>Rekomendasi Lokasi</td><td>Admin, Verifikator</td><td>Rekomendasi lokasi konservasi</td></tr>
+    <tr><td>16</td><td>Data Pokmaswas</td><td>Admin</td><td>Kelola kelompok masyarakat pengawas</td></tr>
+    <tr><td>17</td><td>Mangrove Nasional</td><td>Admin, Verifikator</td><td>Data mangrove skala nasional</td></tr>
+  </table>
+
+  <h2>10.2. Tipe Data Survei</h2>
+  <table>
+    <tr><th>Tipe Survei</th><th>Data yang Dikumpulkan</th></tr>
+    <tr><td>Monitoring Vegetasi</td><td>Jenis vegetasi, jumlah, tinggi (m), diameter (cm), foto, koordinat, ancaman</td></tr>
+    <tr><td>Potensi</td><td>Jenis potensi, luas, volume, lokasi, foto, koordinat</td></tr>
+    <tr><td>Penyu</td><td>Jenis penyu, jumlah sarang, jumlah telur, jejak, panjang karapas, foto sarang, koordinat multi-point</td></tr>
+  </table>
+
+  <h2>10.3. Status Data dalam Sistem</h2>
+  <table>
+    <tr><th>Status</th><th>Keterangan</th><th>Aksi Selanjutnya</th></tr>
+    <tr><td>Pending</td><td>Data baru masuk, menunggu verifikasi</td><td>Verifikator memeriksa data</td></tr>
+    <tr><td>Approved</td><td>Data telah diverifikasi dan disetujui</td><td>Data tampil di peta publik, siap diekspor</td></tr>
+    <tr><td>Rejected</td><td>Data ditolak dengan catatan</td><td>Admin memperbaiki data, submit ulang</td></tr>
+  </table>
+
+  <h2>10.4. Panduan Pemecahan Masalah (Troubleshooting)</h2>
+  <table>
+    <tr><th style="width:35%;">Masalah</th><th>Penyebab</th><th>Solusi</th></tr>
+    <tr><td>Data tidak tersimpan</td><td>Koneksi internet terputus saat sinkronisasi</td><td>Data tersimpan di local storage. Sinkronisasi otomatis saat online kembali.</td></tr>
+    <tr><td>Foto gagal diupload</td><td>Ukuran file terlalu besar atau koneksi lambat</td><td>Kompres foto sebelum upload. Maksimal 5MB per file.</td></tr>
+    <tr><td>Koordinat GPS tidak akurat</td><td>Sinyal GPS lemah atau foto tanpa geotag</td><td>Gunakan fitur GPS manual, atau ambil foto dengan geotagging aktif.</td></tr>
+    <tr><td>Tidak bisa login</td><td>Kredensial salah atau akun tidak aktif</td><td>Hubungi admin sistem untuk reset password.</td></tr>
+    <tr><td>Data tidak muncul di peta</td><td>Status masih pending atau rejected</td><td>Tunggu verifikasi atau perbaiki data sesuai catatan verifikator.</td></tr>
+  </table>
+
+  <h2>10.5. Informasi Kontak</h2>
+  <table>
+    <tr><th style="width:30%;">Bagian</th><th>Kontak</th></tr>
+    <tr><td>Cabang Dinas KP Malang</td><td>Kantor Cabang Dinas Kelautan dan Perikanan, Kabupaten Malang</td></tr>
+    <tr><td>Admin Sistem ID MAP</td><td>Hubungi melalui email atau telepon yang tertera di halaman Landing Page</td></tr>
+    <tr><td>Dukungan Teknis</td><td>Laporkan masalah teknis ke pengembang sistem</td></tr>
+  </table>
+
+  <div style="margin-top:40px;padding-top:20px;border-top:2px solid #1a3a5c;text-align:center;">
+    <p style="font-size:10pt;color:#666;">
+      Dokumen SOP ini disusun berdasarkan implementasi teknis aplikasi ID MAP Cabdin KP Malang.<br>
+      &copy; 2026 Cabang Dinas Kelautan dan Perikanan Malang
+    </p>
+  </div>
+</div>
+
+</body>
+</html>

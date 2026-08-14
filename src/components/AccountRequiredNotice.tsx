@@ -13,7 +13,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { UserPlus, X, ShieldCheck } from 'lucide-react';
+import { UserPlus, X, ShieldCheck, LogIn } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 type NoticeOptions = {
@@ -46,11 +46,11 @@ export function AccountNoticeProvider({ children }: { children: ReactNode }) {
       {children}
       {open && (
         <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-6"
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 py-6 animate-fade-in"
           onClick={close}
         >
           <div
-            className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 sm:p-7"
+            className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 sm:p-7 animate-fade-up text-fade-scope"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -75,17 +75,27 @@ export function AccountNoticeProvider({ children }: { children: ReactNode }) {
             </p>
 
             <div className="mt-5 space-y-2">
+              {/* Tombol utama: Login — untuk user yang sudah punya akun */}
               <button
                 type="button"
                 onClick={() => {
                   close();
-                  // Sementara Clerk belum aktif: arahkan ke halaman login admin
-                  // dengan hint tab "daftar". User bisa hubungi admin untuk akses.
                   navigate('/login');
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white shadow hover:brightness-110 transition"
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:brightness-110 transition"
               >
-                <UserPlus className="h-4 w-4" /> Daftar / Hubungi Admin
+                <LogIn className="h-4 w-4" /> Login Sekarang
+              </button>
+              {/* Daftar akun baru */}
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  navigate('/login');
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-5 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+              >
+                <UserPlus className="h-4 w-4" /> Daftar Akun Baru
               </button>
               <button
                 type="button"
@@ -93,14 +103,14 @@ export function AccountNoticeProvider({ children }: { children: ReactNode }) {
                   close();
                   navigate('/login');
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:border-emerald-300 hover:bg-emerald-50 transition"
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-500 hover:border-slate-300 hover:bg-slate-50 transition"
               >
                 <ShieldCheck className="h-4 w-4" /> Saya Admin / Verifikator
               </button>
               <button
                 type="button"
                 onClick={close}
-                className="w-full px-5 py-2 text-xs font-medium text-slate-500 hover:text-slate-700 transition"
+                className="w-full px-5 py-2 text-xs font-medium text-slate-400 hover:text-slate-600 transition"
               >
                 Tutup
               </button>

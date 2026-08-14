@@ -101,7 +101,7 @@ export default function DownloadDropdown({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full mt-1.5 z-30 min-w-[220px] rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 py-1.5 animate-[idmapDropdownIn_0.16s_ease-out]"
+          className="absolute right-0 top-full mt-1.5 z-[500] min-w-[220px] rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/10 py-1.5 animate-[idmapDropdownIn_0.16s_ease-out]"
         >
           {items.map(item => {
             const Icon = item.icon ?? Download;

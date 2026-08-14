@@ -6,6 +6,8 @@ import Layout from './components/Layout/Layout';
 import ClerkBridge from './components/ClerkBridge';
 import { AccountNoticeProvider } from './components/AccountRequiredNotice';
 import LoginSuccessToast from './components/LoginSuccessToast';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
+import PageFade from './components/PageFade';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Login = lazy(() => import('./pages/Login'));
@@ -17,6 +19,13 @@ const RekomendasiLokasi = lazy(() => import('./pages/RekomendasiLokasi'));
 const VegetasiMangrove = lazy(() => import('./pages/VegetasiMangrove'));
 const PendaratanPenyu = lazy(() => import('./pages/PendaratanPenyu'));
 const VerifikasiData = lazy(() => import('./pages/VerifikasiData'));
+const DataPokmaswas = lazy(() => import('./pages/DataPokmaswas'));
+const Laporan = lazy(() => import('./pages/Laporan'));
+const PembibitanMangrove = lazy(() => import('./pages/PembibitanMangrove'));
+const TekananSosial = lazy(() => import('./pages/TekananSosial'));
+const AnalisisLingkungan = lazy(() => import('./pages/AnalisisLingkungan'));
+const MangroveNasional = lazy(() => import('./pages/MangroveNasional'));
+const PedomanTeknisPage = lazy(() => import('./pages/PedomanTeknisPage'));
 
 function AppShellFallback() {
   return (
@@ -46,14 +55,30 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 function RootRoute() {
-  const { user } = useAuth();
-  return user ? <Navigate to="/dashboard" replace /> : <LandingPage />;
+  return (
+    <PageFade>
+      <LandingPage />
+    </PageFade>
+  );
 }
 
 function LoginRedirect() {
   const { user } = useAuth();
   // Sudah login → langsung dashboard. Belum login → render form admin/verifikator.
-  return user ? <Navigate to="/dashboard" replace /> : <Login />;
+  if (user) return <Navigate to="/dashboard" replace />;
+  return (
+    <PageFade>
+      <Login />
+    </PageFade>
+  );
+}
+
+function PublicPeta() {
+  return (
+    <PageFade className="min-h-screen">
+      <PetaPublik />
+    </PageFade>
+  );
 }
 
 function ProtectedLayout() {
@@ -68,8 +93,9 @@ function AppRoutes() {
     <Suspense fallback={<AppShellFallback />}>
       <Routes>
         <Route path="/" element={<RootRoute />} />
-        <Route path="/peta" element={<PetaPublik />} />
+        <Route path="/peta" element={<PublicPeta />} />
         <Route path="/login" element={<LoginRedirect />} />
+        <Route path="/pedoman-teknis" element={<PedomanTeknisPage />} />
 
         <Route element={<ProtectedLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
@@ -79,6 +105,12 @@ function AppRoutes() {
           <Route path="/vegetasi-mangrove" element={<VegetasiMangrove />} />
           <Route path="/pendaratan-penyu" element={<PendaratanPenyu />} />
           <Route path="/verifikasi-data" element={<VerifikatorRoute><VerifikasiData /></VerifikatorRoute>} />
+          <Route path="/data-pokmaswas" element={<AdminRoute><DataPokmaswas /></AdminRoute>} />
+          <Route path="/laporan" element={<Laporan />} />
+          <Route path="/pembibitan-mangrove" element={<PembibitanMangrove />} />
+          <Route path="/tekanan-sosial" element={<TekananSosial />} />
+          <Route path="/lingkungan" element={<AnalisisLingkungan />} />
+          <Route path="/mangrove-nasional" element={<AdminRoute><MangroveNasional /></AdminRoute>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -95,6 +127,7 @@ export default function App() {
         <AccountNoticeProvider>
           <LoginSuccessToast />
           <AppRoutes />
+          <PWAInstallPrompt />
         </AccountNoticeProvider>
       </BrowserRouter>
     </AuthProvider>

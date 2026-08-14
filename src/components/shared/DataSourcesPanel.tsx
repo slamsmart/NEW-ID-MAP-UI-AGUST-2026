@@ -1,5 +1,5 @@
 import { Database, Satellite, Leaf, Waves, Users, BookOpen, ExternalLink } from 'lucide-react';
-import { dataSources, type DataSource } from '../../data/mockData';
+import { dataSources, type DataSource } from '../../data/seedData';
 
 const KATEGORI_CONFIG: Record<DataSource['kategori'], { label: string; icon: typeof Database; color: string; bg: string }> = {
   spasial:    { label: 'Spasial / Citra', icon: Satellite, color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },

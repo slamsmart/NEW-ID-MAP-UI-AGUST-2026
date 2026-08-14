@@ -1,0 +1,19 @@
+{
+  "name": "ID-MAP — Integrasi Data Mangrove Pesisir",
+  "short_name": "ID-MAP",
+  "description": "Platform monitoring mangrove dan ekosistem pesisir Kab. Malang",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#003527",
+  "theme_color": "#006a61",
+  "orientation": "portrait-primary",
+  "lang": "id",
+  "icons": [
+    { "src": "/logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [
+    { "src": "/hero-mangrove.webp", "sizes": "1280x720", "type": "image/webp", "form_factor": "wide" }
+  ],
+  "categories": ["environment", "government", "maps"]
+}

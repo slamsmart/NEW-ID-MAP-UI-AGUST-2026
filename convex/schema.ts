@@ -260,4 +260,33 @@ export default defineSchema({
     downloadsCSV: v.number(),
     updatedAt: v.number(),
   }).index('by_key', ['key']),
+
+  // ─────────────────────────────────────────────────────────────
+  // pokmaswas — Kelompok Masyarakat Pengawas Konservasi.
+  // Seed awal (PKM-001..PKM-044) tetap di file statis di klien
+  // (src/data/pokmaswasData.ts). Tabel ini menyimpan entri yang
+  // di-input admin/verifikator via form, sehingga nomor baru
+  // dilanjutkan dari STATIC_BASE (lihat convex/pokmaswas.ts).
+  // ─────────────────────────────────────────────────────────────
+  pokmaswas: defineTable({
+    legacyId: v.string(),
+    no: v.number(),
+    kabupatenKota: v.string(),
+    nama: v.string(),
+    alamat: v.string(),
+    ketua: v.string(),
+    noHp: v.string(),
+    lat: v.number(),
+    lng: v.number(),
+    // Profil singkat (legenda)
+    ruangLingkup: v.optional(v.string()),
+    kawasanPantai: v.optional(v.string()),
+    bidangCore: v.array(v.string()),
+    // Audit
+    createdBy: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index('by_legacy', ['legacyId'])
+    .index('by_kab', ['kabupatenKota'])
+    .index('by_no', ['no']),
 });

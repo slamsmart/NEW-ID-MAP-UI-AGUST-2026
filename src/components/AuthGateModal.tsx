@@ -44,7 +44,7 @@ export default function AuthGateModal({
 
   return (
     <div
-      className="fixed inset-0 z-[1100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[1100] flex items-center justify-center p-4 animate-fade-in"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       {/* Backdrop dengan gradien hijau→biru tema mangrove */}
@@ -62,7 +62,7 @@ export default function AuthGateModal({
 
       {/* Glass card */}
       <div
-        className="relative w-full max-w-md rounded-3xl p-7 shadow-2xl"
+        className="relative w-full max-w-md rounded-3xl p-7 shadow-2xl animate-fade-up text-fade-scope"
         style={{
           background: 'linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))',
           border: '1px solid rgba(255,255,255,0.25)',
@@ -80,7 +80,7 @@ export default function AuthGateModal({
 
         {/* Header */}
         <div className="text-center mb-5">
-          <img src="/logo.svg" alt="ID-MAP" className="h-14 mx-auto mb-3 drop-shadow-lg" draggable={false} />
+          <img src="/logo.png" alt="ID-MAP" className="h-14 mx-auto mb-3 drop-shadow-lg" draggable={false} />
           <h2 className="text-white font-extrabold text-2xl tracking-wide">LOGIN</h2>
           <p className="text-white/80 text-xs mt-1 leading-relaxed">
             {reason ?? 'Akses fitur lengkap ID-MAP Cabdin KP Kab. Malang.'}

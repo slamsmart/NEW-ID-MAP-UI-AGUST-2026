@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
@@ -18,71 +18,78 @@ export default function Login() {
     else setError('Username atau password tidak valid.');
   };
 
-  return (
-    <div
-      className="relative min-h-screen w-full flex items-center justify-center px-4 py-10 font-sans overflow-hidden"
-      style={{
-        background:
-          'radial-gradient(80% 60% at 78% 12%, #155e75 0%, transparent 55%),' +
-          'radial-gradient(75% 65% at 35% 95%, #14b8a6 0%, transparent 55%),' +
-          'linear-gradient(160deg, #0e7490 0%, #0f766e 50%, #115e59 100%)',
-      }}
-    >
+  // Dynamic page title
+  useEffect(() => {
+    document.title = 'Login Admin — ID-MAP';
+  }, []);
 
-      <div className="relative z-10 w-full max-w-md">
+  return (
+    <div className="relative min-h-screen w-full flex items-center justify-center px-4 py-10 font-sans overflow-hidden">
+      {/* Background image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: 'url(/hero-mangrove.webp)' }}
+      />
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#003527]/50 to-[#003527]/70" />
+
+      <div className="relative z-10 w-full max-w-md animate-fade-up text-fade-scope">
         {/* Brand row */}
         <div className="mb-6 flex flex-col items-center text-center">
           <img
-            src="/logo.svg"
+            src="/logo.png"
             alt="ID-MAP"
-            className="h-16 w-auto mb-3 drop-shadow-lg"
+            className="h-20 w-auto mb-3 drop-shadow-lg cursor-pointer"
             draggable={false}
+            onClick={() => navigate('/')}
           />
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/80">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/90">
             Admin · Verifikator
           </p>
         </div>
 
         {/* Glass card */}
         <div
-          className="rounded-3xl border border-white/30 p-8 shadow-2xl backdrop-blur-2xl"
+          className="rounded-2xl border border-white/25 p-8 shadow-2xl"
           style={{
-            background: 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%)',
-            boxShadow: '0 20px 60px -10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.25)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.10) 100%)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: '0 20px 60px -10px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.20)',
           }}
         >
-          <h1 className="text-center text-3xl font-light tracking-[0.3em] text-white mb-1">
+          <h1 className="text-center text-2xl font-light tracking-[0.3em] text-white mb-1">
             LOGIN
           </h1>
-          <p className="text-center text-xs text-white/70 mb-7">
+          <p className="text-center text-sm text-white/70 mb-7">
             Masuk ke ID-MAP
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="rounded-full bg-white/85 backdrop-blur shadow-inner">
+            <div className="rounded-full bg-white/90 shadow-inner">
               <input
                 type="text"
                 value={username}
                 autoComplete="username"
                 onChange={e => { setUsername(e.target.value); setError(''); }}
                 placeholder="Username"
-                className="w-full bg-transparent rounded-full px-5 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                className="w-full bg-transparent rounded-full px-5 py-3.5 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none"
               />
             </div>
 
-            <div className="relative rounded-full bg-white/85 backdrop-blur shadow-inner">
+            <div className="relative rounded-full bg-white/90 shadow-inner">
               <input
                 type={showPass ? 'text' : 'password'}
                 value={password}
                 autoComplete="current-password"
                 onChange={e => { setPassword(e.target.value); setError(''); }}
                 placeholder="Password"
-                className="w-full bg-transparent rounded-full px-5 py-3 pr-12 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                className="w-full bg-transparent rounded-full px-5 py-3.5 pr-12 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => setShowPass(!showPass)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
                 aria-label={showPass ? 'Sembunyikan password' : 'Tampilkan password'}
               >
                 {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -90,7 +97,7 @@ export default function Login() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-xs text-red-50 bg-red-500/30 border border-red-300/40 rounded-full px-4 py-2 backdrop-blur">
+              <div className="flex items-center gap-2 text-xs text-red-50 bg-red-500/30 border border-red-300/40 rounded-full px-4 py-2">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 {error}
               </div>
@@ -98,7 +105,7 @@ export default function Login() {
 
             <button
               type="submit"
-              className="mt-2 w-full flex items-center justify-center gap-2 bg-slate-900/85 hover:bg-slate-900 text-white font-medium tracking-[0.2em] py-3 rounded-full transition-all hover:shadow-lg active:scale-[0.99]"
+              className="mt-2 w-full flex items-center justify-center gap-2 bg-[#1e293b]/90 hover:bg-[#1e293b] text-white font-medium tracking-[0.15em] py-3.5 rounded-full transition-all hover:shadow-lg active:scale-[0.99]"
             >
               <LogIn className="w-4 h-4" />
               SIGN IN
@@ -114,14 +121,14 @@ export default function Login() {
         </div>
 
         {/* Footer */}
-        <p className="mt-6 text-center text-[11px] text-white/60">
+        <p className="mt-6 text-center text-xs text-white/70">
           ID-MAP v1.0 · Cabdin KP Kab. Malang
         </p>
-        <p className="mt-1 text-center text-[11px]">
+        <p className="mt-1 text-center text-xs">
           <button
             type="button"
             onClick={() => navigate('/')}
-            className="text-white/70 hover:text-white underline-offset-2 hover:underline"
+            className="text-white/80 hover:text-white underline-offset-2 hover:underline"
           >
             ← Kembali ke Beranda
           </button>

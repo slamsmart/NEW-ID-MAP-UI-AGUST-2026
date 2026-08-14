@@ -4,7 +4,7 @@
  * `useQuery`/`useMutation` lewat <ConvexProvider> di main.tsx.
  */
 import { ConvexReactClient } from 'convex/react';
-import type { DbSurvey, DbLocation } from './supabase';
+import type { DbSurvey, DbLocation } from '../types/db';
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL as string | undefined;
 
@@ -26,8 +26,6 @@ const sanitizeString = (v: unknown): string | undefined =>
 
 /** DbSurvey (snake_case) → args untuk `api.surveys.upsert` (camelCase). */
 export function dbSurveyToConvexArgs(input: DbSurvey) {
-  // Beberapa field berasal dari kolom Supabase yang belum ada di DbSurvey type
-  // (mis. nama_pantai, foto_dokumentasi). Cast ke index-signature untuk akses dinamis.
   const s = input as DbSurvey & Record<string, unknown>;
   return {
     legacyId: s.id,
@@ -155,6 +153,22 @@ export function convexSurveyToDbSurvey(c: Record<string, unknown>): DbSurvey {
       : [],
     sync_status: 'synced',
     photo_urls: Array.isArray(c.photoUrls) ? c.photoUrls as string[] : [],
+    foto_dokumentasi: (c.fotoDokumentasi as string) ?? null,
+    google_maps_url: (c.googleMapsUrl as string) ?? null,
+    luasan_potensi: (c.luasanPotensi as number) ?? null,
+    skor_potensi: (c.skorPotensi as number) ?? null,
+    aksesibilitas: (c.aksesibilitas as DbSurvey['aksesibilitas']) ?? null,
+    pengaruh_pasang: (c.pengaruhPasang as string) ?? null,
+    nama_pantai: (c.namaPantai as string) ?? null,
+    tingkat_abrasi: (c.tingkatAbrasi as DbSurvey['tingkat_abrasi']) ?? null,
+    panjang_terdampak: (c.panjangTerdampak as number) ?? null,
+    prioritas_abrasi: (c.prioritasAbrasi as DbSurvey['prioritas_abrasi']) ?? null,
+    kondisi_sebelum: (c.kondisiSebelum as string) ?? null,
+    kondisi_sesudah: (c.kondisiSesudah as string) ?? null,
+    verification_status: (c.verificationStatus as DbSurvey['verification_status']) ?? 'pending',
+    verification_note: (c.verificationNote as string) ?? null,
+    verified_by: (c.verifiedBy as string) ?? null,
+    verified_at: (c.verifiedAt as string) ?? null,
   };
 }
 

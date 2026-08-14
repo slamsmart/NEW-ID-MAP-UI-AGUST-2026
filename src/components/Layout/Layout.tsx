@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import PageFade from '../PageFade';
 
 const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/': { title: 'Dashboard Nasional', subtitle: 'Ringkasan kondisi mangrove & pesisir Indonesia' },
@@ -21,29 +22,27 @@ export default function Layout() {
   const pageInfo = pageTitles[location.pathname] || { title: 'ID-MAP', subtitle: '' };
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Dynamic document title per page
+  useEffect(() => {
+    document.title = `${pageInfo.title} — ID-MAP`;
+  }, [pageInfo.title]);
+
   return (
     <div
-      // Outer pakai h-dvh saja (mobile-aware). Hindari mix `min-h-screen` di
-      // sini karena konflik antara `height` & `min-height` bikin scroll
-      // kontainer turunan tidak konsisten (mouse wheel kadang tidak nyambung).
-      className="flex h-dvh text-white"
-      style={{
-        background:
-          'linear-gradient(135deg, #064e3b 0%, #047857 25%, #0e7490 60%, #0369a1 100%)',
-      }}
+      className="flex h-dvh text-gray-900 bg-[#f4fcf0]"
     >
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 p-0 md:p-3 md:pl-0">
-        <div className="flex-1 flex flex-col min-h-0 bg-slate-50 md:rounded-3xl md:shadow-2xl md:shadow-black/20 overflow-hidden md:border md:border-green-900/40">
-          <Header
-            title={pageInfo.title}
-            subtitle={pageInfo.subtitle}
-            onMenuClick={() => setSidebarOpen(true)}
-          />
-          <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
+        <Header
+          title={pageInfo.title}
+          subtitle={pageInfo.subtitle}
+          onMenuClick={() => setSidebarOpen(true)}
+        />
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#f4fcf0] pb-safe">
+          <PageFade>
             <Outlet />
-          </main>
-        </div>
+          </PageFade>
+        </main>
       </div>
     </div>
   );

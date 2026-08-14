@@ -3,18 +3,17 @@
  *
  * Strategi:
  * 1. Data survei selalu disimpan ke localStorage dulu (instant, offline-safe)
- * 2. Jika online + Supabase terkonfigurasi → upload ke Supabase
+ * 2. Jika online + Convex terkonfigurasi → upload ke Convex
  * 3. Jika offline → masuk queue, ditandai 'pending'
  * 4. Saat koneksi kembali (event 'online') → proses queue otomatis
  * 5. Foto: disimpan sebagai base64 lokal saat offline, upload ke Cloudinary saat online
  *
- * GPS: navigator.geolocation menggunakan SATELIT, bukan internet.
+ * GPS: navigator.geolocation menggunakan satelit, bukan internet.
  * → Koordinat tetap bisa diambil meski sinyal HP tidak ada.
- * → Yang butuh internet: Supabase sync + Cloudinary upload.
+ * → Yang butuh internet: Convex sync + Cloudinary upload.
  */
 
-import { isSupabaseConfigured } from './supabase';
-import type { DbSurvey, DbLocation } from './supabase';
+import type { DbSurvey, DbLocation } from '../types/db';
 import { convex, isConvexConfigured, dbSurveyToConvexArgs, dbLocationToConvexArgs, convexSurveyToDbSurvey } from './convexClient';
 import { api } from '../../convex/_generated/api';
 
@@ -56,11 +55,8 @@ export function getPendingCount(): number {
          getLocQueue().length;
 }
 
-// Reference yang masih diekspor untuk backward-compat:
-void isSupabaseConfigured;
-
 /**
- * Simpan survei: coba Supabase dulu, fallback ke localStorage queue
+ * Simpan survei: coba Convex dulu, fallback ke localStorage queue
  */
 export async function enqueueSurvey(survey: DbSurvey): Promise<{ success: boolean; offline: boolean }> {
   const queued: QueuedSurvey = {
@@ -85,7 +81,7 @@ export async function enqueueSurvey(survey: DbSurvey): Promise<{ success: boolea
 }
 
 /**
- * Simpan lokasi baru: coba Supabase, fallback ke queue
+ * Simpan lokasi baru: coba Convex, fallback ke queue
  */
 export async function enqueueLocation(loc: DbLocation): Promise<{ success: boolean; offline: boolean }> {
   const locQueue = getLocQueue();
@@ -167,7 +163,7 @@ export async function syncPendingQueue(): Promise<{ synced: number; failed: numb
 }
 
 /**
- * Ambil semua survei — gabungan dari Supabase (jika online) + queue lokal
+ * Ambil semua survei — gabungan dari Convex (jika online) + queue lokal
  */
 export async function getAllSurveys(): Promise<DbSurvey[]> {
   const localSurveys = getQueue() as DbSurvey[];

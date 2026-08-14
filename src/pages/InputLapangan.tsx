@@ -9,9 +9,10 @@ import { PROVINSI_LIST, KABKOTA_BY_PROVINSI } from '../data/wilayahIndonesia';
 import { fetchSurveys, getSurveys, saveSurvey, type SurveyRecord } from '../data/localStore';
 import { hitungSkorPotensi, rekomendasiSpesiesBySubstrat } from '../data/abrasiData';
 import { useAuth } from '../context/useAuth';
-import { uploadPhoto, fileToDataUrl, isCloudinaryConfigured } from '../lib/cloudinary';
+import { uploadPhoto, fileToDataUrl, isCloudinaryConfigured, getCloudinaryUrl } from '../lib/cloudinary';
 import { enqueueSurvey } from '../lib/offlineQueue';
 import { extractGpsAuto, preloadOcrWorker, type ExifGpsResult } from '../lib/exifGps';
+import { parseCoord } from '../lib/coordParser';
 // â"€â"€â"€ Types â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 type TujuanSurvei = 'monitoring_vegetasi' | 'potensi_penanaman' | 'pendaratan_penyu';
@@ -872,11 +873,19 @@ function SarangMultiInput({ sarangList, setSarangList, isOnline }: {
                     </td>
                     <td className="px-2 py-1.5">
                       <input value={s.lat} onChange={e => update(s.id, 'lat', e.target.value)}
-                        placeholder="-8.386..." className="w-full text-xs border border-gray-300 rounded px-1.5 py-1 font-mono bg-white text-gray-900 placeholder-gray-400" />
+                        onBlur={e => {
+                          const parsed = parseCoord(e.target.value);
+                          if (parsed) update(s.id, 'lat', parsed);
+                        }}
+                        placeholder={`-8.386... atau 8°25'50"S`} className="w-full text-xs border border-gray-300 rounded px-1.5 py-1 font-mono bg-white text-gray-900 placeholder-gray-400" />
                     </td>
                     <td className="px-2 py-1.5">
                       <input value={s.lng} onChange={e => update(s.id, 'lng', e.target.value)}
-                        placeholder="112.77..." className="w-full text-xs border border-gray-300 rounded px-1.5 py-1 font-mono bg-white text-gray-900 placeholder-gray-400" />
+                        onBlur={e => {
+                          const parsed = parseCoord(e.target.value);
+                          if (parsed) update(s.id, 'lng', parsed);
+                        }}
+                        placeholder={`112.77... atau 112°38'3"E`} className="w-full text-xs border border-gray-300 rounded px-1.5 py-1 font-mono bg-white text-gray-900 placeholder-gray-400" />
                     </td>
                     <td className="px-2 py-1.5 text-center text-gray-500">{s.waktu || '--'}</td>
                     <td className="px-2 py-1.5">
@@ -941,6 +950,15 @@ export default function InputLapangan() {
     setPenyu({ ...INIT_PENYU, namaPetugas: user?.nama ?? '', unitKerja: getDefaultUnitKerja(user?.unit) });
   };
   const [tujuan, setTujuan] = useState<TujuanSurvei | null>(null);
+  const formAnchorRef = useRef<HTMLDivElement>(null);
+  const handleSelectTujuan = (id: TujuanSurvei) => {
+    setTujuan(id);
+    if (id === 'pendaratan_penyu') preloadOcrWorker();
+    // Tunggu form ter-render lalu scroll ke form supaya user tidak perlu scroll manual
+    setTimeout(() => {
+      formAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
   const [monVeg, setMonVeg] = useState<MonitoringVegetasiForm>({
     ...INIT_MONITORING_VEGETASI, namaPetugas: user?.nama ?? '', unitKerja: getDefaultUnitKerja(user?.unit),
   });
@@ -1391,20 +1409,20 @@ export default function InputLapangan() {
   // â"€â"€ Type Selector â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4">
+    <div className="max-w-4xl mx-auto space-y-4">
 
       {/* Online Badge */}
-      <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-green-700 rounded-lg flex items-center justify-center">
-            <ClipboardList className="w-4 h-4 text-white" />
+      <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 bg-emerald-700 rounded-lg flex items-center justify-center">
+            <ClipboardList className="w-4.5 h-4.5 text-white" />
           </div>
           <div>
-            <p className="text-xs text-gray-400">Modul EcoTrack</p>
-            <p className="text-sm font-bold text-gray-800">Input Data Lapangan</p>
+            <p className="text-[11px] text-gray-400 font-medium">Modul EcoTrack</p>
+            <p className="text-base font-bold text-gray-900">Input Data Lapangan</p>
           </div>
         </div>
-        <div className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border ${
+        <div className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border ${
           isOnline ? 'bg-green-50 border-green-200 text-green-700' : 'bg-amber-50 border-amber-200 text-amber-700'
         }`}>
           {isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
@@ -1429,36 +1447,36 @@ export default function InputLapangan() {
       )}
 
       {/* Tujuan Survei Selector */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Pilih Tujuan Survei</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-4">Pilih Tujuan Survei</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {TYPE_CARDS.map(c => (
-            <button key={c.id} onClick={() => { setTujuan(c.id); if (c.id === 'pendaratan_penyu') preloadOcrWorker(); }}
-              className={`text-left p-3.5 rounded-xl border-2 transition-all ${
+            <button key={c.id} onClick={() => handleSelectTujuan(c.id)}
+              className={`text-left p-4 rounded-xl border-2 transition-all ${
                 tujuan === c.id ? `${c.bg} ${c.border} shadow-sm` : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
               }`}>
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${tujuan === c.id ? c.bg : 'bg-gray-100'}`}>
-                <c.icon className={`w-4 h-4 ${tujuan === c.id ? c.color : 'text-gray-500'}`} />
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center mb-3 ${tujuan === c.id ? c.bg : 'bg-gray-100'}`}>
+                <c.icon className={`w-4.5 h-4.5 ${tujuan === c.id ? c.color : 'text-gray-500'}`} />
               </div>
-              <p className={`text-sm font-bold ${tujuan === c.id ? c.color : 'text-gray-700'}`}>{c.label}</p>
-              <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{c.sub}</p>
+              <p className={`text-sm font-bold ${tujuan === c.id ? c.color : 'text-gray-800'}`}>{c.label}</p>
+              <p className="text-xs text-gray-400 mt-1 leading-relaxed">{c.sub}</p>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+      <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-              <FileText className="w-4 h-4 text-blue-700" />
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
+              <FileText className="w-4.5 h-4.5 text-blue-700" />
             </div>
             <div>
-              <p className="text-sm font-bold text-gray-800">Riwayat Aktivitas</p>
+              <p className="text-sm font-bold text-gray-900">Riwayat Aktivitas</p>
               <p className="text-xs text-gray-500">Cek input sebelumnya dan cetak BA kapan saja.</p>
             </div>
           </div>
-          <span className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full">
+          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
             {historyItems.length} data
           </span>
         </div>
@@ -1476,7 +1494,7 @@ export default function InputLapangan() {
                   <div className="p-3 flex items-start justify-between gap-3">
                     <div className="flex gap-3 min-w-0">
                       {item.fotoDokumentasi ? (
-                        <img src={item.fotoDokumentasi} alt={item.locationName} className="w-16 h-16 rounded-xl object-cover border border-gray-200 flex-shrink-0" />
+                        <img src={getCloudinaryUrl(item.fotoDokumentasi, 'w_128,c_fill,q_auto,f_auto')} alt={item.locationName} className="w-16 h-16 rounded-xl object-cover border border-gray-200 flex-shrink-0" loading="lazy" />
                       ) : (
                         <div className="w-16 h-16 rounded-xl border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center flex-shrink-0">
                           <Camera className="w-4 h-4 text-gray-400" />
@@ -1541,7 +1559,7 @@ export default function InputLapangan() {
                             {item.sarangPoints.map((point, idx) => (
                               <div key={`${item.id}-history-${idx}`} className="flex gap-3 border border-gray-100 rounded-lg p-2">
                                 {point.fotoUrl ? (
-                                  <img src={point.fotoUrl} alt={`Titik ${idx + 1}`} className="w-14 h-14 rounded-lg object-cover border border-gray-200 flex-shrink-0" />
+                                  <img src={getCloudinaryUrl(point.fotoUrl, 'w_112,c_fill,q_auto,f_auto')} alt={`Titik ${idx + 1}`} className="w-14 h-14 rounded-lg object-cover border border-gray-200 flex-shrink-0" loading="lazy" />
                                 ) : (
                                   <div className="w-14 h-14 rounded-lg border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center flex-shrink-0">
                                     <Camera className="w-4 h-4 text-gray-400" />
@@ -1567,6 +1585,9 @@ export default function InputLapangan() {
         )}
       </div>
 
+      {/* Anchor untuk auto-scroll ke form saat user memilih tujuan survei */}
+      <div ref={formAnchorRef} className="scroll-mt-4" />
+
       {/* â"€â"€ FORM: Monitoring Mangrove / Vegetasi (merged) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
       {tujuan === 'monitoring_vegetasi' && (
         <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-5">
@@ -1574,7 +1595,7 @@ export default function InputLapangan() {
           {/* Identitas */}
           <div className="space-y-3">
             <SectionHead icon={ClipboardList} label="Identitas Petugas & Lokasi" />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <G label="Nama Petugas" req><Inp value={monVeg.namaPetugas} onChange={setMV('namaPetugas')} placeholder="Nama lengkap" /></G>
               <UnitKerjaField value={monVeg.unitKerja} onChange={setMV('unitKerja')} required />
               <G label="Tanggal Survei" req><Inp type="date" value={monVeg.tanggal} onChange={setMV('tanggal')} /></G>
@@ -1758,7 +1779,7 @@ export default function InputLapangan() {
           {/* Identitas */}
           <div className="space-y-3">
             <SectionHead icon={ClipboardList} label="Identitas Petugas & Lokasi Survei" color="text-blue-700" />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <G label="Nama Petugas" req><Inp value={potensi.namaPetugas} onChange={setPo('namaPetugas')} placeholder="Nama lengkap" /></G>
               <UnitKerjaField value={potensi.unitKerja} onChange={setPo('unitKerja')} />
               <G label="Tanggal" req><Inp type="date" value={potensi.tanggal} onChange={setPo('tanggal')} /></G>
@@ -1928,7 +1949,7 @@ export default function InputLapangan() {
           {/* Identitas */}
           <div className="space-y-3">
             <SectionHead icon={ClipboardList} label="Identitas Petugas & Lokasi" color="text-teal-700" />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <G label="Nama Petugas" req><Inp value={penyu.namaPetugas} onChange={setPn('namaPetugas')} placeholder="Nama lengkap" /></G>
               <UnitKerjaField value={penyu.unitKerja} onChange={setPn('unitKerja')} />
               <G label="Tanggal Survei" req><Inp type="date" value={penyu.tanggal} onChange={setPn('tanggal')} /></G>
@@ -1965,7 +1986,7 @@ export default function InputLapangan() {
                 </Sel>
               </G>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <G label="Estimasi Jumlah Telur / Sarang"><Inp type="number" min="0" value={penyu.jumlahTelur} onChange={setPn('jumlahTelur')} placeholder="0" /></G>
               <G label="Panjang Pantai (m)"><Inp type="number" min="0" value={penyu.panjangPantai} onChange={setPn('panjangPantai')} placeholder="meter" /></G>
               <G label="Substrat Pantai">

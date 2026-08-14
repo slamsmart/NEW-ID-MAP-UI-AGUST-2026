@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, PieChart, Pie,
 } from 'recharts';
 import { Leaf, TreePine, Sprout, Activity, ChevronDown } from 'lucide-react';
-import { mangroveLocations, ekosistemData } from '../data/mockData';
+import { mangroveLocations as seedLocations, ekosistemData } from '../data/seedData';
+import { fetchAllLocations } from '../data/locations';
+import type { MangroveLocation } from '../types';
 import StatusBadge from '../components/shared/StatusBadge';
 import KPICard from '../components/shared/KPICard';
 
@@ -13,9 +15,14 @@ const SPECIES_COLORS = ['#16a34a', '#22c55e', '#4ade80', '#86efac', '#bbf7d0'];
 
 export default function MonitoringEkosistem() {
   const [selectedId, setSelectedId] = useState('LOC-001');
+  const [mangroveLocations, setMangroveLocations] = useState<MangroveLocation[]>(seedLocations);
 
-  const selectedLoc = mangroveLocations.find(l => l.id === selectedId)!;
-  const selectedEco = ekosistemData.find(e => e.locationId === selectedId)!;
+  useEffect(() => {
+    void fetchAllLocations().then(setMangroveLocations);
+  }, []);
+
+  const selectedLoc = mangroveLocations.find(l => l.id === selectedId) ?? mangroveLocations[0];
+  const selectedEco = ekosistemData.find(e => e.locationId === selectedId) ?? ekosistemData[0];
   const healthScore = selectedEco.skorKesehatan;
 
   const radarData = [
@@ -39,7 +46,7 @@ export default function MonitoringEkosistem() {
   return (
     <div className="space-y-6">
           {/* KPI Row */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <KPICard
               label="Skor Kesehatan"
               value={`${healthScore}`}

@@ -12,7 +12,10 @@ import {
   type PrioritasLevel, type TitikAbrasi,
 } from '../data/abrasiData';
 import { fetchSurveys, updateSurveyRemote, removeSurvey, type SurveyRecord } from '../data/localStore';
+import { convex, isConvexConfigured } from '../lib/convexClient';
+import { api } from '../../convex/_generated/api';
 import { useAuth } from '../context/useAuth';
+import { getOverrides, removeOverride } from '../lib/coordOverrides';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -37,6 +40,14 @@ function estimateAbrasiLuasan(panjangTerdampak?: string): { min: number; max: nu
     max: Math.max(1, Math.round(estimasi * 2)),
     satuan: 'ha',
   };
+}
+
+function applyAbrasiCoordOverrides(list: TitikAbrasi[]): TitikAbrasi[] {
+  const overrides = getOverrides();
+  return list.map(row => {
+    const override = overrides[row.id];
+    return override ? { ...row, koordinat: { ...row.koordinat, lat: override.lat, lng: override.lng } } : row;
+  });
 }
 
 function mapSurveyAbrasiToRow(survey: SurveyRecord): TitikAbrasi | null {
@@ -274,8 +285,7 @@ export default function RekomendasiLokasi() {
   const [filterSubstrat, setFilterSubstrat] = useState<string>('semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedAbrasi, setExpandedAbrasi] = useState<string | null>(null);
-  const [showPdfPanel, setShowPdfPanel] = useState(false);
-  const [abrasiData, setAbrasiData] = useState<TitikAbrasi[]>(() => [...abrasiDataImport]);
+  const [abrasiData, setAbrasiData] = useState<TitikAbrasi[]>(() => applyAbrasiCoordOverrides(abrasiDataImport));
   const [editAbrasiId, setEditAbrasiId] = useState<string | null>(null);
   const [editAbrasiForm, setEditAbrasiForm] = useState<TitikAbrasi | null>(null);
 
@@ -288,6 +298,39 @@ export default function RekomendasiLokasi() {
     if (!editAbrasiForm) return;
     if (editAbrasiForm.id.startsWith('ABR-')) {
       setAbrasiData(prev => prev.map(d => d.id === editAbrasiForm.id ? editAbrasiForm : d));
+      removeOverride(editAbrasiForm.id);
+      if (isConvexConfigured()) {
+        const today = new Date().toISOString().split('T')[0];
+        const tingkat = editAbrasiForm.skorRisiko >= 9 ? 'sangat_parah'
+          : editAbrasiForm.skorRisiko >= 7 ? 'parah'
+          : editAbrasiForm.skorRisiko >= 5 ? 'sedang'
+          : 'ringan';
+        const prioritas = editAbrasiForm.prioritas === 'Tinggi'
+          ? 'Tinggi'
+          : editAbrasiForm.prioritas === 'Sedang'
+            ? 'Sedang'
+            : 'Rendah';
+        convex.mutation(api.surveys.upsert, {
+          legacyId: editAbrasiForm.id,
+          tujuanSurvei: 'abrasi',
+          petugasNama: user?.nama ?? '',
+          petugasUnit: user?.role ?? '',
+          tanggal: today,
+          locationName: editAbrasiForm.kecamatan,
+          province: editAbrasiForm.provinsi,
+          namaPantai: editAbrasiForm.namaPantai,
+          koordinatLat: editAbrasiForm.koordinat.lat,
+          koordinatLng: editAbrasiForm.koordinat.lng,
+          kondisiSebelum: editAbrasiForm.kondisiSebelum,
+          kondisiSesudah: editAbrasiForm.kondisiSesudah,
+          tingkatAbrasi: tingkat,
+          prioritasAbrasi: prioritas,
+          substrat: editAbrasiForm.substrat,
+          ancamanUtama: editAbrasiForm.ancamanUtama,
+          sarangPoints: [],
+          photoUrls: [],
+        }).then(() => refreshSurveys()).catch(() => {});
+      }
     } else {
       void updateSurveyRemote(editAbrasiForm.id, {
         namaPantai: editAbrasiForm.namaPantai,
@@ -324,6 +367,10 @@ export default function RekomendasiLokasi() {
     if (window.confirm(`Hapus data "${namaPantai}"?\n\nData yang dihapus tidak dapat dikembalikan.`)) {
       if (id.startsWith('ABR-')) {
         setAbrasiData(prev => prev.filter(d => d.id !== id));
+        removeOverride(id);
+        if (isConvexConfigured()) {
+          convex.mutation(api.surveys.remove, { legacyId: id }).then(() => refreshSurveys()).catch(() => {});
+        }
       } else {
         void removeSurvey(id);
         void refreshSurveys();
@@ -340,9 +387,15 @@ export default function RekomendasiLokasi() {
 
   useEffect(() => {
     void refreshSurveys();
-    const handleStorage = () => { void refreshSurveys(); };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    const handleChange = () => { void refreshSurveys(); };
+    window.addEventListener('storage', handleChange);
+    window.addEventListener('idmap:coord-override-changed', handleChange);
+    const interval = setInterval(handleChange, 30_000);
+    return () => {
+      window.removeEventListener('storage', handleChange);
+      window.removeEventListener('idmap:coord-override-changed', handleChange);
+      clearInterval(interval);
+    };
   }, []);
 
   const startEditSurvey = (s: SurveyRecord) => {
@@ -385,7 +438,10 @@ export default function RekomendasiLokasi() {
   );
 
   const combinedAbrasiData = useMemo(
-    () => [...surveyAbrasiData, ...abrasiData],
+    () => {
+      const surveyIds = new Set(surveyAbrasiData.map(s => s.id));
+      return [...surveyAbrasiData, ...abrasiData.filter(a => !surveyIds.has(a.id))];
+    },
     [surveyAbrasiData, abrasiData]
   );
 
@@ -544,7 +600,64 @@ export default function RekomendasiLokasi() {
   return (
     <div className="space-y-6">
 
-      {/* Download / Export toolbar — CSV & GeoJSON untuk semua user, PDF khusus admin */}
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+            </div>
+            <span className="text-xs text-gray-500 font-medium">Titik Rawan</span>
+          </div>
+          <p className="text-2xl font-bold text-gray-800">{combinedAbrasiData.length}</p>
+          <p className="text-xs text-gray-400 mt-0.5">lokasi teridentifikasi</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-orange-600" />
+            </div>
+            <span className="text-xs text-gray-500 font-medium">Prioritas Tinggi</span>
+          </div>
+          <p className="text-2xl font-bold text-gray-800">{prioritasTinggi}</p>
+          <p className="text-xs text-gray-400 mt-0.5">lokasi kritis</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+              <Sprout className="w-4 h-4 text-green-600" />
+            </div>
+            <span className="text-xs text-gray-500 font-medium">Target Luasan</span>
+          </div>
+          <p className="text-2xl font-bold text-gray-800">±{totalLuasan.toLocaleString('id-ID')}</p>
+          <p className="text-xs text-gray-400 mt-0.5">ha area restorasi</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <ClipboardCheck className="w-4 h-4 text-blue-600" />
+            </div>
+            <span className="text-xs text-gray-500 font-medium">Data Survei</span>
+          </div>
+          <p className="text-2xl font-bold text-gray-800">{potentialSurveys.length}</p>
+          <p className="text-xs text-gray-400 mt-0.5">titik berpotensi</p>
+        </div>
+      </div>
+
+      {/* Info Banner */}
+      <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex gap-3">
+        <Info className="w-4 h-4 text-green-700 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-semibold text-green-800">Rekomendasi Lokasi Penanaman Mangrove</p>
+          <p className="text-xs text-green-700 mt-0.5 leading-relaxed">
+            Titik rawan abrasi diidentifikasi dari survey lapangan dan analisis citra satelit. Data input lapangan petugas
+            (substrat, salinitas, tutupan tajuk) digunakan sebagai dasar skor potensi penanaman mangrove secara otomatis.
+            Semakin tinggi skor, semakin cocok lokasi untuk penanaman.
+          </p>
+        </div>
+      </div>
+
+      {/* Export Buttons — between info and tabs */}
       <div className="flex flex-wrap items-center justify-end gap-2">
         <button
           onClick={() =>
@@ -555,7 +668,7 @@ export default function RekomendasiLokasi() {
                 namaPantai: r.namaPantai,
                 kecamatan: r.kecamatan,
                 kabKota: r.kabKota,
-                provinsi: r.provinsi,
+                provinsi: r.provinsi ?? '',
                 lat: r.koordinat.lat,
                 lng: r.koordinat.lng,
                 indikasi: r.indikasi,
@@ -615,103 +728,13 @@ export default function RekomendasiLokasi() {
         </button>
         {isAdmin && (
           <button
-            onClick={() => setShowPdfPanel(p => !p)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all shadow-sm ${
-              showPdfPanel
-                ? 'bg-green-700 text-white border-green-700'
-                : 'bg-white text-green-700 border-green-300 hover:bg-green-50'
-            }`}
+            onClick={handleExportPDF}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors border bg-green-700 text-white border-green-700 hover:bg-green-800"
+            title="Export PDF"
           >
-            <FileDown className="w-4 h-4" />
-            {showPdfPanel ? 'Tutup Panel PDF' : 'Export PDF'}
+            <FileDown className="w-3.5 h-3.5" /> Export PDF
           </button>
         )}
-      </div>
-
-      {/* PDF Export Panel */}
-      {showPdfPanel && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-4">
-          <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <FileDown className="w-5 h-5 text-green-700" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-green-800 mb-0.5">Export Data Referensi ke PDF</p>
-            <p className="text-xs text-green-700 mb-3 leading-relaxed">
-              Dokumen PDF berisi: tabel titik rawan abrasi + rekomendasi tanaman, serta titik potensi penanaman
-              dari data survei lapangan yang tersimpan. Cocok untuk laporan lapangan dan referensi program rehabilitasi.
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                onClick={handleExportPDF}
-                className="flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              >
-                <FileDown className="w-4 h-4" />
-                Cetak / Simpan PDF
-              </button>
-              <div className="text-xs text-green-600 space-y-0.5">
-                <p>✓ {combinedAbrasiData.length} titik rawan abrasi</p>
-                <p>✓ {potentialSurveys.length} data survei lapangan</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
-            </div>
-            <span className="text-xs text-gray-500 font-medium">Titik Rawan</span>
-          </div>
-          <p className="text-2xl font-bold text-gray-800">{combinedAbrasiData.length}</p>
-          <p className="text-xs text-gray-400 mt-0.5">lokasi teridentifikasi</p>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 text-orange-600" />
-            </div>
-            <span className="text-xs text-gray-500 font-medium">Prioritas Tinggi</span>
-          </div>
-          <p className="text-2xl font-bold text-gray-800">{prioritasTinggi}</p>
-          <p className="text-xs text-gray-400 mt-0.5">lokasi kritis</p>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-              <Sprout className="w-4 h-4 text-green-600" />
-            </div>
-            <span className="text-xs text-gray-500 font-medium">Target Luasan</span>
-          </div>
-          <p className="text-2xl font-bold text-gray-800">±{totalLuasan.toLocaleString('id-ID')}</p>
-          <p className="text-xs text-gray-400 mt-0.5">ha area restorasi</p>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <ClipboardCheck className="w-4 h-4 text-blue-600" />
-            </div>
-            <span className="text-xs text-gray-500 font-medium">Data Survei</span>
-          </div>
-          <p className="text-2xl font-bold text-gray-800">{potentialSurveys.length}</p>
-          <p className="text-xs text-gray-400 mt-0.5">titik berpotensi</p>
-        </div>
-      </div>
-
-      {/* Info Banner */}
-      <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex gap-3">
-        <Info className="w-4 h-4 text-green-700 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-semibold text-green-800">Rekomendasi Lokasi Penanaman Mangrove</p>
-          <p className="text-xs text-green-700 mt-0.5 leading-relaxed">
-            Titik rawan abrasi diidentifikasi dari survey lapangan dan analisis citra satelit. Data input lapangan petugas
-            (substrat, salinitas, tutupan tajuk) digunakan sebagai dasar skor potensi penanaman mangrove secara otomatis.
-            Semakin tinggi skor, semakin cocok lokasi untuk penanaman.
-          </p>
-        </div>
       </div>
 
       {/* Tabs */}
@@ -1055,7 +1078,7 @@ export default function RekomendasiLokasi() {
                   const pct = combinedAbrasiData.length ? Math.round((count / combinedAbrasiData.length) * 100) : 0;
                   return (
                     <div key={p} className="flex items-center gap-3">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-28 text-center ${getPrioritasColor(p)}`}>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full min-w-[5rem] text-center ${getPrioritasColor(p)}`}>
                         {p}
                       </span>
                       <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -1154,6 +1177,28 @@ export default function RekomendasiLokasi() {
                 ))}
               </div>
             </div>
+
+            {/* Export PDF — inside Ringkasan & Analisis */}
+            {isAdmin && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <FileDown className="w-5 h-5 text-green-700" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">Export Data Referensi ke PDF</p>
+                    <p className="text-xs text-green-700">Dokumen berisi tabel abrasi, rekomendasi tanaman, dan potensi penanaman.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleExportPDF}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-green-700 text-white hover:bg-green-800 transition-colors shadow-sm flex-shrink-0"
+                >
+                  <FileDown className="w-4 h-4" />
+                  Export PDF
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

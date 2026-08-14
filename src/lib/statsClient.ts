@@ -23,15 +23,12 @@ function statsApi() {
   }).stats;
 }
 
-const VISIT_KEY = 'idmap_visit_logged';
-
 export async function recordVisit() {
   if (!isConvexConfigured()) return;
   const s = statsApi();
   if (!s?.recordVisit) return;
   try {
-    if (sessionStorage.getItem(VISIT_KEY) === '1') return;
-    sessionStorage.setItem(VISIT_KEY, '1');
+    // Setiap kunjungan dihitung (tanpa deduplikasi)
     await convex.mutation(s.recordVisit as any, {});
   } catch (err) {
     if (import.meta.env.DEV) console.warn('[stats] recordVisit gagal:', err);

@@ -8,7 +8,7 @@ import {
   AlertTriangle, Clock, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { useState } from 'react';
-import { timeSeriesData, mangroveLocations, ekosistemData, tekananSosialData } from '../data/mockData';
+import { timeSeriesData, mangroveLocations, ekosistemData, tekananSosialData } from '../data/seedData';
 import { kebijakanData } from '../data/kebijakan';
 import StatusBadge from '../components/shared/StatusBadge';
 import DataSourcesPanel from '../components/shared/DataSourcesPanel';
@@ -78,7 +78,7 @@ export default function Laporan() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-green-950 rounded-xl p-6 text-white border border-green-900">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <FileText className="w-5 h-5 text-green-400" />
@@ -96,7 +96,7 @@ export default function Laporan() {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
           {[
             { label: 'Total Area Dipantau', value: `${totalArea.toLocaleString('id-ID')} ha`, icon: Target },
             { label: 'Skor Kesehatan Rata-rata', value: `${avgHealth}/100`, icon: CheckCircle },

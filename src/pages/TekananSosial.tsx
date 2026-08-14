@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, Cell, ScatterChart, Scatter,
 } from 'recharts';
 import { AlertTriangle, Home, Fish, Sprout, ChevronDown, Shield } from 'lucide-react';
-import { mangroveLocations, tekananSosialData, ekosistemData } from '../data/mockData';
+import { mangroveLocations, tekananSosialData, ekosistemData } from '../data/seedData';
 import KPICard from '../components/shared/KPICard';
 import StatusBadge from '../components/shared/StatusBadge';
 
@@ -49,7 +49,7 @@ export default function TekananSosial() {
   return (
     <div className="space-y-6">
       {/* KPI Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           label="Rata-rata Indeks Ancaman"
           value={`${avgAncaman}`}

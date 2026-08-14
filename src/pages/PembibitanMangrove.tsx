@@ -488,7 +488,7 @@ export default function PembibitanMangroveePage() {
 
         {/* MAP */}
         <div className="lg:col-span-2">
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden" style={{ height: 520 }}>
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden h-72 sm:h-96 lg:h-[520px]">
             <MapContainer
               center={[-2.5, 118]}
               zoom={4}

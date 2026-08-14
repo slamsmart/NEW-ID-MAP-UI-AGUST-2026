@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<title>ID-MAP × QRIS BI — Catatan Ide Inovasi Nasional</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    color: #0f172a; line-height: 1.55;
+    background: #fff;
+  }
+  body { padding: 32px 40px; max-width: 820px; margin: 0 auto; }
+
+  /* Cover */
+  .cover {
+    background: linear-gradient(135deg, #042f2e 0%, #064e3b 35%, #0c4a6e 75%, #0f172a 100%);
+    color: #fff;
+    padding: 48px 40px;
+    border-radius: 16px;
+    margin-bottom: 32px;
+    page-break-after: always;
+  }
+  .cover .eyebrow {
+    font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: #5eead4; font-weight: 700; margin-bottom: 14px;
+  }
+  .cover h1 {
+    font-size: 34px; line-height: 1.15; margin: 0 0 14px;
+    font-weight: 800; letter-spacing: -0.5px;
+  }
+  .cover .subtitle {
+    font-size: 16px; color: rgba(255,255,255,0.85); margin: 0 0 28px;
+    line-height: 1.55;
+  }
+  .cover .meta {
+    display: flex; gap: 24px; flex-wrap: wrap;
+    border-top: 1px solid rgba(255,255,255,0.15);
+    padding-top: 18px; font-size: 12px; color: rgba(255,255,255,0.7);
+  }
+  .cover .meta strong { color: #5eead4; display: block; font-size: 10px;
+    letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 4px; }
+
+  /* Content */
+  h1, h2, h3 { color: #064e3b; line-height: 1.3; }
+  h2 {
+    font-size: 22px; margin: 36px 0 14px; padding-bottom: 8px;
+    border-bottom: 2px solid #5eead4;
+  }
+  h3 { font-size: 16px; margin: 22px 0 8px; color: #0f766e; }
+  h4 { font-size: 14px; margin: 14px 0 6px; color: #134e4a; }
+  p { margin: 0 0 12px; text-align: justify; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; }
+  li { margin-bottom: 6px; }
+  strong { color: #064e3b; }
+  code {
+    background: #ecfdf5; color: #047857; padding: 1px 6px;
+    border-radius: 4px; font-size: 12px; font-family: 'Cascadia Code', Consolas, monospace;
+  }
+
+  .callout {
+    background: #f0fdfa; border-left: 4px solid #14b8a6;
+    padding: 14px 18px; margin: 14px 0;
+    border-radius: 0 8px 8px 0; font-size: 13px;
+  }
+  .callout.warn { background: #fffbeb; border-color: #f59e0b; }
+  .callout.win { background: #ecfdf5; border-color: #10b981; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 12px 0 18px;
+    font-size: 12.5px;
+  }
+  th, td {
+    text-align: left; padding: 8px 10px;
+    border-bottom: 1px solid #e2e8f0; vertical-align: top;
+  }
+  th { background: #f0fdfa; color: #0f766e; font-weight: 700;
+    font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; }
+  tr:last-child td { border-bottom: none; }
+
+  .idea {
+    background: #fff; border: 1px solid #d1fae5;
+    border-radius: 12px; padding: 18px 22px; margin: 14px 0;
+    page-break-inside: avoid;
+  }
+  .idea .rank {
+    display: inline-block; background: linear-gradient(135deg, #14b8a6, #0d9488);
+    color: #fff; padding: 3px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .idea.gold { border-color: #fbbf24; background: #fffbeb; }
+  .idea.gold .rank { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  .idea.silver { border-color: #cbd5e1; background: #f8fafc; }
+  .idea.silver .rank { background: linear-gradient(135deg, #94a3b8, #64748b); }
+  .idea.bronze { border-color: #fdba74; background: #fff7ed; }
+  .idea.bronze .rank { background: linear-gradient(135deg, #fb923c, #ea580c); }
+
+  .tag {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 4px; margin-right: 4px;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .tag.bi { background: #dbeafe; color: #1e40af; }
+  .tag.tech { background: #dcfce7; color: #166534; }
+  .tag.scale { background: #fce7f3; color: #9f1239; }
+
+  .footer-note {
+    margin-top: 40px; padding-top: 18px;
+    border-top: 1px dashed #cbd5e1;
+    font-size: 11px; color: #64748b; text-align: center;
+  }
+
+  .roadmap-bar {
+    display: grid; grid-template-columns: 90px 90px 1fr;
+    gap: 8px; align-items: center; padding: 10px 0;
+    border-bottom: 1px solid #e2e8f0; font-size: 12.5px;
+  }
+  .roadmap-bar:last-child { border-bottom: none; }
+  .phase { font-weight: 700; color: #0f766e; }
+  .timeline { color: #64748b; font-size: 11px; }
+
+  /* Print niceties */
+  @media print {
+    body { padding: 0; }
+    .no-print { display: none; }
+    .idea, .callout { break-inside: avoid; }
+    h2 { page-break-after: avoid; }
+  }
+
+  .print-btn {
+    position: fixed; bottom: 24px; right: 24px;
+    background: #0f766e; color: #fff; border: none;
+    padding: 14px 22px; border-radius: 999px; font-weight: 700;
+    box-shadow: 0 8px 24px rgba(15,118,110,0.35); cursor: pointer;
+    font-size: 14px; z-index: 50;
+  }
+  .print-btn:hover { background: #134e4a; }
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">📄 Simpan sebagai PDF (Ctrl+P)</button>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="eyebrow">Catatan Ide Inovasi Nasional</div>
+  <h1>ID-MAP × QRIS BI</h1>
+  <p class="subtitle">
+    Bridge Konservasi Pesisir → Ekonomi Digital.
+    Bagaimana platform monitoring mangrove ID-MAP bisa berkembang menjadi
+    jaringan QRIS hijau pertama di Asia Tenggara — mendukung ekosistem
+    pembayaran Bank Indonesia di skala nasional.
+  </p>
+  <div class="meta">
+    <div><strong>Untuk</strong>Lomba Inovasi Nasional Bank Indonesia</div>
+    <div><strong>Platform</strong>ID-MAP CabdinMalang</div>
+    <div><strong>Status</strong>Operasional · Live</div>
+    <div><strong>Domain</strong>idmap-dkp.vercel.app</div>
+  </div>
+</div>
+
+<!-- TL;DR -->
+<h2>Ringkasan Eksekutif</h2>
+<p>
+  ID-MAP saat ini adalah platform monitoring mangrove dan ekosistem pesisir
+  yang dioperasikan Cabdin KP Malang. Untuk relevan ke <strong>ekosistem QRIS
+  Bank Indonesia</strong> di skala nasional, kuncinya adalah mengubah ID-MAP
+  dari <em>"platform data"</em> menjadi <strong>"platform aliran nilai"</strong> —
+  di mana QRIS menjadi rail transaksi yang memberi <strong>insentif ekonomi
+  langsung</strong> ke pelaku konservasi pesisir.
+</p>
+
+<div class="callout win">
+  <strong>Angle Inti:</strong> Jadikan setiap titik mangrove di peta sebagai
+  <em>node finansial</em>. Dengan 99.000 km panjang pantai Indonesia, ada
+  potensi puluhan ribu titik QRIS hijau yang menghubungkan donor global,
+  UMKM pesisir, dan masyarakat konservasi.
+</div>
+
+<h3>Mengapa Ini Cocok untuk BI</h3>
+<ul>
+  <li><strong>Financial Inclusion</strong> — masyarakat pesisir mayoritas <em>unbanked</em>, QRIS jadi onboarding pertama mereka ke ekonomi digital.</li>
+  <li><strong>Digitalisasi UMKM</strong> — warung, jasa perahu, homestay desa wisata pesisir.</li>
+  <li><strong>Sustainability / ESG</strong> — green finance dengan jejak audit yang transparan.</li>
+  <li><strong>Cross-Border (QRIS-AP)</strong> — turis konservasi dari Malaysia, Thailand, Singapura, dst.</li>
+</ul>
+
+<!-- 5 IDEAS -->
+<h2>Lima Ide Konkret</h2>
+<p>Disusun berdasarkan kombinasi <em>feasibility</em> × <em>impact</em>.</p>
+
+<div class="idea gold">
+  <span class="rank">🥇 IDE UNGGULAN</span>
+  <h3>1. QRIS Carbon Credit Micro-Settlement</h3>
+  <p>
+    Setiap titik mangrove yang tervalidasi di ID-MAP memiliki <em>carbon score</em>
+    (berdasar luas, spesies, kerapatan). Korporasi atau individu cukup
+    <strong>scan QRIS</strong> di titik tersebut → langsung <em>adopt</em> atau
+    <em>fund</em> mangrove itu, dan dana otomatis di-settle ke kelompok tani
+    pesisir lokal.
+  </p>
+  <h4>Mekanisme</h4>
+  <ul>
+    <li>Micropayment Rp 5.000 – Rp 500.000 sekali tap.</li>
+    <li>Dana langsung ke akun BUMDes / kelompok masyarakat pesisir.</li>
+    <li>Donor melihat hasil real-time di peta (foto, GPS, laporan vegetasi).</li>
+  </ul>
+  <h4>Diferensiator</h4>
+  <p>
+    Dana <strong>tidak ke yayasan abstrak</strong>, tapi ke koordinat GPS yang
+    spesifik. Donor bisa "memiliki" pohon mangrovenya dan melacak
+    pertumbuhannya selama bertahun-tahun.
+  </p>
+  <p>
+    <span class="tag bi">Inklusi keuangan</span>
+    <span class="tag bi">Green finance</span>
+    <span class="tag tech">QRIS dynamic</span>
+    <span class="tag scale">Skala 99.000 km pantai</span>
+  </p>
+</div>
+
+<div class="idea silver">
+  <span class="rank">🥈 RUNNER-UP</span>
+  <h3>2. Eco-Tourism QRIS Trail di Pesisir</h3>
+  <p>
+    Kawasan mangrove jadi destinasi wisata edukasi. Setiap spot di peta ID-MAP
+    (jembatan, gazebo, pos edukasi, warung lokal) memiliki <strong>QRIS
+    dynamic</strong>. Pengunjung bayar tiket masuk, sewa perahu, beli produk
+    UMKM — semua via QRIS, dengan <strong>revenue share otomatis</strong> ke
+    pengelola desa wisata <em>plus</em> dana konservasi.
+  </p>
+  <h4>Diferensiator</h4>
+  <p>
+    Bukan sekadar "warung pakai QRIS" — tapi <strong>terintegrasi dengan data
+    konservasi</strong>: 5% otomatis ke dana mangrove kelompok itu sendiri
+    (smart split di payment gateway). Setiap transaksi sekaligus jadi tindakan
+    konservasi.
+  </p>
+  <p>
+    <span class="tag bi">UMKM digital</span>
+    <span class="tag bi">QRIS-AP cross-border</span>
+    <span class="tag scale">Banyuwangi, Bali, Lombok, Raja Ampat, Bunaken</span>
+  </p>
+</div>
+
+<div class="idea bronze">
+  <span class="rank">🥉 KUAT</span>
+  <h3>3. Fishermen's QRIS — Pendaratan Ikan & Penyu Digital</h3>
+  <p>
+    ID-MAP sudah punya modul <code>PendaratanPenyu</code> dan monitoring
+    pendaratan. Extend menjadi <strong>TPI (Tempat Pelelangan Ikan) digital</strong>
+    dengan QRIS di tiap titik pendaratan. Pembeli scan, bayar nelayan langsung
+    — sebagian otomatis split ke iuran konservasi penyu / ekosistem.
+  </p>
+  <h4>Dampak BI</h4>
+  <ul>
+    <li>Inklusi keuangan ~600.000 nelayan kecil Indonesia (mayoritas terjebak rentenir / tengkulak).</li>
+    <li>Data tangkap (volume, jenis, lokasi) jadi dataset untuk policy KKP.</li>
+    <li>Transparansi harga melindungi nelayan dari middleman.</li>
+  </ul>
+</div>
+
+<div class="idea">
+  <span class="rank">IDE 4</span>
+  <h3>4. Verifikator-as-a-Service + QRIS Tip Jar</h3>
+  <p>
+    ID-MAP sudah memiliki role <em>Verifikator</em>. Buka jadi <strong>citizen
+    scientist program nasional</strong> — siapapun bisa upload data mangrove /
+    sampah pesisir, dan verifikator senior memvalidasi. Verifikator menerima
+    <strong>tip QRIS</strong> dari donor / sponsor per data tervalidasi.
+  </p>
+  <p>
+    <em>Side-effect positif:</em> melawan <strong>greenwashing</strong> karena
+    semua data publik dan auditable.
+  </p>
+</div>
+
+<div class="idea">
+  <span class="rank">IDE 5</span>
+  <h3>5. Plastic Waste → QRIS Reward (Bank Sampah Pesisir)</h3>
+  <p>
+    Pemetaan titik bank sampah pesisir di ID-MAP. Warga setor plastik →
+    otomatis dapat <strong>QRIS payout</strong> sesuai timbangan (IoT scale
+    terintegrasi).
+  </p>
+  <div class="callout warn">
+    <strong>Catatan kompetitif:</strong> Sudah ada pemain (Octopus, Plasticpay).
+    Diferensiasi ID-MAP harus jelas: <em>fokus pesisir + integrasi konservasi mangrove</em>,
+    bukan sekadar bank sampah generik.
+  </div>
+</div>
+
+<!-- STRATEGY -->
+<h2>Rekomendasi Strategis untuk Pitch</h2>
+
+<div class="callout win">
+  <strong>Pilih Ide #1 + #2 sebagai paket terpadu.</strong> Narasi pitch:
+  <p style="margin-top:10px;font-style:italic;">
+    "ID-MAP National: Jaringan QRIS Hijau Pertama di Asia Tenggara — dari
+    99.000 km pantai Indonesia, setiap titik mangrove menjadi <em>node</em>
+    finansial yang menghubungkan donor global, UMKM pesisir, dan masyarakat
+    konservasi melalui satu QR code."
+  </p>
+</div>
+
+<h3>Mengapa Kombinasi Ini Menang</h3>
+<table>
+  <thead>
+    <tr><th style="width:30%">Aspek</th><th>Justifikasi</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Multi-stakeholder</strong></td><td>BI, KKP, KLHK, Pemda, swasta, masyarakat — semua dapat manfaat</td></tr>
+    <tr><td><strong>Measurable Impact</strong></td><td>Rupiah tersalurkan + hektar mangrove + ton CO₂ — semua di-dashboard real-time</td></tr>
+    <tr><td><strong>Sudah Operasional</strong></td><td>ID-MAP sudah jalan di Malang. Bukan janji, tapi <em>existing tech</em></td></tr>
+    <tr><td><strong>Cross-Border Ready</strong></td><td>QRIS-AP (ASEAN) sudah live. Turis konservasi bayar pakai QR negaranya</td></tr>
+    <tr><td><strong>ESG-Friendly</strong></td><td>Korporasi butuh laporan emisi → ID-MAP sediakan audit trail (opsional blockchain di fase 2)</td></tr>
+  </tbody>
+</table>
+
+<h3>Diferensiator vs Kompetitor Lomba</h3>
+<p>
+  Banyak peserta akan membawa "QRIS untuk X" generic (parkir, kantin,
+  transportasi). ID-MAP punya <strong>unfair advantage</strong>:
+</p>
+<ul>
+  <li><strong>Data spasial real</strong> — bukan slide mock-up, ada datanya di Malang.</li>
+  <li><strong>Aligned dengan agenda BI</strong> — sustainability, inklusi, cross-border.</li>
+  <li><strong>Foundation tech sudah ada</strong> — Convex realtime, Clerk auth, Leaflet maps.</li>
+</ul>
+
+<!-- ROADMAP -->
+<h2>Roadmap Skala Nasional</h2>
+<div class="roadmap-bar"><span class="phase">Fase 0</span><span class="timeline">Sekarang</span><span>ID-MAP Malang: peta, monitoring multi-role — <strong>sudah live</strong></span></div>
+<div class="roadmap-bar"><span class="phase">Fase 1</span><span class="timeline">3 bulan</span><span>Pilot QRIS dynamic per titik mangrove + 1 desa pilot Malang</span></div>
+<div class="roadmap-bar"><span class="phase">Fase 2</span><span class="timeline">6 bulan</span><span>Skala Jatim: 5 kabupaten pesisir + onboarding 100 UMKM</span></div>
+<div class="roadmap-bar"><span class="phase">Fase 3</span><span class="timeline">12 bulan</span><span>Nasional: API publik, integrasi PNM / BUMDes, dashboard BI</span></div>
+<div class="roadmap-bar"><span class="phase">Fase 4</span><span class="timeline">18 bulan</span><span>ASEAN: QRIS-AP cross-border, partnership Malaysia / Thailand</span></div>
+
+<!-- PROTOTYPE OPTIONS -->
+<h2>Yang Bisa Disiapkan Sekarang untuk Demo Pitch</h2>
+<p>
+  Prototipe cepat (1–2 hari kerja) untuk memperkuat presentasi:
+</p>
+<ol>
+  <li>
+    <strong>Mock QRIS Panel di DetailPanel peta</strong> — tombol
+    <em>"Adopsi titik ini"</em> → modal dengan QR code + simulasi flow donasi.
+  </li>
+  <li>
+    <strong>Carbon Score Calculator</strong> — tiap polygon benthic / titik
+    mangrove punya estimasi tonase CO₂ (formula: luas × density × faktor IPCC).
+  </li>
+  <li>
+    <strong>Public API Endpoint di Convex</strong> —
+    <code>getMangrovePoint(id)</code> + <code>simulateQrisDonation(amount, pointId)</code>
+    untuk demo integrasi mitra.
+  </li>
+  <li>
+    <strong>Landing page section baru</strong> —
+    <em>"For Investors &amp; Donors"</em> dengan QRIS demo interaktif.
+  </li>
+</ol>
+
+<!-- CLOSING TIPS -->
+<h2>Catatan Penting untuk Pitch</h2>
+
+<div class="callout">
+  <strong>Tips Lomba BI:</strong> Bank Indonesia menyukai <strong>angka konkret +
+  foto on-the-ground</strong>. Manfaatkan ini.
+  <p style="margin-top:8px;">
+    Killer opening yang bisa dipakai:<br>
+    <em>"Kami sudah memetakan X hektar mangrove di Malang dengan Y verifikator
+    aktif. Bayangkan kalau setiap pohon punya QR code."</em>
+  </p>
+</div>
+
+<h3>Hal yang Harus Disiapkan Sebelum Pitch</h3>
+<ul>
+  <li>Statistik aktual ID-MAP Malang: jumlah titik, luas terpetakan, jumlah verifikator, jumlah unduhan data.</li>
+  <li>Foto lapangan mangrove + tim survei (autentik &gt; render).</li>
+  <li>Surat dukungan dari Cabdin KP Jatim / KKP (kalau memungkinkan).</li>
+  <li>Estimasi <em>break-even</em> per titik QRIS (target volume transaksi).</li>
+  <li>Mitra payment switch (BI Fast / NSICCS) — clarify mekanisme split otomatis.</li>
+</ul>
+
+<h3>Risiko &amp; Mitigasi</h3>
+<table>
+  <thead>
+    <tr><th>Risiko</th><th>Mitigasi</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Adopsi rendah masyarakat pesisir</td><td>Onboarding berbasis pendamping desa, bukan self-service</td></tr>
+    <tr><td>Trust issue donor (apakah dana sampai?)</td><td>Foto progres + GPS proof + verifikator independen</td></tr>
+    <tr><td>Regulasi BI / OJK soal split payment</td><td>Pakai PSP berlisensi sebagai mitra, bukan build sendiri</td></tr>
+    <tr><td>Greenwashing accusation</td><td>Open data, audit publik, scoring transparan</td></tr>
+  </tbody>
+</table>
+
+<div class="footer-note">
+  Dokumen ini dihasilkan dari brainstorm sesi pengembangan ID-MAP.<br>
+  Disusun untuk persiapan Lomba Inovasi Nasional Bank Indonesia.<br>
+  © ID-MAP CabdinMalang · idmap-dkp.vercel.app
+</div>
+
+</body>
+</html>

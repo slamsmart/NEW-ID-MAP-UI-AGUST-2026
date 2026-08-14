@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { fetchSurveys, updateSurveyRemote, removeSurvey } from '../data/localStore';
 import { downloadCSV, downloadGeoJSON, dateStamp } from '../lib/exportUtils';
+import { getCloudinaryUrl } from '../lib/cloudinary';
 
 interface PenyuEntry {
   id: string;
@@ -44,6 +45,7 @@ export default function PendaratanPenyu() {
   const [pdfEndYear, setPdfEndYear] = useState<string>('semua');
   const [previewEntry, setPreviewEntry] = useState<PenyuEntry | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
 
@@ -233,7 +235,7 @@ export default function PendaratanPenyu() {
   return (
     <div className="max-w-5xl mx-auto space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-white border border-gray-200 rounded-xl px-5 py-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-teal-700 rounded-lg flex items-center justify-center">
             <Turtle className="w-5 h-5 text-white" />
@@ -243,25 +245,46 @@ export default function PendaratanPenyu() {
             <p className="text-sm font-bold text-gray-800">Titik Pendaratan Penyu</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() =>
+            onClick={() => {
+              const csvRows = filtered.flatMap(d => {
+                const pts = (d.sarangPoints ?? []).filter(p => p.lat && p.lng);
+                if (pts.length > 0) {
+                  return pts.map((p, idx) => ({
+                    id: d.id,
+                    namaPantai: d.namaPantai,
+                    lokasi: d.lokasi,
+                    nomorSarang: idx + 1,
+                    koordinat: `${p.lat}, ${p.lng}`,
+                    catatan: p.catatan ?? '',
+                    jenisPenyu: d.jenisPenyu,
+                    jumlahSarang: d.jumlahSarang,
+                    statusPerlindungan: d.statusPerlindungan,
+                    ancaman: d.ancaman,
+                    tanggalSurvei: d.tanggalSurvei,
+                  }));
+                }
+                return [{ id: d.id, namaPantai: d.namaPantai, lokasi: d.lokasi, nomorSarang: 1, koordinat: d.koordinat, catatan: '', jenisPenyu: d.jenisPenyu, jumlahSarang: d.jumlahSarang, statusPerlindungan: d.statusPerlindungan, ancaman: d.ancaman, tanggalSurvei: d.tanggalSurvei }];
+              });
               downloadCSV(
                 `idmap-pendaratan-penyu-${dateStamp()}.csv`,
-                filtered,
+                csvRows,
                 [
                   { key: 'id', label: 'ID' },
                   { key: 'namaPantai', label: 'Nama Pantai' },
                   { key: 'lokasi', label: 'Lokasi' },
+                  { key: 'nomorSarang', label: 'No. Sarang' },
                   { key: 'koordinat', label: 'Koordinat' },
+                  { key: 'catatan', label: 'Catatan' },
                   { key: 'jenisPenyu', label: 'Jenis Penyu' },
                   { key: 'jumlahSarang', label: 'Jumlah Sarang' },
                   { key: 'statusPerlindungan', label: 'Status Perlindungan' },
                   { key: 'ancaman', label: 'Ancaman' },
                   { key: 'tanggalSurvei', label: 'Tanggal Survei' },
                 ],
-              )
-            }
+              );
+            }}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors border bg-white text-teal-700 border-teal-300 hover:bg-teal-50"
             title="Unduh data CSV"
           >
@@ -269,14 +292,15 @@ export default function PendaratanPenyu() {
           </button>
           <button
             onClick={() => {
-              const points = filtered
-                .map(d => {
-                  const [latStr, lngStr] = (d.koordinat || '').split(',').map(s => s.trim());
-                  return {
-                    lat: Number.parseFloat(latStr),
-                    lng: Number.parseFloat(lngStr),
+              const points = filtered.flatMap(d => {
+                const validPts = (d.sarangPoints ?? []).filter(p => p.lat && p.lng);
+                if (validPts.length > 0) {
+                  return validPts.map((p, idx) => ({
+                    lat: Number.parseFloat(p.lat),
+                    lng: Number.parseFloat(p.lng),
                     properties: {
                       id: d.id,
+                      nomorSarang: idx + 1,
                       kategori: 'pendaratan_penyu',
                       namaPantai: d.namaPantai,
                       lokasi: d.lokasi,
@@ -285,9 +309,13 @@ export default function PendaratanPenyu() {
                       statusPerlindungan: d.statusPerlindungan,
                       ancaman: d.ancaman,
                       tanggalSurvei: d.tanggalSurvei,
+                      catatan: p.catatan ?? '',
                     },
-                  };
-                });
+                  }));
+                }
+                const [latStr, lngStr] = (d.koordinat || '').split(',').map(s => s.trim());
+                return [{ lat: Number.parseFloat(latStr), lng: Number.parseFloat(lngStr), properties: { id: d.id, nomorSarang: 1, kategori: 'pendaratan_penyu', namaPantai: d.namaPantai, lokasi: d.lokasi, jenisPenyu: d.jenisPenyu, jumlahSarang: d.jumlahSarang, statusPerlindungan: d.statusPerlindungan, ancaman: d.ancaman, tanggalSurvei: d.tanggalSurvei } }];
+              });
               downloadGeoJSON(`idmap-pendaratan-penyu-${dateStamp()}.geojson`, points);
             }}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors border bg-white text-teal-700 border-teal-300 hover:bg-teal-50"
@@ -506,8 +534,8 @@ export default function PendaratanPenyu() {
                   </div>
                 </div>
                 {d.fotoUrl && (
-                  <div className="overflow-hidden rounded-xl mb-3">
-                    <img src={d.fotoUrl} alt={`Foto ${d.namaPantai}`} className="w-full h-44 object-cover" />
+                  <div className="overflow-hidden rounded-xl mb-3 cursor-pointer" onClick={() => setLightboxImg(d.fotoUrl!)}>
+                    <img src={getCloudinaryUrl(d.fotoUrl, 'w_800,c_fill,q_auto,f_auto')} alt={`Foto ${d.namaPantai}`} className="w-full h-44 object-cover hover:opacity-90 transition-opacity" loading="lazy" />
                   </div>
                 )}
                 {validPoints.length > 0 && (
@@ -515,7 +543,7 @@ export default function PendaratanPenyu() {
                     {previewPhotos.length > 0 && (
                       <div className="flex -space-x-2">
                         {previewPhotos.map((p, idx) => (
-                          <img key={`${d.id}-thumb-${idx}`} src={p.fotoUrl} alt={`Titik ${idx + 1}`} className="w-10 h-10 rounded-lg border-2 border-white object-cover shadow-sm" />
+                          <img key={`${d.id}-thumb-${idx}`} src={getCloudinaryUrl(p.fotoUrl, 'w_80,c_fill,q_auto,f_auto')} alt={`Titik ${idx + 1}`} className="w-10 h-10 rounded-lg border-2 border-white object-cover shadow-sm cursor-pointer hover:opacity-90 transition-opacity" loading="lazy" onClick={() => setLightboxImg(p.fotoUrl!)} />
                         ))}
                       </div>
                     )}
@@ -570,7 +598,7 @@ export default function PendaratanPenyu() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <button type="button" onClick={scrollToList} className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-center hover:shadow-sm transition-shadow">
           <p className="text-lg font-bold text-teal-700">{data.length}</p>
           <p className="text-xs text-gray-500">Titik Pendaratan</p>
@@ -603,10 +631,10 @@ export default function PendaratanPenyu() {
                   {point.fotoUrl ? (
                     <button
                       type="button"
-                      onClick={() => setPreviewImage(point.fotoUrl!)}
+                      onClick={() => setLightboxImg(point.fotoUrl!)}
                       className="flex-shrink-0"
                     >
-                      <img src={point.fotoUrl} alt={`Titik ${idx + 1}`} className="w-20 h-20 rounded-xl object-cover border border-gray-200 shadow-sm" />
+                      <img src={getCloudinaryUrl(point.fotoUrl, 'w_160,c_fill,q_auto,f_auto')} alt={`Titik ${idx + 1}`} className="w-20 h-20 rounded-xl object-cover border border-gray-200 shadow-sm hover:opacity-90 transition-opacity" loading="lazy" />
                     </button>
                   ) : (
                     <div className="w-20 h-20 rounded-xl border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center flex-shrink-0">
@@ -637,6 +665,29 @@ export default function PendaratanPenyu() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4" onClick={() => setPreviewImage(null)}>
           <div className="max-w-4xl max-h-[85vh]">
             <img src={previewImage} alt="Preview lokasi sarang" className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl object-contain" />
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox — klik foto manapun */}
+      {lightboxImg && (
+        <div
+          className="fixed inset-0 bg-black/85 flex items-center justify-center z-[70] p-4"
+          onClick={() => setLightboxImg(null)}
+        >
+          <div className="relative max-w-5xl max-h-[90vh] w-full flex items-center justify-center">
+            <img
+              src={getCloudinaryUrl(lightboxImg, 'w_1920,c_limit,q_auto,f_auto')}
+              alt="Foto penyu"
+              className="max-w-full max-h-[90vh] rounded-2xl shadow-2xl object-contain"
+              onClick={e => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setLightboxImg(null)}
+              className="absolute top-3 right-3 bg-black/60 text-white rounded-full p-2 hover:bg-black/80 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
       )}

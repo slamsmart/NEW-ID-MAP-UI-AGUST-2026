@@ -1,28 +1,48 @@
 import { useState, useEffect, useMemo, cloneElement } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Marker, Popup, useMap, GeoJSON } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, GeoJSON } from 'react-leaflet';
+import type { FeatureCollection } from 'geojson';
+import JSZip from 'jszip';
+import { kml as kmlToGeoJSON } from '@tmcw/togeojson';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { mangroveLocations, ekosistemData } from '../data/mockData';
-import { titikAbrasiData } from '../data/abrasiData';
-import { fetchSurveys } from '../data/localStore';
-import { Layers, Map, Satellite, Mountain, ChevronRight, ChevronDown, X, Download, FileText, LogIn, UserPlus, PanelRight, Home, Plus, Minus, Check } from 'lucide-react';
+import { mangroveLocations as seedLocations, ekosistemData } from '../data/seedData';
+import { fetchAllLocations } from '../data/locations';
+import type { MangroveLocation } from '../types';
+import { titikAbrasiData, type PrioritasLevel, type SubstratType, type TitikAbrasi } from '../data/abrasiData';
+import { usePokmaswas } from '../hooks/usePokmaswas';
+import { fetchSurveys, mapDbSurveyToSurveyRecord, type SurveyRecord } from '../data/localStore';
+import { convex, isConvexConfigured, convexSurveyToDbSurvey } from '../lib/convexClient';
+import { api } from '../../convex/_generated/api';
+import { getCloudinaryUrl } from '../lib/cloudinary';
+import { Layers, Map, Satellite, Mountain, ChevronRight, ChevronDown, X, Download, FileText, LogIn, UserPlus, PanelRight, Home, Plus, Minus, Check, Search, Waves, LocateFixed, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SignInButton, SignUpButton } from '@clerk/clerk-react';
 import { useAuth } from '../context/useAuth';
 import { useAccountNotice } from '../components/AccountRequiredNotice';
 import DownloadDropdown from '../components/DownloadDropdown';
+import { RUANG_LINGKUP_OPTIONS, BIDANG_CORE_OPTIONS } from '../data/pokmaswasProfile';
 import { recordVisit } from '../lib/statsClient';
+import { applyOverridesToList, setOverride, removeOverride, getOverrides } from '../lib/coordOverrides';
+import { parseCoord } from '../lib/coordParser';
 
 const isClerkConfigured = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-// ── Penyu sample coordinates (nesting beaches Kab. Malang & sekitar) ─────────
+// ── Penyu coordinates (nesting beaches Kab. Malang pesisir selatan) ──────────
 const penyuLocations = [
-  { id: 'PNY-001', namaPantai: 'Pantai Bajul Mati', lokasi: 'Gedangan, Kab. Malang', lat: -8.394, lng: 112.530, jenis: 'Penyu Lekang', sarang: 12 },
-  { id: 'PNY-002', namaPantai: 'Pantai Sendang Biru', lokasi: 'Sumbermanjing, Kab. Malang', lat: -8.437, lng: 112.620, jenis: 'Penyu Hijau', sarang: 8 },
-  { id: 'PNY-003', namaPantai: 'Pantai Nganteb', lokasi: 'Tirtoyudo, Kab. Malang', lat: -8.466, lng: 112.720, jenis: 'Penyu Lekang', sarang: 5 },
-  { id: 'PNY-004', namaPantai: 'Pantai Wonogoro', lokasi: 'Gedangan, Kab. Malang', lat: -8.381, lng: 112.508, jenis: 'Penyu Sisik', sarang: 3 },
-  { id: 'PNY-005', namaPantai: 'Pantai Lenggoksono', lokasi: 'Tirtoyudo, Kab. Malang', lat: -8.458, lng: 112.750, jenis: 'Penyu Hijau', sarang: 7 },
-  { id: 'PNY-006', namaPantai: 'Pantai Kondang Iwak', lokasi: 'Ampelgading, Kab. Malang', lat: -8.473, lng: 112.794, jenis: 'Penyu Lekang', sarang: 4 },
+  { id: 'PNY-001', namaPantai: 'Pantai Bajul Mati',    lokasi: 'Gedangan, Kab. Malang',           lat: -8.3940, lng: 112.5300, jenis: 'Penyu Lekang', sarang: 12, fotoUrl: '' },
+  { id: 'PNY-002', namaPantai: 'Pantai Sendang Biru',  lokasi: 'Sumbermanjing, Kab. Malang',      lat: -8.4370, lng: 112.6200, jenis: 'Penyu Hijau',  sarang: 8,  fotoUrl: '' },
+  { id: 'PNY-003', namaPantai: 'Pantai Nganteb',       lokasi: 'Tirtoyudo, Kab. Malang',          lat: -8.4660, lng: 112.7200, jenis: 'Penyu Lekang', sarang: 5,  fotoUrl: '' },
+  { id: 'PNY-004', namaPantai: 'Pantai Wonogoro',      lokasi: 'Gedangan, Kab. Malang',           lat: -8.3810, lng: 112.5080, jenis: 'Penyu Sisik',  sarang: 3,  fotoUrl: '' },
+  { id: 'PNY-005', namaPantai: 'Pantai Lenggoksono',   lokasi: 'Tirtoyudo, Kab. Malang',          lat: -8.4580, lng: 112.7500, jenis: 'Penyu Hijau',  sarang: 7,  fotoUrl: '' },
+  { id: 'PNY-006', namaPantai: 'Pantai Kondang Iwak',  lokasi: 'Ampelgading, Kab. Malang',        lat: -8.4730, lng: 112.7940, jenis: 'Penyu Lekang', sarang: 4,  fotoUrl: '' },
+  { id: 'PNY-007', namaPantai: 'Pantai Sidoasri',      lokasi: 'Gedangan, Kab. Malang',           lat: -8.3880, lng: 112.4890, jenis: 'Penyu Lekang', sarang: 6,  fotoUrl: '' },
+  { id: 'PNY-008', namaPantai: 'Pantai Tamban',        lokasi: 'Sumbermanjing Wetan, Kab. Malang',lat: -8.4430, lng: 112.5930, jenis: 'Penyu Hijau',  sarang: 5,  fotoUrl: '' },
+  { id: 'PNY-009', namaPantai: 'Pantai Clungup',       lokasi: 'Sumbermanjing Wetan, Kab. Malang',lat: -8.4490, lng: 112.5985, jenis: 'Penyu Sisik',  sarang: 2,  fotoUrl: '' },
+  { id: 'PNY-010', namaPantai: 'Pantai Goa Cina',      lokasi: 'Sumbermanjing Wetan, Kab. Malang',lat: -8.4526, lng: 112.6091, jenis: 'Penyu Hijau',  sarang: 9,  fotoUrl: '' },
+  { id: 'PNY-011', namaPantai: 'Pantai Sipelot',       lokasi: 'Dampit, Kab. Malang',             lat: -8.4605, lng: 112.6427, jenis: 'Penyu Lekang', sarang: 3,  fotoUrl: '' },
+  { id: 'PNY-012', namaPantai: 'Pantai Licin',         lokasi: 'Tirtoyudo, Kab. Malang',          lat: -8.4687, lng: 112.7035, jenis: 'Penyu Hijau',  sarang: 4,  fotoUrl: '' },
+  { id: 'PNY-013', namaPantai: 'Pantai Batu Bengkung', lokasi: 'Gedangan, Kab. Malang',           lat: -8.3890, lng: 112.4760, jenis: 'Penyu Sisik',  sarang: 2,  fotoUrl: '' },
+  { id: 'PNY-014', namaPantai: 'Pantai Jengkol',       lokasi: 'Ampelgading, Kab. Malang',        lat: -8.4742, lng: 112.7683, jenis: 'Penyu Lekang', sarang: 5,  fotoUrl: '' },
 ];
 
 const MANGROVE_STATUS_COLORS: Record<string, string> = {
@@ -41,6 +61,57 @@ const ABRASI_PRIORITAS_COLORS: Record<string, string> = {
   'Rendah–Sedang': '#eab308',
 };
 
+type PenyuLoc = (typeof penyuLocations)[number] & {
+  sarangPoints?: Array<{ id: string; lat: string; lng: string; latNum: number; lngNum: number; catatan?: string; waktu?: string; fotoUrl?: string }>;
+};
+
+/** SurveyRecord (pendaratan_penyu) → marker penyu. */
+function surveysToPenyuList(surveys: SurveyRecord[]): PenyuLoc[] {
+  return surveys
+    .filter(s => s.tujuanSurvei === 'pendaratan_penyu' && s.koordinatLat && s.koordinatLng)
+    .map(s => ({
+      id: s.id,
+      namaPantai: s.namaPantai || s.locationName || 'Pantai Pendaratan Penyu',
+      lokasi: s.locationName || s.province || '',
+      lat: parseFloat(s.koordinatLat!),
+      lng: parseFloat(s.koordinatLng!),
+      jenis: s.jenisPenyu || 'Penyu',
+      sarang: parseInt(s.jumlahSarang || '0'),
+      fotoUrl: s.fotoDokumentasi || s.sarangPoints?.find(p => p.fotoUrl)?.fotoUrl || '',
+      sarangPoints: s.sarangPoints?.filter(p => p.lat && p.lng).map((p, idx) => ({
+        ...p,
+        id: `${s.id}-sarang-${idx + 1}`,
+        latNum: parseFloat(p.lat),
+        lngNum: parseFloat(p.lng),
+      })).filter(p => !isNaN(p.latNum) && !isNaN(p.lngNum)) ?? [],
+    }))
+    .filter(p => !isNaN(p.lat) && !isNaN(p.lng)) as PenyuLoc[];
+}
+
+/** SurveyRecord (abrasi) → marker titik abrasi. */
+function surveysToAbrasiList(surveys: SurveyRecord[]): TitikAbrasi[] {
+  return surveys
+    .filter(s => s.tujuanSurvei === 'abrasi' && s.koordinatLat && s.koordinatLng)
+    .map(s => ({
+      id: s.id,
+      namaPantai: s.namaPantai || s.locationName || 'Titik Abrasi',
+      kecamatan: s.locationName || '',
+      kabKota: s.province || '',
+      provinsi: s.province || '',
+      koordinat: { lat: parseFloat(s.koordinatLat!), lng: parseFloat(s.koordinatLng!) },
+      indikasi: '',
+      kondisiSebelum: '',
+      kondisiSesudah: '',
+      tanamanRekomendasi: s.rekomendasiLapangan ? [s.rekomendasiLapangan] : [],
+      luasanRestorasi: { min: 0, max: 0, satuan: 'ha' },
+      prioritas: (s.prioritasAbrasi || 'Sedang') as PrioritasLevel,
+      substrat: (s.substrat || 'pasir') as SubstratType,
+      ancamanUtama: s.ancamanUtama || [],
+      skorRisiko: s.skorPotensi || 5,
+    }))
+    .filter(a => !isNaN(a.koordinat.lat) && !isNaN(a.koordinat.lng));
+}
+
 // Benthic class colors — match reference legend (Seagrass green, Rubble brown,
 // Sand tan, Rock slate, Coral/Algae light blue)
 const BENTHIC_COLORS: Record<string, string> = {
@@ -52,11 +123,22 @@ const BENTHIC_COLORS: Record<string, string> = {
 };
 const BENTHIC_DEFAULT_COLOR = '#999999';
 
+const MHI_COLORS: Record<string, string> = {
+  'Potential Rehabilitation Area': '#ff2600',
+  Poor: '#ffbb00',
+  Moderate: '#a4c400',
+  Excelent: '#006100',
+};
+const MHI_DEFAULT_COLOR = '#64748b';
+const MHI_ORDER = ['Potential Rehabilitation Area', 'Poor', 'Moderate', 'Excelent'];
+
 const MAP_LAYERS = [
   { id: 'osm', label: 'OpenStreetMap', icon: Map, url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
   { id: 'satellite', label: 'Satelit', icon: Satellite, url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' },
   { id: 'topo', label: 'Topografi', icon: Mountain, url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', attribution: '&copy; OpenTopoMap' },
 ];
+const DEFAULT_MAP_CENTER: [number, number] = [-8.3, 112.6];
+const DEFAULT_MAP_ZOOM = 9;
 
 // Custom icons via DivIcon
 function makeMangroveIcon(color = '#15803d') {
@@ -72,10 +154,30 @@ function makeMangroveIcon(color = '#15803d') {
 function makeTurtleIcon() {
   return L.divIcon({
     className: '',
-    html: `<div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:#0d9488;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4);font-size:16px">🐢</div>`,
+    html: `<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:#0f766e;border-radius:50%;border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.55);font-size:20px;line-height:1">🐢</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -18],
+  });
+}
+
+function makeTurtleNestIcon(_index: number) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:#0f766e;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.45);font-size:16px;line-height:1">🐢</div>`,
     iconSize: [30, 30],
     iconAnchor: [15, 15],
     popupAnchor: [0, -15],
+  });
+}
+
+function makePokmaswasIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:#7c3aed;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4);font-size:14px">👤</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14],
   });
 }
 
@@ -94,6 +196,14 @@ function TileLayerSwitcher({ activeLayer }: { activeLayer: string }) {
 function MapInstanceCapture({ onReady }: { onReady: (m: L.Map) => void }) {
   const map = useMap();
   useEffect(() => { onReady(map); }, [map, onReady]);
+  return null;
+}
+
+function MapCoordinates({ onChange }: { onChange: (coordinates: [number, number]) => void }) {
+  useMapEvents({
+    mousemove: event => onChange([event.latlng.lat, event.latlng.lng]),
+    click: event => onChange([event.latlng.lat, event.latlng.lng]),
+  });
   return null;
 }
 
@@ -118,20 +228,62 @@ function FlyToSelected({
 
 // Layer filter options used by the floating dropdown.
 const LAYER_OPTIONS = [
-  { val: 'all',      label: 'Semua Layer', color: '#64748b' },
-  { val: 'mangrove', label: 'Mangrove',    color: '#16a34a' },
-  { val: 'abrasi',   label: 'Abrasi',      color: '#f97316' },
-  { val: 'penyu',    label: 'Penyu',       color: '#0d9488' },
-  { val: 'benthic',  label: 'Benthic',     color: '#0891b2' },
+  { val: 'none',      label: 'Pilih Layer',  color: '#94a3b8' },
+  { val: 'all',       label: 'Semua Layer',  color: '#64748b' },
+  { val: 'mangrove',  label: 'Mangrove',     color: '#16a34a' },
+  { val: 'abrasi',    label: 'Abrasi',       color: '#f97316' },
+  { val: 'penyu',     label: 'Penyu',        color: '#0d9488' },
+  { val: 'pokmaswas', label: 'Pokmaswas',    color: '#7c3aed' },
+  { val: 'mhi',       label: 'MHI',          color: '#006100' },
+  { val: 'benthic',   label: 'Benthic',      color: '#0891b2' },
+  { val: 'polaruang',   label: 'Pemanfaatan Ruang Laut',   color: '#d97706' },
+  { val: 'konservasi',  label: 'Konservasi',   color: '#15803d' },
+  { val: 'rtrw-jawa-timur', label: 'RTRW Provinsi Jawa Timur', color: '#047857' },
 ] as const;
+
+type DataLayer = Exclude<(typeof LAYER_OPTIONS)[number]['val'], 'none' | 'all'>;
+const DATA_LAYER_OPTIONS = LAYER_OPTIONS.filter((layer): layer is Extract<(typeof LAYER_OPTIONS)[number], { val: DataLayer }> => layer.val !== 'none' && layer.val !== 'all');
+
+async function loadKmzFeatureCollection(url: string): Promise<FeatureCollection> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+  const archive = await JSZip.loadAsync(await response.arrayBuffer());
+  const kmlEntry = Object.values(archive.files).find(file => /\.kml$/i.test(file.name));
+  if (!kmlEntry) throw new Error('Berkas KML tidak ditemukan di dalam KMZ.');
+
+  const kmlDocument = new DOMParser().parseFromString(await kmlEntry.async('text'), 'application/xml');
+  if (kmlDocument.querySelector('parsererror')) throw new Error('KML di dalam KMZ tidak valid.');
+
+  return kmlToGeoJSON(kmlDocument) as FeatureCollection;
+}
+
+function rtrwFeatureStyle(feature?: GeoJSON.Feature) {
+  const properties = feature?.properties as Record<string, unknown> | null | undefined;
+  const fillColor = typeof properties?.fill === 'string' ? properties.fill : '#34d399';
+  const strokeColor = typeof properties?.stroke === 'string' ? properties.stroke : fillColor;
+
+  return {
+    color: strokeColor,
+    fillColor,
+    fillOpacity: typeof properties?.['fill-opacity'] === 'number' ? properties['fill-opacity'] : 0.65,
+    opacity: typeof properties?.['stroke-opacity'] === 'number' ? properties['stroke-opacity'] : 0.8,
+    weight: typeof properties?.['stroke-width'] === 'number' ? properties['stroke-width'] : 0.7,
+  };
+}
 
 export default function PetaPublik() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { show: showAccountNotice } = useAccountNotice();
+  const [mangroveLocations, setMangroveLocations] = useState<MangroveLocation[]>(seedLocations);
 
-  // Single layer filter: 'all' | 'mangrove' | 'abrasi' | 'penyu' | 'benthic'
-  const [activeLayerFilter, setActiveLayerFilter] = useState<'all' | 'mangrove' | 'abrasi' | 'penyu' | 'benthic'>('all');
+  useEffect(() => {
+    void fetchAllLocations().then(setMangroveLocations);
+  }, []);
+
+  // Peta dimulai tanpa overlay; pengguna dapat memilih beberapa layer sekaligus.
+  const [selectedLayers, setSelectedLayers] = useState<DataLayer[]>([]);
   const [activeMapLayer, setActiveMapLayer] = useState('osm');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<'mangrove' | 'abrasi' | 'penyu' | null>(null);
@@ -139,76 +291,190 @@ export default function PetaPublik() {
   const [layerMenuOpen, setLayerMenuOpen] = useState(false);
   const [mapTypeMenuOpen, setMapTypeMenuOpen] = useState(false);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
+  const [mapCoordinates, setMapCoordinates] = useState<[number, number] | null>(null);
+  const [coordinateInputOpen, setCoordinateInputOpen] = useState(false);
+  const [coordinateInput, setCoordinateInput] = useState('');
+  const [coordinateInputError, setCoordinateInputError] = useState('');
 
-  // Derived visibility from single filter
-  const showMangrove = activeLayerFilter === 'all' || activeLayerFilter === 'mangrove';
-  const showAbrasi   = activeLayerFilter === 'all' || activeLayerFilter === 'abrasi';
-  const showPenyu    = activeLayerFilter === 'all' || activeLayerFilter === 'penyu';
-  const showBenthic  = activeLayerFilter === 'all' || activeLayerFilter === 'benthic';
+  const goToCoordinates = () => {
+    const values = coordinateInput.trim().split(/[,;\s]+/).map(Number);
+    const [lat, lng] = values;
 
-  // Benthic GeoJSON
+    if (values.length !== 2 || !Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      setCoordinateInputError('Masukkan latitude dan longitude yang valid.');
+      return;
+    }
+
+    mapInstance?.flyTo([lat, lng], 15, { duration: 1.2 });
+    setMapCoordinates([lat, lng]);
+    setCoordinateInputError('');
+    setCoordinateInputOpen(false);
+  };
+
+  const isLayerSelected = (layer: DataLayer) => selectedLayers.includes(layer);
+  const showMangrove = isLayerSelected('mangrove');
+  const showAbrasi = isLayerSelected('abrasi');
+  const showPenyu = isLayerSelected('penyu');
+  const showPokmaswas = isLayerSelected('pokmaswas');
+  const showMhi = isLayerSelected('mhi');
+  const showBenthic = isLayerSelected('benthic');
+  const showPolaruang = isLayerSelected('polaruang');
+  const showKonservasi = isLayerSelected('konservasi');
+  const showRtrw = isLayerSelected('rtrw-jawa-timur');
+  const allLayersSelected = selectedLayers.length === DATA_LAYER_OPTIONS.length;
+  const layerControlLabel = selectedLayers.length === 0
+    ? 'Pilih Layer'
+    : allLayersSelected
+      ? 'Semua Layer'
+      : selectedLayers.length === 1
+        ? DATA_LAYER_OPTIONS.find(layer => layer.val === selectedLayers[0])?.label ?? 'Pilih Layer'
+        : `${selectedLayers.length} Layer dipilih`;
+
+  const toggleLayer = (layer: DataLayer) => {
+    setSelectedLayers(current => current.includes(layer)
+      ? current.filter(selected => selected !== layer)
+      : [...current, layer]);
+    setSelectedId(null);
+    setSelectedType(null);
+  };
+
+  const toggleAllLayers = () => {
+    setSelectedLayers(current => current.length === DATA_LAYER_OPTIONS.length
+      ? []
+      : DATA_LAYER_OPTIONS.map(layer => layer.val));
+    setSelectedId(null);
+    setSelectedType(null);
+  };
+
+  const { records: pokmaswasRecords } = usePokmaswas();
+  const [filterRuangLingkup, setFilterRuangLingkup] = useState<string>('semua');
+  const [filterBidangCore, setFilterBidangCore] = useState<string>('semua');
+
+  // GeoJSON layer states
   const [benthicData, setBenthicData] = useState<any>(null);
   const [benthicLoading, setBenthicLoading] = useState(false);
+  const [mhiData, setMhiData] = useState<any>(null);
+  const [mhiLoading, setMhiLoading] = useState(false);
+  const [polaruangData, setPolaruangData] = useState<any>(null);
+  const [polaruangLoading, setPolaruangLoading] = useState(false);
+  const [konservasiData, setKonservasiData] = useState<any>(null);
+  const [konservasiLoading, setKonservasiLoading] = useState(false);
+  const [rtrwData, setRtrwData] = useState<FeatureCollection | null>(null);
+  const [rtrwLoading, setRtrwLoading] = useState(false);
 
 
   // Real survey data from field officers
-  const [surveyPenyu, setSurveyPenyu] = useState<typeof penyuLocations>([]);
-  const [surveyAbrasi, setSurveyAbrasi] = useState<typeof titikAbrasiData>([]);
+  const [surveyPenyu, setSurveyPenyu] = useState<PenyuLoc[]>([]);
+  const [surveyAbrasi, setSurveyAbrasi] = useState<TitikAbrasi[]>([]);
 
-  const mangroveFiltered = mangroveLocations;
+  // Verifikator coord override state
+  const isVerifikator = user?.role === 'verifikator';
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAbrasiId, setEditAbrasiId] = useState<string | null>(null);
+  const [editLat, setEditLat] = useState('');
+  const [editLng, setEditLng] = useState('');
+  const [overridesVersion, setOverridesVersion] = useState(0);
+
+  useEffect(() => {
+    const handler = () => setOverridesVersion(v => v + 1);
+    window.addEventListener('idmap:coord-override-changed', handler);
+    window.addEventListener('storage', handler);
+    return () => {
+      window.removeEventListener('idmap:coord-override-changed', handler);
+      window.removeEventListener('storage', handler);
+    };
+  }, []);
+
+  // Apply overrides to mangrove locations
+  void overridesVersion;
+  const mangroveFiltered = applyOverridesToList(mangroveLocations);
+  const abrasiStaticWithOverrides = titikAbrasiData.map(abr => {
+    const override = getOverrides()[abr.id];
+    return override ? { ...abr, koordinat: { ...abr.koordinat, lat: override.lat, lng: override.lng } } : abr;
+  });
 
   // Track visit (Convex stats — best-effort, dedup via sessionStorage)
   useEffect(() => {
     void recordVisit();
   }, []);
 
-  // Load survey data (field officer input → map)
+  // Re-fit map tiles when sidebar opens/closes — Leaflet doesn't auto-detect
+  // container size changes, so we must call invalidateSize() after the DOM updates.
   useEffect(() => {
-    fetchSurveys().then(surveys => {
-      // Penyu from surveys
-      const penyuFromDB = surveys
-        .filter(s => s.tujuanSurvei === 'pendaratan_penyu' && s.koordinatLat && s.koordinatLng)
-        .map(s => ({
-          id: s.id,
-          namaPantai: s.namaPantai || s.locationName || 'Pantai Pendaratan Penyu',
-          lokasi: s.locationName || s.province || '',
-          lat: parseFloat(s.koordinatLat!),
-          lng: parseFloat(s.koordinatLng!),
-          jenis: s.jenisPenyu || 'Penyu',
-          sarang: parseInt(s.jumlahSarang || '0'),
-        }))
-        .filter(p => !isNaN(p.lat) && !isNaN(p.lng));
-      if (penyuFromDB.length > 0) setSurveyPenyu(penyuFromDB);
+    if (!mapInstance) return;
+    const timer = setTimeout(() => mapInstance.invalidateSize(), 50);
+    return () => clearTimeout(timer);
+  }, [panelOpen, mapInstance]);
 
-      // Abrasi from surveys
-      const abrasiFromDB = surveys
-        .filter(s => s.tujuanSurvei === 'abrasi' && s.koordinatLat && s.koordinatLng)
-        .map(s => ({
-          id: s.id,
-          namaPantai: s.namaPantai || s.locationName || 'Titik Abrasi',
-          kecamatan: s.locationName || '',
-          kabKota: s.province || '',
-          provinsi: s.province || '',
-          koordinat: { lat: parseFloat(s.koordinatLat!), lng: parseFloat(s.koordinatLng!) },
-          indikasi: '',
-          kondisiSebelum: '',
-          kondisiSesudah: '',
-          tanamanRekomendasi: s.rekomendasiLapangan ? [s.rekomendasiLapangan] : [],
-          luasanRestorasi: { min: 0, max: 0, satuan: 'ha' },
-          prioritas: 'Sedang' as const,
-          substrat: (s.substrat || 'pasir') as any,
-          ancamanUtama: s.ancamanUtama || [],
-          skorRisiko: s.skorPotensi || 5,
-        }))
-        .filter(a => !isNaN(a.koordinat.lat) && !isNaN(a.koordinat.lng));
+  // Load survey data (field officer input → map).
+  // Real-time via Convex watchQuery agar entri dari device lain langsung
+  // tampil di semua device. Fallback: localStorage polling bila Convex nonaktif.
+  useEffect(() => {
+    if (!isConvexConfigured()) {
+      const load = () => {
+        fetchSurveys().then(surveys => {
+          const penyuFromDB = surveysToPenyuList(surveys);
+          if (penyuFromDB.length > 0) setSurveyPenyu(penyuFromDB);
+          const abrasiFromDB = surveysToAbrasiList(surveys);
+          if (abrasiFromDB.length > 0) setSurveyAbrasi(abrasiFromDB);
+        }).catch(() => {});
+      };
+      load();
+      const handler = () => load();
+      window.addEventListener('storage', handler);
+      window.addEventListener('idmap:coord-override-changed', handler);
+      const interval = setInterval(load, 30_000);
+      return () => {
+        window.removeEventListener('storage', handler);
+        window.removeEventListener('idmap:coord-override-changed', handler);
+        clearInterval(interval);
+      };
+    }
+
+    let active = true;
+    const unsubs: Array<() => void> = [];
+    const subscribe = (
+      tujuan: 'abrasi' | 'pendaratan_penyu',
+      onData: (surveys: SurveyRecord[]) => void,
+    ) => {
+      try {
+        const watch = convex.watchQuery(api.surveys.listByTujuan, { tujuanSurvei: tujuan, limit: 500 });
+        const apply = () => {
+          try {
+            const rows = watch.localQueryResult() as Array<Record<string, unknown>> | undefined;
+            if (!active || !rows) return;
+            onData(rows.map(r => mapDbSurveyToSurveyRecord(convexSurveyToDbSurvey(r) as unknown as Record<string, unknown>)));
+          } catch { /* belum deploy */ }
+        };
+        unsubs.push(watch.onUpdate(apply));
+        apply();
+      } catch (e) {
+        console.warn(`[peta-publik] convex watch ${tujuan} gagal:`, e);
+      }
+    };
+    subscribe('abrasi', surveys => {
+      const abrasiFromDB = surveysToAbrasiList(surveys);
       if (abrasiFromDB.length > 0) setSurveyAbrasi(abrasiFromDB);
-    }).catch(() => {});
+    });
+    subscribe('pendaratan_penyu', surveys => {
+      const penyuFromDB = surveysToPenyuList(surveys);
+      if (penyuFromDB.length > 0) setSurveyPenyu(penyuFromDB);
+    });
+    return () => {
+      active = false;
+      unsubs.forEach(u => u());
+    };
   }, []);
 
-  // All penyu = static fallback + live survey data
-  const allPenyu = surveyPenyu.length > 0 ? surveyPenyu : penyuLocations;
+  // All penyu = static fallback + live survey data (dengan coord overrides)
+  const allPenyuBase = surveyPenyu.length > 0 ? surveyPenyu : penyuLocations;
+  const allPenyu = allPenyuBase.map(p => {
+    const override = getOverrides()[p.id];
+    return override ? { ...p, lat: override.lat, lng: override.lng } : p;
+  });
   // All abrasi = static + live
-  const allAbrasi = [...titikAbrasiData, ...surveyAbrasi];
+  const surveyAbrasiIds = new Set(surveyAbrasi.map(a => a.id));
+  const allAbrasi = [...surveyAbrasi, ...abrasiStaticWithOverrides.filter(a => !surveyAbrasiIds.has(a.id))];
 
   // Load benthic when selected
   useEffect(() => {
@@ -221,6 +487,71 @@ export default function PetaPublik() {
     }
   }, [showBenthic, benthicData]);
 
+  // Load MHI mangrove layer from KMZ conversion output.
+  useEffect(() => {
+    if (showMhi && !mhiData) {
+      setMhiLoading(true);
+      fetch('/mhi-mangrove.geojson')
+        .then(r => r.json())
+        .then(d => { setMhiData(d); setMhiLoading(false); })
+        .catch(() => setMhiLoading(false));
+    }
+  }, [showMhi, mhiData]);
+
+  // Load pola ruang pemanfaatan layer.
+  useEffect(() => {
+    if (showPolaruang && !polaruangData) {
+      setPolaruangLoading(true);
+      fetch('/polaruang.geojson')
+        .then(r => r.json())
+        .then(d => { setPolaruangData(d); setPolaruangLoading(false); })
+        .catch(() => setPolaruangLoading(false));
+    }
+  }, [showPolaruang, polaruangData]);
+
+  // Load kawasan konservasi layer.
+  useEffect(() => {
+    if (showKonservasi && !konservasiData) {
+      setKonservasiLoading(true);
+      fetch('/konservasi.geojson')
+        .then(r => r.json())
+        .then(d => { setKonservasiData(d); setKonservasiLoading(false); })
+        .catch(() => setKonservasiLoading(false));
+    }
+  }, [showKonservasi, konservasiData]);
+
+  // Load RTRW directly from the five original KMZ archives only when selected.
+  useEffect(() => {
+    if (!showRtrw) {
+      setRtrwData(null);
+      return;
+    }
+
+    let active = true;
+    setRtrwLoading(true);
+    setRtrwData(null);
+    const regionalFiles = [
+      'Kab. Malang.kmz',
+      'Kab. Pasuruan.kmz',
+      'Kota. Pasuruan.kmz',
+      'Kota Surabaya.kmz',
+      'Kab. Sidoarjo.kmz',
+    ];
+
+    Promise.all(regionalFiles.map(file => loadKmzFeatureCollection(`/boundaries/${file}`)))
+      .then(layers => {
+        if (!active) return;
+        setRtrwData({
+          type: 'FeatureCollection',
+          features: layers.flatMap(layer => layer.features),
+        });
+      })
+      .catch(error => console.warn('[peta-publik] layer RTRW KMZ gagal dimuat:', error))
+      .finally(() => { if (active) setRtrwLoading(false); });
+
+    return () => { active = false; };
+  }, [showRtrw]);
+
   // Aggregate benthic class counts for the legend
   const benthicCounts = useMemo<Record<string, number> | null>(() => {
     if (!benthicData?.features) return null;
@@ -231,6 +562,38 @@ export default function PetaPublik() {
     }
     return counts;
   }, [benthicData]);
+
+  const mhiCounts = useMemo<Record<string, number> | null>(() => {
+    if (!mhiData?.features) return null;
+    const counts: Record<string, number> = {};
+    for (const f of mhiData.features) {
+      const cls = (f.properties?.mhiClass as string) ?? 'Unknown';
+      counts[cls] = (counts[cls] ?? 0) + 1;
+    }
+    return counts;
+  }, [mhiData]);
+
+  // Unique zone → color pairs for konservasi legend
+  const konservasiZones = useMemo<[string, string][]>(() => {
+    if (!konservasiData?.features) return [];
+    const seen: Record<string, string> = {};
+    for (const f of konservasiData.features) {
+      const zone = f.properties?.zone as string;
+      if (zone && !seen[zone]) seen[zone] = f.properties?.color as string ?? '#15803d';
+    }
+    return Object.entries(seen).sort(([a], [b]) => a.localeCompare(b));
+  }, [konservasiData]);
+
+  // Unique zone → color pairs for pola ruang legend (sorted alphabetically)
+  const polaruangZones = useMemo<[string, string][]>(() => {
+    if (!polaruangData?.features) return [];
+    const seen: Record<string, string> = {};
+    for (const f of polaruangData.features) {
+      const zone = f.properties?.zone as string;
+      if (zone && !seen[zone]) seen[zone] = f.properties?.color as string ?? '#d97706';
+    }
+    return Object.entries(seen).sort(([a], [b]) => a.localeCompare(b));
+  }, [polaruangData]);
 
   // Render order matches the reference legend
   const BENTHIC_ORDER = ['Seagrass', 'Rubble', 'Sand', 'Rock', 'Coral/Algae'];
@@ -272,6 +635,7 @@ export default function PetaPublik() {
    * download as `.geojson`.
    */
   const downloadMarkerGeoJSON = () => {
+    if (!requireAuth('Untuk mengunduh data GeoJSON, silakan login atau daftar akun terlebih dahulu.')) return;
     const features: Array<Record<string, unknown>> = [];
 
     if (showMangrove) {
@@ -348,7 +712,31 @@ export default function PetaPublik() {
    * print dialog. User can choose "Save as PDF" to obtain a PDF file.
    * No external library required.
    */
+  /**
+   * Guard helper — jika user belum login, tampilkan notice login/daftar
+   * dan batalkan aksi. Kembalikan `true` bila boleh lanjut.
+   */
+  const requireAuth = (reason?: string): boolean => {
+    if (user) return true;
+    if (isClerkConfigured) {
+      // Clerk aktif: buka modal sign-in Clerk via button virtual
+      // (tidak bisa panggil hook imperatively, gunakan notice sebagai bridge)
+      showAccountNotice({
+        title: 'Login Diperlukan',
+        message: reason ?? 'Untuk mengunduh data peta, silakan login atau daftar akun ID-MAP terlebih dahulu.',
+      });
+    } else {
+      showAccountNotice({
+        title: 'Login Diperlukan',
+        message: reason ?? 'Untuk mengunduh data peta, silakan login atau daftar akun ID-MAP terlebih dahulu.',
+      });
+    }
+    return false;
+  };
+
   const downloadReportPDF = () => {
+    if (!requireAuth('Untuk mengekspor laporan PDF, Anda harus login atau daftar akun terlebih dahulu.')) return;
+
     const counts = {
       mangrove: showMangrove ? mangroveFiltered.length : 0,
       abrasi: showAbrasi ? allAbrasi.length : 0,
@@ -490,29 +878,46 @@ export default function PetaPublik() {
   };
 
   return (
-    <div className="flex flex-col" style={{ height: '100vh', background: '#f1f5f9', color: '#0f172a' }}>
-
-      {/* ── TOP BAR (light/clean) ── */}
-      <div className="flex items-center justify-between px-3 sm:px-5 py-2.5 flex-shrink-0 border-b border-slate-200 gap-2 bg-white">
-        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-          <button
-            onClick={() => navigate(user ? '/dashboard' : '/')}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition-colors flex-shrink-0"
-          >
-            <Home className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Beranda</span>
-          </button>
-          <div className="w-px h-6 bg-slate-200 flex-shrink-0" />
-          <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-widest font-semibold text-emerald-700">ID-MAP</p>
-            <h1 className="text-slate-800 font-bold text-xs md:text-sm leading-tight truncate hidden sm:block">Peta Interaktif Mangrove dan Ekosistem Pesisir</h1>
+    <div className="flex h-screen overflow-hidden bg-[#eef3fb] text-slate-900">
+      <aside className="hidden md:flex w-[82px] lg:w-[104px] flex-col items-center border-r border-slate-200 bg-[#f7f8fc] px-3 py-5">
+        <div className="flex flex-col items-center gap-6">
+          <div className="h-12 w-12 overflow-hidden rounded-full border border-slate-200 shadow-sm">
+            <img src="/logo.png" alt="ID-MAP" className="h-full w-full object-cover" />
           </div>
+          <nav className="flex flex-col items-stretch gap-2">
+            <button onClick={() => navigate('/')} className="flex flex-col items-center gap-1 rounded-2xl px-2.5 py-3 text-[11px] font-medium text-slate-700 hover:bg-white hover:shadow-sm transition-colors">
+              <Home className="h-5 w-5" />
+              <span>Home</span>
+            </button>
+            <button className="relative flex flex-col items-center gap-1 rounded-2xl bg-white px-2.5 py-3 text-[11px] font-semibold text-emerald-700 shadow-sm">
+              <span className="absolute right-0 top-2 h-12 w-1 rounded-l-full bg-emerald-600" />
+              <Layers className="h-5 w-5" />
+              <span>Map</span>
+            </button>
+          </nav>
         </div>
+      </aside>
 
+      <main className="flex min-w-0 flex-1 flex-col">
+        <header className="relative z-10 flex flex-shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-[#d6dbe3]/95 px-4 py-3 backdrop-blur-sm sm:px-5 lg:px-6">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-800">ID-MAP</p>
+            <h1 className="max-w-[26rem] text-[18px] font-bold leading-snug text-slate-950 sm:text-[21px] lg:max-w-[34rem]">
+              Peta Interaktif Mangrove dan Ekosistem Pesisir
+            </h1>
+          </div>
 
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {/* Tombol Unduh — dropdown PDF / GeoJSON. Belum login → modal SignUp. */}
-          {user ? (
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-2 shadow-sm focus-within:border-emerald-400 lg:flex">
+              <Search className="h-4 w-4 text-slate-500" />
+              <input
+                className="w-72 border-0 bg-transparent p-0 text-sm text-slate-700 placeholder:text-slate-400 focus:ring-0"
+                placeholder="Cari wilayah atau koordinat..."
+                type="text"
+              />
+            </div>
+
+            {/* Tombol Unduh — tampil untuk semua user; handler di-guard auth */}
             <DownloadDropdown
               className="hidden sm:block"
               items={[
@@ -530,99 +935,51 @@ export default function PetaPublik() {
                 },
               ]}
             />
-          ) : (
-            <AuthRequired mode="signup">
-              <button
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-emerald-300 transition-colors shadow-sm"
-                title="Login untuk unduh"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Unduh</span>
+
+            {user ? (
+              <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-emerald-700/20 transition-colors hover:bg-emerald-800 sm:px-5">
+                <span>Dashboard</span>
+                <ChevronRight className="h-3.5 w-3.5" />
               </button>
-            </AuthRequired>
-          )}
+            ) : (
+              <>
+                <AuthRequired mode="signup">
+                  <button
+                    className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-700 to-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-emerald-700/20 transition-all hover:brightness-110"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Daftar
+                  </button>
+                </AuthRequired>
+                <AuthRequired>
+                  <button className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-emerald-400 hover:text-emerald-700">
+                    <LogIn className="h-3.5 w-3.5" />
+                    Login
+                  </button>
+                </AuthRequired>
+              </>
+            )}
 
-          {user ? (
-            <button onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm">
-              <span className="hidden sm:inline">Dashboard</span>
-              <ChevronRight className="w-3 h-3" />
+            <button
+              onClick={() => setPanelOpen(o => !o)}
+              className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-emerald-400 sm:hidden"
+              title="Toggle panel"
+            >
+              <PanelRight className="h-4 w-4" />
             </button>
-          ) : (
-            <>
-              {/* Daftar → Clerk Sign Up modal | Login → Clerk Sign In modal */}
-              <AuthRequired mode="signup">
-                <button
-                  className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold text-white shadow-sm transition-all hover:brightness-110"
-                  style={{ background: 'linear-gradient(90deg, #059669, #0ea5e9)' }}
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  Daftar
-                </button>
-              </AuthRequired>
-              <AuthRequired>
-                <button
-                  className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 rounded-full text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:border-emerald-400 hover:text-emerald-700 transition-colors shadow-sm"
-                >
-                  <LogIn className="w-3.5 h-3.5" />
-                  Login
-                </button>
-              </AuthRequired>
-            </>
-          )}
+          </div>
+        </header>
 
-          {/* Panel toggle (mobile) */}
-          <button
-            onClick={() => setPanelOpen(o => !o)}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors sm:hidden"
-            title="Toggle panel"
-          >
-            <PanelRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-
-      {/* ── MAP + SIDEBAR ── */}
-      <div className="flex flex-1 overflow-hidden relative">
-
-        {/* MAP */}
-        <div className="flex-1 relative">
-          <MapContainer center={[-8.3, 112.6]} zoom={9} style={{ height: '100%', width: '100%', background: '#0d1117' }} zoomControl={false}>
-            <MapController center={[-8.3, 112.6]} zoom={9} />
+        <div className="relative flex min-h-0 flex-1 overflow-hidden">
+          <div className="relative min-w-0 flex-1 bg-[#0f3a3a]">
+            <MapContainer center={DEFAULT_MAP_CENTER} zoom={DEFAULT_MAP_ZOOM} style={{ height: '100%', width: '100%', background: '#0b2b32' }} zoomControl={false}>
+            <MapController center={DEFAULT_MAP_CENTER} zoom={DEFAULT_MAP_ZOOM} />
             <MapInstanceCapture onReady={setMapInstance} />
+            <MapCoordinates onChange={setMapCoordinates} />
             <FlyToSelected target={flyTarget} zoom={15} />
             <TileLayerSwitcher activeLayer={activeMapLayer} />
 
-            {/* Mangrove markers */}
-            {showMangrove && mangroveFiltered.map(loc => (
-              <CircleMarker
-                key={loc.id}
-                center={[loc.lat, loc.lng]}
-                radius={selectedId === loc.id ? MANGROVE_RADIUS[loc.status] + 3 : MANGROVE_RADIUS[loc.status]}
-                pathOptions={{
-                  color: selectedId === loc.id ? '#fff' : MANGROVE_STATUS_COLORS[loc.status],
-                  fillColor: MANGROVE_STATUS_COLORS[loc.status],
-                  fillOpacity: selectedId === loc.id ? 1 : 0.75,
-                  weight: selectedId === loc.id ? 2.5 : 1.5,
-                }}
-                eventHandlers={{ click: () => { setSelectedId(loc.id); setSelectedType('mangrove'); } }}
-              >
-                <Popup>
-                  <div className="text-sm min-w-[160px]">
-                    <div className="font-bold text-gray-800">{loc.name}</div>
-                    <div className="text-xs text-gray-500">{loc.district}</div>
-                    <div className="text-xs flex justify-between mt-1">
-                      <span className="text-gray-500">Luas</span><span className="font-medium">{loc.areaHa} ha</span>
-                    </div>
-                    <div className="text-xs flex justify-between">
-                      <span className="text-gray-500">Status</span>
-                      <span className="font-medium capitalize" style={{ color: MANGROVE_STATUS_COLORS[loc.status] }}>{loc.status}</span>
-                    </div>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            ))}
+            {/* Marker titik mangrove disembunyikan agar layer spasial tetap bersih. */}
 
             {/* Abrasi / Rekomendasi Mangrove markers */}
             {showAbrasi && allAbrasi.map(abr => (
@@ -641,6 +998,122 @@ export default function PetaPublik() {
                     <div className="text-xs text-gray-500">{abr.kecamatan}, {abr.kabKota}</div>
                     <div className="text-xs mt-1 text-gray-600">Skor risiko: <strong>{abr.skorRisiko}/10</strong></div>
                     <div className="text-xs text-green-700 mt-0.5">Rekomendasi: {abr.tanamanRekomendasi[0]}</div>
+                    {isVerifikator && editAbrasiId === abr.id ? (
+                      <div className="mt-2 bg-orange-50 border border-orange-200 rounded-lg p-2 space-y-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-orange-700">Edit Koordinat</p>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <input
+                            value={editLat}
+                            onChange={e => setEditLat(e.target.value)}
+                            onBlur={e => { const p = parseCoord(e.target.value); if (p) setEditLat(p); }}
+                            placeholder="Lat"
+                            className="text-xs border border-gray-300 rounded px-1.5 py-1 font-mono w-full"
+                          />
+                          <input
+                            value={editLng}
+                            onChange={e => setEditLng(e.target.value)}
+                            onBlur={e => { const p = parseCoord(e.target.value); if (p) setEditLng(p); }}
+                            placeholder="Lng"
+                            className="text-xs border border-gray-300 rounded px-1.5 py-1 font-mono w-full"
+                          />
+                        </div>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={async () => {
+                              const lat = parseFloat(parseCoord(editLat) ?? '');
+                              const lng = parseFloat(parseCoord(editLng) ?? '');
+                              if (isNaN(lat) || isNaN(lng)) {
+                                alert('Koordinat tidak valid.');
+                                return;
+                              }
+                              const today = new Date().toISOString().split('T')[0];
+                              const tingkat = abr.skorRisiko >= 9 ? 'sangat_parah'
+                                : abr.skorRisiko >= 7 ? 'parah'
+                                : abr.skorRisiko >= 5 ? 'sedang'
+                                : 'ringan';
+                              if (isConvexConfigured()) {
+                                await convex.mutation(api.surveys.upsert, {
+                                  legacyId: abr.id,
+                                  tujuanSurvei: 'abrasi',
+                                  petugasNama: user?.nama ?? '',
+                                  petugasUnit: user?.role ?? '',
+                                  tanggal: today,
+                                  locationName: abr.kecamatan,
+                                  province: abr.provinsi,
+                                  namaPantai: abr.namaPantai,
+                                  koordinatLat: lat,
+                                  koordinatLng: lng,
+                                  kondisiSebelum: abr.kondisiSebelum,
+                                  kondisiSesudah: abr.kondisiSesudah,
+                                  tingkatAbrasi: tingkat,
+                                  prioritasAbrasi: abr.prioritas,
+                                  substrat: abr.substrat,
+                                  ancamanUtama: abr.ancamanUtama,
+                                  sarangPoints: [],
+                                  photoUrls: [],
+                                }).catch(() => {});
+                              }
+                              removeOverride(abr.id);
+                              // Convex watchQuery auto-push ke semua device.
+                              // Fallback (Convex nonaktif): reload lokal.
+                              if (!isConvexConfigured()) {
+                                fetchSurveys()
+                                  .then(surveys => setSurveyAbrasi(surveysToAbrasiList(surveys)))
+                                  .catch(() => {});
+                              }
+                              setEditAbrasiId(null);
+                            }}
+                            className="flex-1 flex items-center justify-center gap-1 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold px-2 py-1 rounded"
+                          >
+                            <Check className="w-3 h-3" /> Simpan
+                          </button>
+                          <button
+                            onClick={() => setEditAbrasiId(null)}
+                            className="flex items-center justify-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-1 rounded"
+                          >
+                            <X className="w-3 h-3" /> Batal
+                          </button>
+                        </div>
+                        {getOverrides()[abr.id] && (
+                          <button
+                            onClick={() => {
+                              if (confirm('Reset ke koordinat asli?')) {
+                                removeOverride(abr.id);
+                                if (!isConvexConfigured()) {
+                                  fetchSurveys()
+                                    .then(surveys => setSurveyAbrasi(surveysToAbrasiList(surveys)))
+                                    .catch(() => {});
+                                }
+                                setEditAbrasiId(null);
+                              }
+                            }}
+                            className="w-full bg-amber-100 hover:bg-amber-200 text-amber-700 text-[10px] font-semibold px-2 py-1 rounded"
+                          >
+                            Reset ke Asli
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {isVerifikator && (
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              setEditAbrasiId(abr.id);
+                              setEditLat(abr.koordinat.lat.toString());
+                              setEditLng(abr.koordinat.lng.toString());
+                            }}
+                            className="w-full mt-2 flex items-center justify-center gap-1 bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-1 rounded border border-orange-200"
+                          >
+                            Edit Koordinat
+                          </button>
+                        )}
+                      </>
+                    )}
+                    <div className="text-[10px] text-gray-400 mt-1 font-mono">
+                      {abr.koordinat.lat.toFixed(4)}, {abr.koordinat.lng.toFixed(4)}
+                      {getOverrides()[abr.id] && <span className="ml-1 text-amber-600">(diedit)</span>}
+                    </div>
                   </div>
                 </Popup>
               </Marker>
@@ -655,20 +1128,220 @@ export default function PetaPublik() {
                 eventHandlers={{ click: () => { setSelectedId(pny.id); setSelectedType('penyu'); } }}
               >
                 <Popup>
-                  <div className="text-sm min-w-[160px]">
+                  <div className="text-sm min-w-[180px]">
                     <div className="text-[10px] font-bold text-teal-700 uppercase mb-0.5">Titik Pendaratan Penyu</div>
                     <div className="font-bold text-gray-800">{pny.namaPantai}</div>
                     <div className="text-xs text-gray-500">{pny.lokasi}</div>
+                    {(pny as any).fotoUrl && (
+                      <div className="mt-1.5 mb-1.5 rounded-lg overflow-hidden border border-gray-200">
+                        <img src={getCloudinaryUrl((pny as any).fotoUrl, 'w_600,c_fill,q_auto,f_auto')} alt={pny.namaPantai} className="w-full h-24 object-cover" loading="lazy" />
+                      </div>
+                    )}
+                    {(pny as any).sarangPoints?.length > 0 && (
+                      <div className="mt-2 mb-1">
+                        <div className="text-[10px] font-semibold text-teal-700 mb-1">
+                          {(pny as any).sarangPoints.length} titik koordinat petugas
+                        </div>
+                        <div className="grid grid-cols-4 gap-1">
+                          {(pny as any).sarangPoints.slice(0, 8).map((point: any, idx: number) => (
+                            <div key={point.id} className="relative h-10 rounded-md overflow-hidden bg-teal-50 border border-teal-100">
+                              {point.fotoUrl ? (
+                                <img src={getCloudinaryUrl(point.fotoUrl, 'w_80,c_fill,q_auto,f_auto')} alt={`Titik sarang ${idx + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-teal-700">{idx + 1}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="text-xs flex justify-between mt-1">
                       <span className="text-gray-500">Jenis</span><span className="font-medium">{pny.jenis}</span>
                     </div>
                     <div className="text-xs flex justify-between">
                       <span className="text-gray-500">Sarang</span><span className="font-medium">{pny.sarang} titik</span>
                     </div>
+                    <div className="text-[10px] text-gray-400 mt-1 font-mono">
+                      {pny.lat.toFixed(4)}, {pny.lng.toFixed(4)}
+                      {getOverrides()[pny.id] && <span className="ml-1 text-amber-600">(diedit)</span>}
+                    </div>
+                    {isVerifikator && editingId === pny.id ? (
+                      <div className="mt-2 bg-teal-50 border border-teal-200 rounded-lg p-2 space-y-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-teal-700">Edit Koordinat</p>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <input
+                            value={editLat}
+                            onChange={e => setEditLat(e.target.value)}
+                            onBlur={e => { const p = parseCoord(e.target.value); if (p) setEditLat(p); }}
+                            placeholder="Lat"
+                            className="text-xs border border-gray-300 rounded px-1.5 py-1 font-mono w-full"
+                          />
+                          <input
+                            value={editLng}
+                            onChange={e => setEditLng(e.target.value)}
+                            onBlur={e => { const p = parseCoord(e.target.value); if (p) setEditLng(p); }}
+                            placeholder="Lng"
+                            className="text-xs border border-gray-300 rounded px-1.5 py-1 font-mono w-full"
+                          />
+                        </div>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => {
+                              const lat = parseFloat(parseCoord(editLat) ?? '');
+                              const lng = parseFloat(parseCoord(editLng) ?? '');
+                              if (isNaN(lat) || isNaN(lng)) {
+                                alert('Koordinat tidak valid.');
+                                return;
+                              }
+                              setOverride(pny.id, lat, lng, user?.nama);
+                              setEditingId(null);
+                            }}
+                            className="flex-1 flex items-center justify-center gap-1 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold px-2 py-1 rounded"
+                          >
+                            <Check className="w-3 h-3" /> Simpan
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="flex items-center justify-center gap-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-1 rounded"
+                          >
+                            <X className="w-3 h-3" /> Batal
+                          </button>
+                        </div>
+                        {getOverrides()[pny.id] && (
+                          <button
+                            onClick={() => {
+                              if (confirm('Reset ke koordinat asli?')) {
+                                removeOverride(pny.id);
+                                setEditingId(null);
+                              }
+                            }}
+                            className="w-full bg-amber-100 hover:bg-amber-200 text-amber-700 text-[10px] font-semibold px-2 py-1 rounded"
+                          >
+                            Reset ke Asli
+                          </button>
+                        )}
+                      </div>
+                    ) : isVerifikator ? (
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          setEditingId(pny.id);
+                          setEditLat(pny.lat.toString());
+                          setEditLng(pny.lng.toString());
+                        }}
+                        className="w-full mt-2 flex items-center justify-center gap-1 bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-semibold px-2 py-1 rounded border border-teal-200"
+                      >
+                        ✏️ Edit Koordinat
+                      </button>
+                    ) : null}
                   </div>
                 </Popup>
               </Marker>
             ))}
+
+            {showPenyu && allPenyu.flatMap(pny => {
+              const sarangPoints = (pny as any).sarangPoints ?? [];
+              if (sarangPoints.length <= 1) return [];
+              return sarangPoints.map((point: any, idx: number) => (
+              <Marker
+                key={point.id}
+                position={[point.latNum, point.lngNum]}
+                icon={makeTurtleNestIcon(idx + 1)}
+                eventHandlers={{ click: () => { setSelectedId(pny.id); setSelectedType('penyu'); } }}
+              >
+                <Popup>
+                  <div className="text-sm min-w-[190px]">
+                    <div className="text-[10px] font-bold text-amber-700 uppercase mb-0.5">Titik Sarang #{idx + 1}</div>
+                    <div className="font-bold text-gray-800">{pny.namaPantai}</div>
+                    <div className="text-xs text-gray-500">{pny.jenis}</div>
+                    {point.fotoUrl && (
+                      <div className="mt-1.5 mb-1.5 rounded-lg overflow-hidden border border-gray-200">
+                        <img src={point.fotoUrl} alt={`Foto titik sarang ${idx + 1}`} className="w-full h-28 object-cover" />
+                      </div>
+                    )}
+                    {point.catatan && <div className="text-xs text-gray-600 mt-1">{point.catatan}</div>}
+                    {point.waktu && <div className="text-[10px] text-gray-400 mt-1">{point.waktu}</div>}
+                    <div className="text-[10px] text-gray-400 mt-1 font-mono">
+                      {point.latNum.toFixed(5)}, {point.lngNum.toFixed(5)}
+                    </div>
+                  </div>
+                </Popup>
+              </Marker>
+            ));
+            })}
+
+            {/* Pokmaswas markers */}
+            {showPokmaswas && pokmaswasRecords
+              .filter(pkm => {
+                if (filterRuangLingkup !== 'semua' && pkm.ruangLingkup !== filterRuangLingkup) return false;
+                if (filterBidangCore !== 'semua' && !(pkm.bidangCore ?? []).includes(filterBidangCore)) return false;
+                return true;
+              })
+              .map(pkm => {
+              const override = getOverrides()[pkm.id];
+              const lat = override ? override.lat : pkm.lat;
+              const lng = override ? override.lng : pkm.lng;
+              return (
+                <Marker
+                  key={pkm.id}
+                  position={[lat, lng]}
+                  icon={makePokmaswasIcon()}
+                >
+                  <Popup>
+                    <div className="text-sm min-w-[200px]">
+                      <div className="flex items-center gap-1 mb-1">
+                        <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                          POKMASWAS
+                        </span>
+                      </div>
+                      <div className="font-bold text-gray-800">{pkm.nama}</div>
+                      <div className="text-xs text-gray-500 mb-2">{pkm.alamat}</div>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Kab/Kota</span>
+                          <span className="font-medium">{pkm.kabupatenKota}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Ketua</span>
+                          <span className="font-medium">{pkm.ketua}</span>
+                        </div>
+                        {pkm.ruangLingkup && (
+                          <div className="flex justify-between gap-2">
+                            <span className="text-gray-500 flex-shrink-0">Ruang Lingkup</span>
+                            <span className="font-medium text-purple-700 text-right">{pkm.ruangLingkup}</span>
+                          </div>
+                        )}
+                        {pkm.kawasanPantai && (
+                          <div className="flex justify-between gap-2">
+                            <span className="text-gray-500 flex-shrink-0">Kawasan Pantai</span>
+                            <span className="font-medium text-right max-w-[130px]">{pkm.kawasanPantai}</span>
+                          </div>
+                        )}
+                        {pkm.bidangCore && pkm.bidangCore.length > 0 && (
+                          <div className="pt-1">
+                            <span className="text-gray-500">Bidang/Core:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {pkm.bidangCore.map(b => (
+                                <span
+                                  key={b}
+                                  className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full"
+                                >
+                                  {b}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Lokasi</span>
+                          <span className="font-mono text-[10px]">{lat.toFixed(4)}, {lng.toFixed(4)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
 
             {/* Benthic layer — Polygon GeoJSON colored per class */}
             {showBenthic && benthicData && (
@@ -693,38 +1366,217 @@ export default function PetaPublik() {
                 }}
               />
             )}
+
+            {showMhi && mhiData && (
+              <GeoJSON
+                key="mhi-mangrove"
+                data={mhiData}
+                style={(feature) => {
+                  const cls = feature?.properties?.mhiClass ?? 'Unknown';
+                  const color = feature?.properties?.color ?? MHI_COLORS[cls] ?? MHI_DEFAULT_COLOR;
+                  return {
+                    color: '#1f2937',
+                    fillColor: color,
+                    fillOpacity: 0.58,
+                    weight: 0.25,
+                    opacity: 0.45,
+                  };
+                }}
+                onEachFeature={(feature, layer) => {
+                  const area = Number(feature.properties?.areaHa);
+                  const areaText = Number.isFinite(area) && area > 0
+                    ? `${area.toLocaleString('id-ID', { maximumFractionDigits: 2 })} ha`
+                    : '-';
+                  layer.bindPopup(
+                    `<div style="font-size:12px;min-width:180px">
+                      <strong>MHI Mangrove 2024</strong><br/>
+                      Wilayah: ${feature.properties?.wilayah ?? '-'}<br/>
+                      Kategori: ${feature.properties?.mhiClass ?? '-'}<br/>
+                      Luas: ${areaText}
+                    </div>`,
+                  );
+                }}
+              />
+            )}
+
+            {showPolaruang && polaruangData && (
+              <GeoJSON
+                key="polaruang"
+                data={polaruangData}
+                style={(feature) => ({
+                  color: '#78350f',
+                  fillColor: feature?.properties?.color ?? '#d97706',
+                  fillOpacity: 0.45,
+                  weight: 0.5,
+                  opacity: 0.7,
+                })}
+                onEachFeature={(feature, layer) => {
+                  layer.bindPopup(
+                    `<div style="font-size:12px;min-width:180px">
+                      <strong>Pola Ruang Pemanfaatan</strong><br/>
+                      Zona: ${feature.properties?.zone ?? '-'}<br/>
+                      Kode: ${feature.properties?.kodkws ?? '-'}<br/>
+                      Jenis: ${feature.properties?.jenis ?? '-'}
+                    </div>`,
+                  );
+                }}
+              />
+            )}
+
+            {rtrwData && showRtrw && (
+              <GeoJSON
+                key="rtrw-jawa-timur"
+                data={rtrwData}
+                style={rtrwFeatureStyle}
+                onEachFeature={(feature, layer) => {
+                  layer.bindPopup(
+                    `<div style="font-size:12px;min-width:180px">
+                      <strong>RTRW</strong><br/>
+                      Zona: ${feature.properties?.name ?? feature.properties?.zone ?? '-'}
+                    </div>`,
+                  );
+                }}
+              />
+            )}
+
+            {showKonservasi && konservasiData && (
+              <GeoJSON
+                key="konservasi"
+                data={konservasiData}
+                style={(feature) => ({
+                  color: '#14532d',
+                  fillColor: feature?.properties?.color ?? '#15803d',
+                  fillOpacity: 0.45,
+                  weight: 0.5,
+                  opacity: 0.7,
+                })}
+                onEachFeature={(feature, layer) => {
+                  layer.bindPopup(
+                    `<div style="font-size:12px;min-width:180px">
+                      <strong>Kawasan Konservasi</strong><br/>
+                      Zona: ${feature.properties?.zone ?? '-'}<br/>
+                      Kode: ${feature.properties?.kodkws ?? '-'}<br/>
+                      Jenis: ${feature.properties?.jenis ?? '-'}
+                    </div>`,
+                  );
+                }}
+              />
+            )}
           </MapContainer>
 
           {benthicLoading && (
-            <div className="absolute top-3 left-3 z-[999] px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 bg-white/95 backdrop-blur shadow-sm text-cyan-700 border border-cyan-200">
-              <span className="w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+            <div className="absolute left-4 top-4 z-[999] flex items-center gap-2 rounded-full border border-white/30 bg-white/90 px-3 py-2 text-xs font-semibold text-cyan-800 shadow-md backdrop-blur">
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-cyan-500 border-t-transparent" />
               Memuat data benthic...
             </div>
           )}
 
-          {/* ── FLOATING RIGHT CONTROLS — order: Map type → Layer → Zoom ── */}
-          <div className="absolute top-14 right-3 z-[1000] flex flex-col items-end gap-2">
+          {mhiLoading && (
+            <div className="absolute left-4 top-16 z-[999] flex items-center gap-2 rounded-full border border-white/30 bg-white/90 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-md backdrop-blur">
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+              Memuat data MHI...
+            </div>
+          )}
 
-            {/* 1. Map type dropdown (top) */}
+          {polaruangLoading && (
+            <div className="absolute left-4 top-28 z-[999] flex items-center gap-2 rounded-full border border-white/30 bg-white/90 px-3 py-2 text-xs font-semibold text-amber-800 shadow-md backdrop-blur">
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+              Memuat pola ruang...
+            </div>
+          )}
+
+          {rtrwLoading && (
+            <div className="absolute left-4 top-40 z-[999] flex items-center gap-2 rounded-full border border-white/30 bg-white/90 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-md backdrop-blur">
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+              Memuat layer RTRW...
+            </div>
+          )}
+
+          {konservasiLoading && (
+            <div className="absolute left-4 top-40 z-[999] flex items-center gap-2 rounded-full border border-white/30 bg-white/90 px-3 py-2 text-xs font-semibold text-green-800 shadow-md backdrop-blur">
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
+              Memuat konservasi...
+            </div>
+          )}
+
+          <div className="absolute left-4 top-20 z-[1000] w-[calc(100%-2rem)] sm:w-80">
+            <button
+              type="button"
+              onClick={() => {
+                setCoordinateInputOpen(open => !open);
+                setCoordinateInputError('');
+                setLayerMenuOpen(false);
+                setMapTypeMenuOpen(false);
+              }}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-700 shadow-lg shadow-slate-900/5 backdrop-blur transition-colors hover:bg-emerald-50 hover:text-emerald-700"
+              aria-expanded={coordinateInputOpen}
+            >
+              <LocateFixed className="h-4 w-4 text-emerald-700" />
+              Input Koordinat
+            </button>
+
+            {coordinateInputOpen && (
+              <form
+                onSubmit={event => {
+                  event.preventDefault();
+                  goToCoordinates();
+                }}
+                className="mt-2 rounded-xl border border-slate-200 bg-white p-3 shadow-xl"
+              >
+                <label htmlFor="map-coordinate-input" className="mb-1.5 block text-xs font-semibold text-slate-700">
+                  Latitude, longitude
+                </label>
+                <input
+                  id="map-coordinate-input"
+                  autoFocus
+                  value={coordinateInput}
+                  onChange={event => {
+                    setCoordinateInput(event.target.value);
+                    if (coordinateInputError) setCoordinateInputError('');
+                  }}
+                  placeholder="-8.123456, 112.123456"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                />
+                {coordinateInputError && <p className="mt-1.5 text-xs text-rose-600">{coordinateInputError}</p>}
+                <div className="mt-3 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCoordinateInputOpen(false);
+                      setCoordinateInputError('');
+                    }}
+                    className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100"
+                  >
+                    Batal
+                  </button>
+                  <button type="submit" className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-800">
+                    Tuju lokasi
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+
+          <div className="absolute right-4 top-20 z-[1000] flex flex-col items-end gap-3">
             <div className="relative">
               <button
                 onClick={() => { setMapTypeMenuOpen(o => !o); setLayerMenuOpen(false); }}
-                className="flex items-center gap-2 pl-3 pr-2 py-2 rounded-xl bg-white/95 backdrop-blur shadow-md border border-slate-200 text-xs font-semibold text-slate-700 hover:border-emerald-400 transition-all min-w-[140px]"
+                className="flex min-w-[180px] items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-4 py-3 text-left text-sm font-semibold text-slate-700 shadow-lg shadow-slate-900/5 backdrop-blur"
               >
                 {(() => {
                   const cur = MAP_LAYERS.find(l => l.id === activeMapLayer) ?? MAP_LAYERS[0];
                   const Icon = cur.icon;
                   return (
                     <>
-                      <Icon className="w-3.5 h-3.5 text-sky-600" />
-                      <span className="flex-1 text-left">{cur.label}</span>
+                      <Icon className="h-4 w-4 text-emerald-700" />
+                      <span className="flex-1">{cur.label}</span>
                     </>
                   );
                 })()}
-                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${mapTypeMenuOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${mapTypeMenuOpen ? 'rotate-180' : ''}`} />
               </button>
               {mapTypeMenuOpen && (
-                <div className="absolute right-0 mt-1.5 w-44 rounded-xl bg-white shadow-xl border border-slate-200 overflow-hidden">
+                <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
                   {MAP_LAYERS.map(l => {
                     const Icon = l.icon;
                     const isActive = activeMapLayer === l.id;
@@ -732,11 +1584,11 @@ export default function PetaPublik() {
                       <button
                         key={l.id}
                         onClick={() => { setActiveMapLayer(l.id); setMapTypeMenuOpen(false); }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                        className="flex w-full items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-50"
                       >
-                        <Icon className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                        <Icon className="h-4 w-4 text-slate-500" />
                         <span className="flex-1 text-left">{l.label}</span>
-                        {isActive && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                        {isActive && <Check className="h-4 w-4 text-emerald-700" />}
                       </button>
                     );
                   })}
@@ -744,146 +1596,270 @@ export default function PetaPublik() {
               )}
             </div>
 
-            {/* 2. Layer filter dropdown (right under Map type) */}
             <div className="relative">
               <button
                 onClick={() => { setLayerMenuOpen(o => !o); setMapTypeMenuOpen(false); }}
-                className="flex items-center gap-2 pl-3 pr-2 py-2 rounded-xl bg-white/95 backdrop-blur shadow-md border border-slate-200 text-xs font-semibold text-slate-700 hover:border-emerald-400 transition-all min-w-[140px]"
+                className="flex min-w-[180px] items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-4 py-3 text-left text-sm font-semibold text-slate-700 shadow-lg shadow-slate-900/5 backdrop-blur"
               >
-                <Layers className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="flex-1 text-left">
-                  {LAYER_OPTIONS.find(l => l.val === activeLayerFilter)?.label}
-                </span>
-                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${layerMenuOpen ? 'rotate-180' : ''}`} />
+                <Layers className="h-4 w-4 text-emerald-700" />
+                <span className="flex-1">{layerControlLabel}</span>
+                <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${layerMenuOpen ? 'rotate-180' : ''}`} />
               </button>
               {layerMenuOpen && (
-                <div className="absolute right-0 mt-1.5 w-44 rounded-xl bg-white shadow-xl border border-slate-200 overflow-hidden">
-                  {LAYER_OPTIONS.map(opt => {
-                    const isActive = activeLayerFilter === opt.val;
+                <div className="absolute right-0 mt-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+                  <label className="flex cursor-pointer items-center gap-3 border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    <input
+                      type="checkbox"
+                      checked={allLayersSelected}
+                      onChange={toggleAllLayers}
+                      className="h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
+                    />
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: '#64748b' }} />
+                    <span>Semua Layer</span>
+                  </label>
+                  {DATA_LAYER_OPTIONS.map(opt => {
+                    const isSelected = isLayerSelected(opt.val);
                     return (
-                      <button
-                        key={opt.val}
-                        onClick={() => {
-                          setActiveLayerFilter(opt.val);
-                          setSelectedId(null);
-                          setSelectedType(null);
-                          setLayerMenuOpen(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                      >
-                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: opt.color }} />
-                        <span className="flex-1 text-left">{opt.label}</span>
-                        {isActive && <Check className="w-3.5 h-3.5 text-emerald-600" />}
-                      </button>
+                      <label key={opt.val} className="flex cursor-pointer items-center gap-3 px-4 py-3 text-sm text-slate-700 transition-colors hover:bg-slate-50">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleLayer(opt.val)}
+                          className="h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
+                        />
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: opt.color }} />
+                        <span className="flex-1">{opt.label}</span>
+                      </label>
                     );
                   })}
                 </div>
               )}
             </div>
 
-            {/* 3. Zoom controls (bottom) */}
-            <div className="flex flex-col rounded-xl bg-white/95 backdrop-blur shadow-md border border-slate-200 overflow-hidden">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white/90 shadow-lg shadow-slate-900/5 backdrop-blur">
               <button
                 onClick={() => mapInstance?.zoomIn()}
-                className="flex items-center justify-center w-9 h-9 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors border-b border-slate-200"
+                className="flex h-11 w-11 items-center justify-center border-b border-slate-200 text-slate-800 transition-colors hover:bg-emerald-50 hover:text-emerald-700"
                 title="Zoom in"
                 aria-label="Zoom in"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="h-5 w-5" />
               </button>
               <button
                 onClick={() => mapInstance?.zoomOut()}
-                className="flex items-center justify-center w-9 h-9 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                className="flex h-11 w-11 items-center justify-center text-slate-800 transition-colors hover:bg-emerald-50 hover:text-emerald-700"
                 title="Zoom out"
                 aria-label="Zoom out"
               >
-                <Minus className="w-4 h-4" />
+                <Minus className="h-5 w-5" />
               </button>
             </div>
+
+            <button
+              onClick={() => mapInstance?.locate({ setView: true, enableHighAccuracy: true })}
+              className="overflow-hidden rounded-xl border border-slate-200 bg-white/90 p-3 text-slate-800 shadow-lg shadow-slate-900/5 backdrop-blur transition-colors hover:bg-emerald-50 hover:text-emerald-700"
+              title="Lokasi saya"
+              aria-label="Lokasi saya"
+            >
+              <LocateFixed className="h-5 w-5" />
+            </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (mapCoordinates) {
+                void navigator.clipboard?.writeText(`${mapCoordinates[0].toFixed(6)}, ${mapCoordinates[1].toFixed(6)}`);
+              }
+            }}
+            title="Koordinat mengikuti kursor atau klik peta. Klik untuk menyalin."
+            className="absolute bottom-6 left-6 z-[998] flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-[12px] font-medium text-slate-700 shadow-lg backdrop-blur transition-colors hover:bg-emerald-50"
+          >
+            <span className="flex items-center gap-2 border-r border-slate-200 pr-3">
+              <Layers className="h-3.5 w-3.5 text-slate-500" />
+              {MAP_LAYERS.find(layer => layer.id === activeMapLayer)?.label ?? 'Basemap'}
+            </span>
+            <span>
+              {mapCoordinates
+                ? `${mapCoordinates[0].toFixed(6)}, ${mapCoordinates[1].toFixed(6)}`
+                : 'Arahkan kursor ke peta'}
+            </span>
+          </button>
         </div>
 
-        {/* ── PANEL TOGGLE BUTTON (floating, desktop) ── */}
-        <button
-          onClick={() => setPanelOpen(o => !o)}
-          className="absolute top-3 right-3 z-[998] hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white/95 backdrop-blur shadow-sm text-slate-600 hover:text-slate-800 border border-slate-200"
-          title={panelOpen ? 'Sembunyikan panel' : 'Tampilkan panel'}
-        >
-          <PanelRight className={`w-3.5 h-3.5 transition-transform ${panelOpen ? 'rotate-180' : ''}`} />
-          <span className="hidden md:inline">{panelOpen ? 'Tutup' : 'Panel'}</span>
-        </button>
+        {/* Tombol tampilkan legenda — muncul saat panel ditutup */}
+        {!panelOpen && (
+          <button
+            onClick={() => setPanelOpen(true)}
+            className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 z-[997] flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-slate-200 bg-[#dbe5f7]/95 px-2.5 py-4 text-[10px] font-semibold text-slate-700 shadow-xl backdrop-blur-sm transition-colors hover:bg-emerald-50 hover:text-emerald-700"
+            title="Tampilkan panel legenda"
+          >
+            <Layers className="h-4 w-4 text-emerald-700" />
+            <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.08em' }}>Legenda</span>
+          </button>
+        )}
 
-        {/* ── RIGHT SIDEBAR ── Desktop inline */}
         {panelOpen && (
-        <div className="hidden sm:flex w-64 md:w-72 flex-shrink-0 flex-col border-l border-slate-200 overflow-y-auto" style={{ background: '#ffffff' }}>
-
-          {/* Legend */}
-          <div className="px-4 py-3 border-b border-slate-200">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-600 mb-3">
-              <Layers className="w-4 h-4 text-teal-400" /> Legenda
-            </div>
-
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Titik Mangrove</p>
-            <div className="space-y-1.5 mb-3">
-              {Object.entries(MANGROVE_STATUS_COLORS).map(([s, color]) => (
-                <div key={s} className="flex items-center gap-2.5">
-                  <div className="rounded-full flex-shrink-0"
-                    style={{ width: MANGROVE_RADIUS[s] * 1.6, height: MANGROVE_RADIUS[s] * 1.6, background: color, opacity: 0.85 }} />
-                  <span className="text-xs capitalize text-slate-700">{s}</span>
+          <aside className="hidden w-[380px] flex-shrink-0 flex-col overflow-hidden border-l border-slate-200 bg-[#dbe5f7]/95 shadow-2xl shadow-slate-900/10 backdrop-blur sm:flex lg:w-[420px]">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div className="flex items-center gap-3">
+                <Layers className="h-5 w-5 text-emerald-700" />
+                <div>
+                  <h2 className="text-[18px] font-semibold text-slate-900">Legenda</h2>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-700">Konfigurasi visualisasi</p>
                 </div>
-              ))}
+              </div>
+              <button
+                onClick={() => setPanelOpen(false)}
+                className="flex items-center gap-2 rounded-xl bg-[#d6e2ff] px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-[#cfdcff]"
+                title={panelOpen ? 'Sembunyikan panel' : 'Tampilkan panel'}
+              >
+                <X className="h-4 w-4" />
+                Tutup
+              </button>
             </div>
 
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Titik Abrasi / Rekomendasi</p>
-            <div className="space-y-1.5 mb-3">
-              {Object.entries(ABRASI_PRIORITAS_COLORS).map(([p, color]) => (
-                <div key={p} className="flex items-center gap-2">
-                  <div className="text-sm">🌿</div>
-                  <span className="text-xs text-slate-700">{p}</span>
-                  <div className="w-2 h-2 rounded-full ml-auto" style={{ background: color }} />
-                </div>
-              ))}
-            </div>
+            <div className="overflow-y-auto px-4 py-4">
+              <div className="space-y-4">
 
-            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Pendaratan Penyu</p>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="text-sm">🐢</div>
-              <span className="text-xs text-slate-700">Titik pendaratan penyu laut</span>
-            </div>
 
-            {/* Kelas Benthic legend (visible when benthic layer active or 'all') */}
-            {showBenthic && (
-              <>
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Kelas Benthic</p>
-                <div className="space-y-1.5">
-                  {BENTHIC_ORDER.map((cls) => (
-                    <div key={cls} className="flex items-center gap-2">
-                      <span
-                        className="w-3 h-3 rounded-sm flex-shrink-0"
-                        style={{ background: BENTHIC_COLORS[cls] ?? BENTHIC_DEFAULT_COLOR }}
-                      />
-                      <span className="text-xs text-slate-700 flex-1">{cls}</span>
-                      {benthicCounts && (
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          {(benthicCounts[cls] ?? 0).toLocaleString()}
-                        </span>
-                      )}
+                <section>
+                  <div className="mb-4 flex items-center gap-2 text-slate-800">
+                    <span className="h-5 w-1 rounded-full bg-orange-700" />
+                    <span className="text-base font-medium uppercase tracking-tight">Titik Abrasi / Rekomendasi</span>
+                  </div>
+                  <div className="space-y-4 px-1">
+                    {Object.entries(ABRASI_PRIORITAS_COLORS).map(([p, color]) => (
+                      <div key={p} className="flex items-center gap-3 text-[15px] text-slate-800">
+                        <span className="text-lg leading-none text-emerald-700">🌲</span>
+                        <span className="flex-1">{p}</span>
+                        <div className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section>
+                  <div className="mb-4 text-base font-medium uppercase tracking-tight text-slate-800">Pendaratan Penyu</div>
+                  <div className="flex items-center gap-3 px-1 text-[15px] text-slate-800">
+                    <Waves className="h-5 w-5 text-emerald-700" />
+                    <span>Titik pendaratan penyu laut</span>
+                  </div>
+                </section>
+
+                {showMhi && (
+                  <section>
+                    <div className="mb-4 flex items-center gap-2 text-slate-800">
+                      <span className="h-5 w-1 rounded-full bg-emerald-800" />
+                      <span className="text-base font-medium uppercase tracking-tight">MHI Mangrove</span>
                     </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+                    <div className="overflow-hidden rounded-2xl border border-white/70 bg-white/65 shadow-sm">
+                      <table className="w-full text-left text-sm">
+                        <tbody>
+                          {MHI_ORDER.map((cls, index) => (
+                            <tr key={cls} className={index !== MHI_ORDER.length - 1 ? 'border-b border-slate-100' : ''}>
+                              <td className="px-4 py-4">
+                                <div className="flex items-center gap-4">
+                                  <span className="h-4 w-4 rounded-sm border border-slate-300" style={{ background: MHI_COLORS[cls] ?? MHI_DEFAULT_COLOR }} />
+                                  <span className="text-slate-900">{cls}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-right font-medium text-slate-500">
+                                {mhiCounts ? (mhiCounts[cls] ?? 0).toLocaleString() : '0'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                )}
 
-          {/* Unduh Data — sudah dipindah ke tombol dropdown di top toolbar.
-              Hint kecil untuk user yang belum login agar tahu fitur tersedia. */}
-          {!user && (
-            <div className="px-4 py-3 border-b border-slate-200">
-              <p className="text-[11px] text-slate-500 text-center leading-relaxed">
-                🔒 Login dulu untuk mengunduh data peta (PDF / GeoJSON).
-              </p>
+                {showBenthic && (
+                  <section>
+                    <div className="mb-4 flex items-center gap-2 text-slate-800">
+                      <span className="h-5 w-1 rounded-full bg-blue-600" />
+                      <span className="text-base font-medium uppercase tracking-tight">Kelas Benthic</span>
+                    </div>
+                    <div className="overflow-hidden rounded-2xl border border-white/70 bg-white/65 shadow-sm">
+                      <table className="w-full text-left text-sm">
+                        <tbody>
+                          {BENTHIC_ORDER.map((cls, index) => (
+                            <tr key={cls} className={index !== BENTHIC_ORDER.length - 1 ? 'border-b border-slate-100' : ''}>
+                              <td className="px-4 py-4">
+                                <div className="flex items-center gap-4">
+                                  <span className="h-4 w-4 rounded-sm border border-slate-300" style={{ background: BENTHIC_COLORS[cls] ?? BENTHIC_DEFAULT_COLOR }} />
+                                  <span className="text-slate-900">{cls}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-right font-medium text-slate-500">
+                                {benthicCounts ? (benthicCounts[cls] ?? 0).toLocaleString() : '0'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                )}
+
+                {showPolaruang && polaruangData && (
+                  <section>
+                    <div className="mb-4 flex items-center gap-2 text-slate-800">
+                      <span className="h-5 w-1 rounded-full bg-amber-500" />
+                      <span className="text-base font-medium uppercase tracking-tight">Pola Ruang Pemanfaatan</span>
+                    </div>
+                    <div className="overflow-hidden rounded-2xl border border-white/70 bg-white/65 shadow-sm">
+                      <table className="w-full text-left text-sm">
+                        <tbody>
+                          {polaruangZones.map(([zone, color], index) => (
+                            <tr key={zone} className={index !== polaruangZones.length - 1 ? 'border-b border-slate-100' : ''}>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-4">
+                                  <span className="h-4 w-4 flex-shrink-0 rounded-sm border border-slate-300" style={{ background: color }} />
+                                  <span className="text-slate-900">{zone}</span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                )}
+
+                {showKonservasi && konservasiData && (
+                  <section>
+                    <div className="mb-4 flex items-center gap-2 text-slate-800">
+                      <span className="h-5 w-1 rounded-full bg-green-700" />
+                      <span className="text-base font-medium uppercase tracking-tight">Kawasan Konservasi</span>
+                    </div>
+                    <div className="overflow-hidden rounded-2xl border border-white/70 bg-white/65 shadow-sm">
+                      <table className="w-full text-left text-sm">
+                        <tbody>
+                          {konservasiZones.map(([zone, color], index) => (
+                            <tr key={zone} className={index !== konservasiZones.length - 1 ? 'border-b border-slate-100' : ''}>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-4">
+                                  <span className="h-4 w-4 flex-shrink-0 rounded-sm border border-slate-300" style={{ background: color }} />
+                                  <span className="text-slate-900">{zone}</span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                )}
+              </div>
             </div>
-          )}
+
+            {!user && (
+              <div className="border-t border-slate-200 px-4 py-4 text-center text-[12px] text-slate-700">
+                Login untuk mengunduh data peta.
+              </div>
+            )}
 
           {/* Selected location detail */}
           {selectedMangrove && (
@@ -967,14 +1943,36 @@ export default function PetaPublik() {
                 <InfoRow label="Koordinat">
                   <span className="text-[10px] text-slate-500 font-mono">{selectedPenyu.lat.toFixed(4)}, {selectedPenyu.lng.toFixed(4)}</span>
                 </InfoRow>
+                {(selectedPenyu as any).sarangPoints?.length > 0 && (
+                  <div className="pt-2 border-t border-slate-100">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase mb-2">
+                      Titik Bulk Petugas ({(selectedPenyu as any).sarangPoints.length})
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(selectedPenyu as any).sarangPoints.slice(0, 14).map((point: any, idx: number) => (
+                        <div key={point.id} className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+                          {point.fotoUrl ? (
+                            <img src={point.fotoUrl} alt={`Titik ${idx + 1}`} className="w-full h-16 object-cover" />
+                          ) : (
+                            <div className="w-full h-16 bg-amber-50 flex items-center justify-center text-xs font-bold text-amber-700">#{idx + 1}</div>
+                          )}
+                          <div className="px-2 py-1">
+                            <div className="text-[10px] font-bold text-slate-700">Titik #{idx + 1}</div>
+                            <div className="text-[9px] text-slate-400 font-mono">{point.latNum.toFixed(4)}, {point.lngNum.toFixed(4)}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </DetailPanel>
           )}
 
           {/* No selection: collapsible category lists */}
           {!selectedId && (
-            <div className="flex-1 flex flex-col px-3 py-3 overflow-y-auto">
-              {(activeLayerFilter === 'all' || activeLayerFilter === 'mangrove') && (
+            <div className="flex-1 space-y-3 overflow-y-auto border-t border-slate-200 px-4 py-4">
+              {showMangrove && (
                 <CategorySection
                   icon="🌿"
                   title="Mangrove"
@@ -984,16 +1982,16 @@ export default function PetaPublik() {
                   {mangroveFiltered.map(loc => (
                     <button key={loc.id}
                       onClick={() => { setSelectedId(loc.id); setSelectedType('mangrove'); }}
-                      className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-slate-50 transition-colors">
-                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: MANGROVE_STATUS_COLORS[loc.status] }} />
-                      <span className="truncate text-slate-600">{loc.name}</span>
-                      <span className="ml-auto text-slate-400 flex-shrink-0 text-[10px]">{loc.areaHa.toLocaleString()} ha</span>
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/55">
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: MANGROVE_STATUS_COLORS[loc.status] }} />
+                      <span className="truncate text-slate-700 font-medium">{loc.name}</span>
+                      <span className="ml-auto text-slate-400 flex-shrink-0 text-xs">{loc.areaHa.toLocaleString()} ha</span>
                     </button>
                   ))}
                 </CategorySection>
               )}
 
-              {(activeLayerFilter === 'all' || activeLayerFilter === 'abrasi') && (
+              {showAbrasi && (
                 <CategorySection
                   icon="🌊"
                   title="Abrasi / Rekomendasi"
@@ -1003,17 +2001,17 @@ export default function PetaPublik() {
                   {allAbrasi.map(abr => (
                     <button key={abr.id}
                       onClick={() => { setSelectedId(abr.id); setSelectedType('abrasi'); }}
-                      className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-slate-50 transition-colors">
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/55">
                       <span className="flex-shrink-0">🌿</span>
-                      <span className="truncate text-slate-600">{abr.namaPantai}</span>
-                      <span className="ml-auto text-[10px] flex-shrink-0 font-bold"
+                      <span className="truncate text-slate-700 font-medium">{abr.namaPantai}</span>
+                      <span className="ml-auto text-xs flex-shrink-0 font-bold"
                         style={{ color: ABRASI_PRIORITAS_COLORS[abr.prioritas] }}>{abr.skorRisiko}/10</span>
                     </button>
                   ))}
                 </CategorySection>
               )}
 
-              {(activeLayerFilter === 'all' || activeLayerFilter === 'penyu') && (
+              {showPenyu && (
                 <CategorySection
                   icon="🐢"
                   title="Pendaratan Penyu"
@@ -1023,17 +2021,17 @@ export default function PetaPublik() {
                   {allPenyu.map(pny => (
                     <button key={pny.id}
                       onClick={() => { setSelectedId(pny.id); setSelectedType('penyu'); }}
-                      className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs hover:bg-slate-50 transition-colors">
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/55">
                       <span className="flex-shrink-0">🐢</span>
-                      <span className="truncate text-slate-600">{pny.namaPantai}</span>
-                      <span className="ml-auto text-teal-500 flex-shrink-0 text-[10px]">{pny.sarang} sarang</span>
+                      <span className="truncate text-slate-700 font-medium">{pny.namaPantai}</span>
+                      <span className="ml-auto text-teal-500 flex-shrink-0 text-xs">{pny.sarang} sarang</span>
                     </button>
                   ))}
                 </CategorySection>
               )}
             </div>
           )}
-        </div>
+          </aside>
         )}
 
         {/* ── RIGHT SIDEBAR ── Mobile overlay */}
@@ -1050,51 +2048,150 @@ export default function PetaPublik() {
 
             {/* Legend */}
             <div className="px-4 py-3 border-b border-slate-200">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-600 mb-3">
-                <Layers className="w-4 h-4 text-teal-400" /> Legenda
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
+                <Layers className="w-4 h-4 text-teal-500" /> Legenda
               </div>
-              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Titik Mangrove</p>
-              <div className="space-y-1.5 mb-3">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Titik Mangrove</p>
+              <div className="space-y-2 mb-4">
                 {Object.entries(MANGROVE_STATUS_COLORS).map(([s, color]) => (
-                  <div key={s} className="flex items-center gap-2.5">
+                  <div key={s} className="flex items-center gap-3">
                     <div className="rounded-full flex-shrink-0"
                       style={{ width: MANGROVE_RADIUS[s] * 1.6, height: MANGROVE_RADIUS[s] * 1.6, background: color, opacity: 0.85 }} />
-                    <span className="text-xs capitalize text-slate-700">{s}</span>
+                    <span className="text-sm capitalize text-slate-700 font-medium">{s}</span>
                   </div>
                 ))}
               </div>
-              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Titik Abrasi / Rekomendasi</p>
-              <div className="space-y-1.5 mb-3">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Titik Abrasi / Rekomendasi</p>
+              <div className="space-y-2 mb-4">
                 {Object.entries(ABRASI_PRIORITAS_COLORS).map(([p, color]) => (
-                  <div key={p} className="flex items-center gap-2">
+                  <div key={p} className="flex items-center gap-2.5">
                     <div className="text-sm">🌿</div>
-                    <span className="text-xs text-slate-700">{p}</span>
-                    <div className="w-2 h-2 rounded-full ml-auto" style={{ background: color }} />
+                    <span className="text-sm text-slate-700 font-medium">{p}</span>
+                    <div className="w-2.5 h-2.5 rounded-full ml-auto" style={{ background: color }} />
                   </div>
                 ))}
               </div>
-              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Pendaratan Penyu</p>
-              <div className="flex items-center gap-2 mb-3">
+              <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Pendaratan Penyu</p>
+              <div className="flex items-center gap-2.5 mb-4">
                 <div className="text-sm">🐢</div>
-                <span className="text-xs text-slate-700">Titik pendaratan penyu laut</span>
+                <span className="text-sm text-slate-700 font-medium">Titik pendaratan penyu laut</span>
               </div>
+
+              {showPokmaswas && (
+                <div className="mb-4 pt-3 border-t border-slate-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-4 h-4 rounded-full bg-purple-600 border-2 border-white flex-shrink-0 flex items-center justify-center text-[8px]">👤</div>
+                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Profil Pokmaswas</p>
+                    <Info className="w-3 h-3 text-purple-400 ml-auto" />
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed mb-2">
+                    Kelompok Masyarakat Pengawas Konservasi. Klik kategori untuk memfilter marker.
+                  </p>
+                  <p className="text-[10px] font-semibold text-purple-700 mb-1">Ruang Lingkup</p>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {RUANG_LINGKUP_OPTIONS.map(o => (
+                      <button
+                        key={o}
+                        onClick={() => setFilterRuangLingkup(filterRuangLingkup === o ? 'semua' : o)}
+                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                          filterRuangLingkup === o
+                            ? 'bg-purple-600 text-white border-purple-600'
+                            : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                        }`}
+                      >
+                        {o}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] font-semibold text-purple-700 mb-1">Bidang / Core</p>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {BIDANG_CORE_OPTIONS.map(o => (
+                      <button
+                        key={o}
+                        onClick={() => setFilterBidangCore(filterBidangCore === o ? 'semua' : o)}
+                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                          filterBidangCore === o
+                            ? 'bg-purple-600 text-white border-purple-600'
+                            : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                        }`}
+                      >
+                        {o}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] font-semibold text-purple-700 mb-1">Kawasan Pantai</p>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    Segmen pantai tempat kelompok beroperasi (isian bebas per entri).
+                  </p>
+                </div>
+              )}
+
+              {showMhi && (
+                <>
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">MHI Mangrove</p>
+                  <div className="space-y-2 mb-4">
+                    {MHI_ORDER.map((cls) => (
+                      <div key={cls} className="flex items-center gap-2.5">
+                        <span
+                          className="w-3.5 h-3.5 rounded-sm flex-shrink-0"
+                          style={{ background: MHI_COLORS[cls] ?? MHI_DEFAULT_COLOR }}
+                        />
+                        <span className="text-sm text-slate-700 font-medium flex-1">{cls}</span>
+                        {mhiCounts && (
+                          <span className="text-xs text-slate-400 font-semibold">
+                            {(mhiCounts[cls] ?? 0).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
 
               {showBenthic && (
                 <>
-                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Kelas Benthic</p>
-                  <div className="space-y-1.5">
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Kelas Benthic</p>
+                  <div className="space-y-2">
                     {BENTHIC_ORDER.map((cls) => (
-                      <div key={cls} className="flex items-center gap-2">
+                      <div key={cls} className="flex items-center gap-2.5">
                         <span
-                          className="w-3 h-3 rounded-sm flex-shrink-0"
+                          className="w-3.5 h-3.5 rounded-sm flex-shrink-0"
                           style={{ background: BENTHIC_COLORS[cls] ?? BENTHIC_DEFAULT_COLOR }}
                         />
-                        <span className="text-xs text-slate-700 flex-1">{cls}</span>
+                        <span className="text-sm text-slate-700 font-medium flex-1">{cls}</span>
                         {benthicCounts && (
-                          <span className="text-[10px] text-slate-400 font-medium">
+                          <span className="text-xs text-slate-400 font-semibold">
                             {(benthicCounts[cls] ?? 0).toLocaleString()}
                           </span>
                         )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {showPolaruang && polaruangData && (
+                <>
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 mt-4">Pola Ruang Pemanfaatan</p>
+                  <div className="space-y-2">
+                    {polaruangZones.map(([zone, color]) => (
+                      <div key={zone} className="flex items-center gap-2.5">
+                        <span className="w-3.5 h-3.5 rounded-sm flex-shrink-0" style={{ background: color }} />
+                        <span className="text-sm text-slate-700 font-medium flex-1">{zone}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {showKonservasi && konservasiData && (
+                <>
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 mt-4">Kawasan Konservasi</p>
+                  <div className="space-y-2">
+                    {konservasiZones.map(([zone, color]) => (
+                      <div key={zone} className="flex items-center gap-2.5">
+                        <span className="w-3.5 h-3.5 rounded-sm flex-shrink-0" style={{ background: color }} />
+                        <span className="text-sm text-slate-700 font-medium flex-1">{zone}</span>
                       </div>
                     ))}
                   </div>
@@ -1160,7 +2257,7 @@ export default function PetaPublik() {
 
             {/* Location list — collapsible */}
             <div className="flex-1 flex flex-col px-3 py-3 overflow-y-auto">
-              {(activeLayerFilter === 'all' || activeLayerFilter === 'mangrove') && (
+              {showMangrove && (
                 <CategorySection
                   icon="🌿"
                   title="Mangrove"
@@ -1179,7 +2276,7 @@ export default function PetaPublik() {
                 </CategorySection>
               )}
 
-              {(activeLayerFilter === 'all' || activeLayerFilter === 'abrasi') && (
+              {showAbrasi && (
                 <CategorySection
                   icon="🌊"
                   title="Abrasi / Rekomendasi"
@@ -1199,7 +2296,7 @@ export default function PetaPublik() {
                 </CategorySection>
               )}
 
-              {(activeLayerFilter === 'all' || activeLayerFilter === 'penyu') && (
+              {showPenyu && (
                 <CategorySection
                   icon="🐢"
                   title="Pendaratan Penyu"
@@ -1222,8 +2319,8 @@ export default function PetaPublik() {
         </div>
         )}
 
-      </div>
-
+        </div>
+      </main>
     </div>
   );
 }
@@ -1266,17 +2363,17 @@ function CategorySection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="mb-1">
+    <div className="mb-1.5">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
+        className="w-full flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-colors"
         aria-expanded={open}
       >
-        <span className="text-sm leading-none">{icon}</span>
+        <span className="text-base leading-none">{icon}</span>
         <span className="flex-1 text-left">{title}</span>
-        <span className="text-[10px] font-bold" style={{ color: accent }}>({count})</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        <span className="text-xs font-bold" style={{ color: accent }}>({count})</span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
       <div
         className="overflow-hidden transition-all duration-200"

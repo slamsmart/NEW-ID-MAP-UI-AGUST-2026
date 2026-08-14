@@ -1,28 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-
-// Jika env belum diisi, client tetap dibuat tapi semua operasi akan gagal gracefully
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key',
-  {
-    auth: {
-      // This app currently uses EmailJS-based OTP, so don't auto-restore stale
-      // Supabase auth sessions from storage and trigger refresh-token errors.
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  },
-);
-
-export const isSupabaseConfigured = () =>
-  !!supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co' &&
-  !!supabaseAnonKey && supabaseAnonKey !== 'placeholder-key';
-
-// ── Types (mirror dari schema SQL) ──────────────────────────────────────────
+/** Shared DB shapes used by offline queue + Convex adapters (snake_case). */
 
 export interface DbLocation {
   id: string;
@@ -55,14 +31,12 @@ export interface DbSurvey {
   koordinat_lat: number | null;
   koordinat_lng: number | null;
   gps_accuracy: number | null;
-  // Ekosistem
   tutupan_tajuk: number | null;
   kerapatan_estimasi: number | null;
   spesies_dominan: string | null;
   spesies_lain: string | null;
   laju_regenerasi: string | null;
   kondisi_serasah: string | null;
-  // Lingkungan
   salinitas: number | null;
   ph: number | null;
   suhu: number | null;
@@ -70,21 +44,33 @@ export interface DbSurvey {
   substrat: string | null;
   elevasi: number | null;
   pasang_surut: string | null;
-  // Tekanan
   ancaman_utama: string[];
   jarak_pemukiman: number | null;
   luas_tambak_estimasi: number | null;
   aktivitas_manusia: string | null;
   status_tenurial: string | null;
-  // Catatan
   kondisi_umum: string | null;
   rekomendasi_lapangan: string | null;
-  // Pendaratan Penyu
   jenis_penyu?: string | null;
   jumlah_sarang?: number | null;
   status_perlindungan?: string | null;
   sarang_points?: Array<{ lat: string; lng: string; catatan?: string; waktu?: string; fotoUrl?: string }>;
-  // Sync
   sync_status: 'synced' | 'pending';
   photo_urls: string[];
+  foto_dokumentasi?: string | null;
+  google_maps_url?: string | null;
+  luasan_potensi?: number | null;
+  skor_potensi?: number | null;
+  aksesibilitas?: 'mudah' | 'sedang' | 'sulit' | null;
+  pengaruh_pasang?: string | null;
+  nama_pantai?: string | null;
+  tingkat_abrasi?: 'ringan' | 'sedang' | 'parah' | 'sangat_parah' | null;
+  panjang_terdampak?: number | null;
+  prioritas_abrasi?: 'Tinggi' | 'Sedang' | 'Rendah' | null;
+  kondisi_sebelum?: string | null;
+  kondisi_sesudah?: string | null;
+  verification_status?: 'pending' | 'approved' | 'rejected' | null;
+  verification_note?: string | null;
+  verified_by?: string | null;
+  verified_at?: string | null;
 }

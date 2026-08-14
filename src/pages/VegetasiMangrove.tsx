@@ -171,7 +171,7 @@ export default function VegetasiMangrove() {
   return (
     <div className="max-w-5xl mx-auto space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-white border border-gray-200 rounded-xl px-5 py-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-green-700 rounded-lg flex items-center justify-center">
             <Trees className="w-5 h-5 text-white" />
@@ -181,7 +181,7 @@ export default function VegetasiMangrove() {
             <p className="text-sm font-bold text-gray-800">Lokasi Vegetasi Mangrove</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() =>
               downloadCSV(
@@ -418,7 +418,7 @@ export default function VegetasiMangrove() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-center">
           <p className="text-lg font-bold text-green-700">{data.length}</p>
           <p className="text-xs text-gray-500">Total Titik Vegetasi</p>

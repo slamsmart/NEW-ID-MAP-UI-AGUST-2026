@@ -179,7 +179,7 @@ export const titikAbrasiData: TitikAbrasi[] = [
     koordinat: { lat: -8.462, lng: 112.648 },
     indikasi: 'Degradasi mangrove',
     kondisiSebelum: 'Mangrove alami cukup luas',
-    kondisiSesudah: 'Sebagian area rusak → direhabi­litasi',
+    kondisiSesudah: 'Sebagian area rusak → direhabilitasi',
     tanamanRekomendasi: [
       'Rhizophora apiculata',
       'Sonneratia alba',
@@ -189,6 +189,106 @@ export const titikAbrasiData: TitikAbrasi[] = [
     substrat: 'lumpur',
     ancamanUtama: ['Degradasi mangrove', 'Abrasi lokal'],
     skorRisiko: 6,
+  },
+  {
+    id: 'ABR-009',
+    namaPantai: 'Gatra',
+    kecamatan: 'Sumbermanjing Wetan',
+    kabKota: 'Kab. Malang',
+    provinsi: 'Jawa Timur',
+    koordinat: { lat: -8.443, lng: 112.673 },
+    indikasi: 'Abrasi + akresi',
+    kondisiSebelum: 'Pantai relatif stabil',
+    kondisiSesudah: 'Dinamika garis pantai tinggi',
+    tanamanRekomendasi: [
+      'Rhizophora mucronata',
+      'Cemara udang (Casuarina equisetifolia)',
+    ],
+    luasanRestorasi: { min: 0, max: 0, satuan: 'bagian CMC' },
+    prioritas: 'Sedang',
+    substrat: 'campuran',
+    ancamanUtama: ['Abrasi', 'Akresi', 'Dinamika garis pantai'],
+    skorRisiko: 6,
+  },
+  {
+    id: 'ABR-010',
+    namaPantai: 'Pantai Mini',
+    kecamatan: 'Sumbermanjing Wetan',
+    kabKota: 'Kab. Malang',
+    provinsi: 'Jawa Timur',
+    koordinat: { lat: -8.445, lng: 112.668 },
+    indikasi: 'Abrasi tertinggi',
+    kondisiSebelum: 'Vegetasi pesisir ada',
+    kondisiSesudah: 'Pantai menyempit signifikan',
+    tanamanRekomendasi: [
+      'Rhizophora stylosa',
+      'Avicennia marina',
+    ],
+    luasanRestorasi: { min: 0, max: 0, satuan: 'bagian CMC' },
+    prioritas: 'Tinggi',
+    substrat: 'campuran',
+    ancamanUtama: ['Abrasi tertinggi', 'Penyempitan pantai'],
+    skorRisiko: 9,
+  },
+  {
+    id: 'ABR-011',
+    namaPantai: 'Tiga Warna',
+    kecamatan: 'Sumbermanjing Wetan',
+    kabKota: 'Kab. Malang',
+    provinsi: 'Jawa Timur',
+    koordinat: { lat: -8.442, lng: 112.670 },
+    indikasi: 'Dinamika pantai',
+    kondisiSebelum: 'Ekosistem relatif sehat',
+    kondisiSesudah: 'Fluktuasi garis pantai',
+    tanamanRekomendasi: [
+      'Avicennia marina',
+      'Rhizophora mucronata',
+    ],
+    luasanRestorasi: { min: 0, max: 0, satuan: 'bagian CMC' },
+    prioritas: 'Rendah–Sedang',
+    substrat: 'campuran',
+    ancamanUtama: ['Dinamika pantai', 'Fluktuasi garis pantai'],
+    skorRisiko: 4,
+  },
+  {
+    id: 'ABR-012',
+    namaPantai: 'Goa China',
+    kecamatan: 'Sumbermanjing Wetan',
+    kabKota: 'Kab. Malang',
+    provinsi: 'Jawa Timur',
+    koordinat: { lat: -8.430, lng: 112.708 },
+    indikasi: 'Erosi pasir',
+    kondisiSebelum: 'Pantai berpasir luas',
+    kondisiSesudah: 'Bukit pasir menurun',
+    tanamanRekomendasi: [
+      'Pandan laut (Pandanus tectorius)',
+      'Spinifex littoreus',
+    ],
+    luasanRestorasi: { min: 10, max: 25, satuan: 'ha' },
+    prioritas: 'Sedang',
+    substrat: 'pasir',
+    ancamanUtama: ['Erosi pasir', 'Penurunan bukit pasir'],
+    skorRisiko: 6,
+  },
+  {
+    id: 'ABR-013',
+    namaPantai: 'Jonggring Saloko',
+    kecamatan: 'Ampelgading',
+    kabKota: 'Kab. Malang',
+    provinsi: 'Jawa Timur',
+    koordinat: { lat: -8.348, lng: 112.760 },
+    indikasi: 'Erosi tebing',
+    kondisiSebelum: 'Tebing relatif stabil',
+    kondisiSesudah: 'Longsoran & erosi lokal',
+    tanamanRekomendasi: [
+      'Ketapang (Terminalia catappa)',
+      'Waru laut (Hibiscus tiliaceus)',
+    ],
+    luasanRestorasi: { min: 5, max: 15, satuan: 'ha' },
+    prioritas: 'Rendah–Sedang',
+    substrat: 'berbatu',
+    ancamanUtama: ['Erosi tebing', 'Longsoran lokal'],
+    skorRisiko: 3,
   },
 ];
 
@@ -246,3 +346,48 @@ export function rekomendasiSpesiesBySubstrat(substrat: string): string[] {
       return ['Rhizophora apiculata', 'Avicennia marina'];
   }
 }
+
+/** Penjelasan jenis tanaman pesisir dari catatan PDF DKP Kab. Malang */
+export interface PenjelasanSpesies {
+  nama: string;
+  namaUmum: string;
+  deskripsi: string;
+}
+
+export const penjelasanSpesies: PenjelasanSpesies[] = [
+  {
+    nama: 'Rhizophora spp.',
+    namaUmum: 'bakau merah',
+    deskripsi: 'Akar tunjang kuat, sangat efektif meredam gelombang dan menahan sedimen.',
+  },
+  {
+    nama: 'Avicennia spp.',
+    namaUmum: 'api-api',
+    deskripsi: 'Memiliki akar napas (pneumatofor), cocok di zona yang sering tergenang.',
+  },
+  {
+    nama: 'Sonneratia spp.',
+    namaUmum: 'pedada',
+    deskripsi: 'Tahan salinitas tinggi dan gelombang, sering jadi pionir alami.',
+  },
+  {
+    nama: 'Bruguiera spp.',
+    namaUmum: 'tumu',
+    deskripsi: 'Akar lutut, membantu stabilisasi tanah bagian tengah zona mangrove.',
+  },
+  {
+    nama: 'Nypa fruticans',
+    namaUmum: 'nipah',
+    deskripsi: 'Cocok di daerah estuari/muara, membantu menahan aliran air dan sedimen.',
+  },
+];
+
+/** Catatan penting dari DKP Kab. Malang */
+export const catatanPentingAbrasi = {
+  ringkasan: 'Tidak semua pantai cocok untuk mangrove → pantai berkarang atau berombak besar langsung (open coast) lebih efektif memakai cemara laut & pandan.',
+  kondisiOptimalMangrove: [
+    'Muara sungai',
+    'Teluk terlindung',
+    'Laguna (contoh: Clungup, Sendang Biru)',
+  ],
+};

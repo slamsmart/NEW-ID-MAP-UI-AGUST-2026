@@ -5,7 +5,7 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis,
 } from 'recharts';
 import { Waves, Thermometer, Droplets, FlaskConical, ChevronDown } from 'lucide-react';
-import { mangroveLocations, lingkunganData } from '../data/mockData';
+import { mangroveLocations, lingkunganData } from '../data/seedData';
 import KPICard from '../components/shared/KPICard';
 import StatusBadge from '../components/shared/StatusBadge';
 
@@ -91,7 +91,7 @@ export default function AnalisisLingkungan() {
   return (
     <div className="space-y-6">
       {/* KPI Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           label="Rata-rata Salinitas"
           value={`${avgSalinitas}`}

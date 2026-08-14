@@ -1,5 +1,5 @@
 import { getAllSurveys } from '../lib/offlineQueue';
-import { type DbSurvey } from '../lib/supabase';
+import { type DbSurvey } from '../types/db';
 import { convex, isConvexConfigured } from '../lib/convexClient';
 import { api } from '../../convex/_generated/api';
 import type { MangroveLocation } from '../types';

@@ -2,12 +2,170 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+  .pl-safe { padding-left: env(safe-area-inset-left, 0px); }
+  .pr-safe { padding-right: env(safe-area-inset-right, 0px); }
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
+@keyframes scrolldown {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  40%  { opacity: 1; }
+  100% { transform: translateY(200%); opacity: 0; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes text-fade {
+  0%   { opacity: 0; filter: blur(4px); }
+  100% { opacity: 1; filter: blur(0); }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fade-in 0.55s ease-out both;
+  }
+  .animate-fade-up {
+    animation: fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .animate-fade-down {
+    animation: fade-down 0.45s ease-out both;
+  }
+  .animate-text-fade {
+    animation: text-fade 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Page-level wrapper */
+  .page-fade {
+    animation: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Text cascade: headings & body copy fade in with slight stagger */
+  .text-fade-scope h1,
+  .text-fade-scope h2,
+  .text-fade-scope h3,
+  .text-fade-scope h4 {
+    animation: text-fade 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .text-fade-scope h1 { animation-delay: 0.02s; }
+  .text-fade-scope h2 { animation-delay: 0.06s; }
+  .text-fade-scope h3 { animation-delay: 0.1s; }
+  .text-fade-scope h4 { animation-delay: 0.14s; }
+
+  .text-fade-scope p,
+  .text-fade-scope li,
+  .text-fade-scope label,
+  .text-fade-scope span,
+  .text-fade-scope td,
+  .text-fade-scope th {
+    animation: fade-in 0.5s ease-out both;
+  }
+
+  /* Stagger children (cards, rows) */
+  .fade-stagger > * {
+    animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .fade-stagger > *:nth-child(1)  { animation-delay: 0.03s; }
+  .fade-stagger > *:nth-child(2)  { animation-delay: 0.07s; }
+  .fade-stagger > *:nth-child(3)  { animation-delay: 0.11s; }
+  .fade-stagger > *:nth-child(4)  { animation-delay: 0.15s; }
+  .fade-stagger > *:nth-child(5)  { animation-delay: 0.19s; }
+  .fade-stagger > *:nth-child(6)  { animation-delay: 0.23s; }
+  .fade-stagger > *:nth-child(7)  { animation-delay: 0.27s; }
+  .fade-stagger > *:nth-child(8)  { animation-delay: 0.31s; }
+  .fade-stagger > *:nth-child(9)  { animation-delay: 0.35s; }
+  .fade-stagger > *:nth-child(10) { animation-delay: 0.39s; }
+  .fade-stagger > *:nth-child(n+11) { animation-delay: 0.42s; }
+}
+
+/* ── Scroll-reveal: elements start hidden, become visible via JS ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+/* Stagger helper — add delay via CSS var or inline style */
+.reveal-delay-1 { transition-delay: 0.10s; }
+.reveal-delay-2 { transition-delay: 0.20s; }
+.reveal-delay-3 { transition-delay: 0.30s; }
+.reveal-delay-4 { transition-delay: 0.40s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-fade-up,
+  .animate-fade-down,
+  .animate-text-fade,
+  .page-fade,
+  .text-fade-scope h1,
+  .text-fade-scope h2,
+  .text-fade-scope h3,
+  .text-fade-scope h4,
+  .text-fade-scope p,
+  .text-fade-scope li,
+  .text-fade-scope label,
+  .text-fade-scope span,
+  .text-fade-scope td,
+  .text-fade-scope th,
+  .fade-stagger > * {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+  }
+  .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
 :root {
   color-scheme: light;
+
+  /* ── shadcn/ui CSS variables (mapped to project palette) ── */
+  --background: 0 0% 97%;
+  --foreground: 210 6% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 210 6% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 210 6% 10%;
+  --primary: 168 100% 20%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 168 60% 55%;
+  --secondary-foreground: 168 100% 11%;
+  --muted: 210 10% 95%;
+  --muted-foreground: 163 8% 37%;
+  --accent: 168 75% 87%;
+  --accent-foreground: 168 100% 11%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 163 14% 77%;
+  --input: 163 14% 77%;
+  --ring: 168 100% 20%;
+  --radius: 0.75rem;
 }
 
 html {
@@ -22,13 +180,29 @@ html {
 html, body {
   margin: 0;
   padding: 0;
-  /* FIX: overflow-x:hidden pada html/body memblokir touch scroll di Chrome Android.
-     Dihapus dari sini. Jika ada konten yang meluber horizontal, atasi per-komponen. */
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: #f9fafb;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  background: #f4fcf0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* Inter variable font features: tabular nums, contextual alternates */
+  font-feature-settings: 'cv05', 'cv08', 'calt', 'kern';
+  font-optical-sizing: auto;
+}
+
+/* ── Typography polish ──
+   text-balance  : heading wrap rata kiri-kanan, hindari 1-2 kata yatim di baris terakhir
+   text-pretty   : paragraf hindari orphan word di baris terakhir
+*/
+h1, h2, h3, h4, h5, h6 {
+  text-wrap: balance;
+}
+
+p, li, blockquote, figcaption {
+  text-wrap: pretty;
 }
 
 .lp-justify {
@@ -97,7 +271,17 @@ canvas {
 }
 
 .leaflet-popup-content {
-  margin: 12px 14px !important;
+  min-width: 220px;
+  margin: 14px 16px !important;
+  font-size: 14px !important;
+  line-height: 1.45;
+}
+
+/* Popup GeoJSON memakai HTML string dengan font-size inline; samakan agar
+   keterangan RTRW dan seluruh layer peta tetap mudah dibaca. */
+.leaflet-popup-content > div {
+  font-size: 14px !important;
+  line-height: 1.45 !important;
 }
 
 ::-webkit-scrollbar {
@@ -154,8 +338,13 @@ canvas {
   }
 
   .leaflet-popup-content {
-    margin: 10px 12px !important;
-    font-size: 12px !important;
+    min-width: 0;
+    margin: 12px 14px !important;
+    font-size: 13px !important;
+  }
+
+  .leaflet-popup-content > div {
+    font-size: 13px !important;
   }
 
   .leaflet-control-attribution {

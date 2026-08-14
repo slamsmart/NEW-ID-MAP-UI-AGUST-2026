@@ -302,7 +302,7 @@ export default function MangroveNasional() {
           <Waves className="w-4 h-4 text-blue-600" />
           <p className="text-sm font-semibold text-gray-800">Tingkat Abrasi per Kab/Kota</p>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { label: 'Abrasi Tinggi', val: kabkotaSummary.byAbrasi.tinggi, color: 'bg-red-100 text-red-800 border-red-200' },
             { label: 'Abrasi Sedang', val: kabkotaSummary.byAbrasi.sedang, color: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
@@ -345,7 +345,7 @@ export default function MangroveNasional() {
                 placeholder="Cari kab/kota atau provinsi..."
                 value={search}
                 onChange={e => { setSearch(e.target.value); setPage(1); }}
-                className="bg-transparent text-xs text-gray-700 outline-none w-44"
+                className="bg-transparent text-xs text-gray-700 outline-none w-full sm:w-44"
               />
             </div>
             <div className="flex items-center gap-1.5">

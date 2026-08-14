@@ -1,9 +1,10 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Leaf,
-  ClipboardList, ChevronRight,
+  ClipboardList,
   Lock, Sprout, Turtle, Trees,
-  ClipboardCheck, X, Map as MapIcon,
+  ClipboardCheck, X, Map as MapIcon, Users,
+  FlaskConical, AlertTriangle, BarChart3, Globe, Flower2,
 } from 'lucide-react';
 import type { UserRole } from '../../context/authModel';
 import { useAuth } from '../../context/useAuth';
@@ -19,6 +20,7 @@ interface NavItem {
 const NAV_MAIN: NavItem[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', exact: true },
   { to: '/peta', icon: MapIcon, label: 'Lihat Peta Interaktif' },
+  { to: '/data-pokmaswas', icon: Users, label: 'Data Pokmaswas', minRole: ['admin', 'verifikator'] },
   { to: '/ekosistem', icon: Leaf, label: 'Kondisi Ekosistem' },
 ];
 
@@ -28,8 +30,16 @@ const NAV_INPUT: NavItem[] = [
 
 const NAV_MONITORING: NavItem[] = [
   { to: '/rekomendasi-lokasi', icon: Sprout, label: 'Potensi & Rekomendasi' },
-  { to: '/vegetasi-mangrove', icon: Trees, label: 'Monitoring Mangrove / Vegetasi' },
+  { to: '/vegetasi-mangrove', icon: Trees, label: 'Monitoring Vegetasi' },
   { to: '/pendaratan-penyu', icon: Turtle, label: 'Titik Pendaratan Penyu' },
+  { to: '/pembibitan-mangrove', icon: Flower2, label: 'Pembibitan Mangrove' },
+  { to: '/lingkungan', icon: FlaskConical, label: 'Analisis Lingkungan' },
+  { to: '/tekanan-sosial', icon: AlertTriangle, label: 'Tekanan Sosial' },
+  { to: '/laporan', icon: BarChart3, label: 'Laporan & Analitik' },
+];
+
+const NAV_DATA: NavItem[] = [
+  { to: '/mangrove-nasional', icon: Globe, label: 'Mangrove Nasional', minRole: ['admin'] },
 ];
 
 const NAV_VERIFIKASI: NavItem[] = [
@@ -61,12 +71,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       if (!allowed) {
         return (
           <div key={to}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs text-green-800 cursor-not-allowed select-none"
+            className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-400 cursor-not-allowed select-none"
             title="Akses terbatas"
           >
-            <Icon className="w-4 h-4 text-green-900 flex-shrink-0" />
+            <Icon className="w-[18px] h-[18px] flex-shrink-0" />
             <span className="flex-1 line-through">{label}</span>
-            <Lock className="w-3 h-3 text-green-900" />
+            <Lock className="w-3 h-3" />
           </div>
         );
       }
@@ -82,18 +92,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             handleNavClick();
           }}
           className={({ isActive }) =>
-            `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors group ${
+            `flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium transition-all ${
               isActive
-                ? 'bg-white/20 text-white shadow-sm border border-white/25 backdrop-blur-sm'
-                : 'text-white/70 hover:bg-white/10 hover:text-white'
+                ? 'bg-emerald-100/80 text-gray-900 border-l-4 border-emerald-600'
+                : 'text-gray-700 hover:bg-emerald-50 hover:text-gray-900 border-l-4 border-transparent'
             }`
           }
         >
           {({ isActive }: { isActive: boolean }) => (
             <>
-              <Icon className={`w-[15px] h-[15px] flex-shrink-0 ${isActive ? 'text-emerald-200' : 'text-white/60 group-hover:text-white'}`} />
+              <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-emerald-700' : 'text-gray-500'}`} />
               <span className="flex-1 leading-tight">{label}</span>
-              {isActive && <ChevronRight className="w-3 h-3 text-white/80" />}
             </>
           )}
         </NavLink>
@@ -102,74 +111,69 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const sidebarContent = (
     <aside
-      className="w-64 h-full text-white flex flex-col"
-      style={{
-        background:
-          'linear-gradient(180deg, #064e3b 0%, #065f46 35%, #0e7490 75%, #0369a1 100%)',
-      }}
+      className="w-[220px] h-full flex flex-col bg-[#f4fcf0] border-r border-emerald-100"
     >
-      <div className="px-4 pt-4 pb-3 border-b border-white/15 flex items-center justify-between">
-        <img
-          src="/logo.svg"
-          alt="ID-MAP"
-          className="h-14 w-auto object-contain cursor-pointer"
-          draggable={false}
-          onClick={() => { navigate('/dashboard'); handleNavClick(); }}
-        />
+      {/* Logo / Brand */}
+      <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+        <div
+          className="cursor-pointer"
+          onClick={() => { navigate('/'); handleNavClick(); }}
+        >
+          <h1 className="text-xl font-bold text-emerald-800 tracking-tight">ID-MAP</h1>
+          <p className="text-[11px] text-gray-700 font-medium mt-0.5">Integrasi Data Mangrove dan Pesisir</p>
+        </div>
         <button
           onClick={onClose}
-          className="md:hidden p-1.5 text-white/70 hover:text-white hover:bg-white/15 rounded-lg transition-colors"
+          className="md:hidden p-1.5 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100 rounded-lg transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
 
-      <div className="px-4 py-3">
-        <div className="bg-white/10 rounded-lg px-3 py-2 border border-white/20 backdrop-blur-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-emerald-300 rounded-full animate-pulse shadow-[0_0_8px_rgba(110,231,183,0.8)]" />
-            <span className="text-xs text-white font-semibold">Sistem Aktif</span>
-          </div>
-          <p className="text-[11px] text-white/70 mt-0.5 leading-snug">Wilker Cabdin KP Kab. Malang · Ref. 2024–2025</p>
-        </div>
-      </div>
-
-      <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-        <p className="text-[10px] text-white/55 uppercase tracking-[0.18em] font-semibold px-3 pt-1 pb-2">Menu Utama</p>
+      {/* Navigation */}
+      <nav className="flex-1 py-2 overflow-y-auto">
         {renderNavItems(NAV_MAIN)}
 
         {user && (user.role === 'verifikator' || user.role === 'admin') && (
-          <div className="pt-4">
-            <p className="text-[10px] text-white/55 uppercase tracking-[0.18em] font-semibold px-3 pb-2">Input Data</p>
+          <div className="mt-4">
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.15em] font-semibold px-5 pb-1.5">Input Data</p>
             {renderNavItems(NAV_INPUT)}
           </div>
         )}
 
         {user && (
-          <div className="pt-4">
-            <p className="text-[10px] text-white/55 uppercase tracking-[0.18em] font-semibold px-3 pb-2">Monitoring Pesisir</p>
+          <div className="mt-4">
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.15em] font-semibold px-5 pb-1.5">Monitoring Pesisir</p>
             {renderNavItems(NAV_MONITORING)}
           </div>
         )}
 
         {user && user.role === 'verifikator' && (
-          <div className="pt-4">
-            <p className="text-[10px] text-white/55 uppercase tracking-[0.18em] font-semibold px-3 pb-2">Verifikasi</p>
+          <div className="mt-4">
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.15em] font-semibold px-5 pb-1.5">Verifikasi</p>
             {renderNavItems(NAV_VERIFIKASI)}
+          </div>
+        )}
+
+        {user && user.role === 'admin' && (
+          <div className="mt-4">
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.15em] font-semibold px-5 pb-1.5">Data Nasional</p>
+            {renderNavItems(NAV_DATA)}
           </div>
         )}
       </nav>
 
-      <div className="px-4 py-3 border-t border-white/15">
-        <p className="text-[10px] text-white/55 text-center">ID-MAP v1.0 · Cabdin KP Kab. Malang</p>
+      {/* Footer */}
+      <div className="px-4 py-3 border-t border-emerald-100">
+        <p className="text-[10px] text-gray-400 text-center font-medium">ID-MAP v1.0 · Cabdin KP Kab. Malang</p>
       </div>
     </aside>
   );
 
   return (
     <>
-      {/* Desktop: always-visible sidebar (h-full = match parent h-dvh) */}
-      <div className="hidden md:flex w-64 h-full flex-shrink-0">
+      {/* Desktop: always-visible sidebar */}
+      <div className="hidden md:flex w-[220px] h-full flex-shrink-0">
         {sidebarContent}
       </div>
 
