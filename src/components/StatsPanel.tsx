@@ -7,7 +7,8 @@
  */
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import { Eye, Download, Users, FileText, Database } from 'lucide-react';
+import { Eye, Download, Users, FileText, Database, BarChart3 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { isConvexConfigured } from '../lib/convexClient';
 
 // `stats.*` mungkin belum ter-codegen (sebelum user jalankan `npx convex dev`
@@ -16,6 +17,11 @@ import { isConvexConfigured } from '../lib/convexClient';
 // module karena akan throw saat impor → crash seluruh halaman.
 function getStatsApiRef(): any | null {
   const ref = (api as unknown as { stats?: { getStats?: any } }).stats?.getStats;
+  return ref ?? null;
+}
+
+function getStatsDetailApiRef(): any | null {
+  const ref = (api as unknown as { stats?: { getStatsDetail?: any } }).stats?.getStatsDetail;
   return ref ?? null;
 }
 
@@ -63,14 +69,66 @@ function StatCard({
   );
 }
 
+interface StatsDetailResult {
+  byMonth: Array<{ key: string; label: string; visits: number; downloads: number }>;
+  byQuarter: Array<{ key: string; label: string; visits: number; downloads: number }>;
+  totalUsers: number;
+  updatedAt?: number;
+}
+
+function ChartCard({
+  title,
+  subtitle,
+  data,
+}: {
+  title: string;
+  subtitle: string;
+  data: Array<{ label: string; visits: number; downloads: number }>;
+}) {
+  const totalVisits = data.reduce((s, d) => s + d.visits, 0);
+  const totalDownloads = data.reduce((s, d) => s + d.downloads, 0);
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-4">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <div className="min-w-0">
+          <h4 className="text-sm font-bold text-gray-800">{title}</h4>
+          <p className="text-[11px] text-gray-500">{subtitle}</p>
+        </div>
+        <div className="flex flex-col items-end gap-0.5 flex-shrink-0 text-[10px] font-semibold">
+          <span className="text-sky-600">Kunjungan {totalVisits.toLocaleString('id-ID')}</span>
+          <span className="text-emerald-600">Unduhan {totalDownloads.toLocaleString('id-ID')}</span>
+        </div>
+      </div>
+      <div className="h-48">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={0} angle={-30} textAnchor="end" height={40} />
+            <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={false} allowDecimals={false} />
+            <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 12 }} cursor={{ fill: 'rgba(14,165,233,0.06)' }} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="visits" name="Kunjungan" fill="#0ea5e9" radius={[4, 4, 0, 0]} maxBarSize={26} />
+            <Bar dataKey="downloads" name="Unduhan" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={26} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
 export default function StatsPanel() {
   const ref = getStatsApiRef();
+  const detailRef = getStatsDetailApiRef();
   // useQuery diizinkan menerima 'skip' kalau Convex tidak siap — tetap aman
   // di server-side render dan saat ref belum ada.
   const stats = useQuery(
     ref ?? ('skip' as any),
     isConvexConfigured() && ref ? {} : 'skip',
   ) as StatsResult | undefined;
+  const detail = useQuery(
+    detailRef ?? ('skip' as any),
+    isConvexConfigured() && detailRef ? {} : 'skip',
+  ) as StatsDetailResult | undefined;
 
   if (!isConvexConfigured()) {
     return (
@@ -195,7 +253,7 @@ export default function StatsPanel() {
         </div>
         <button
           onClick={handleExportPDF}
-          className="flex items-center gap-1.5 bg-[#006a61] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-[#005049] transition-colors"
+          className="flex items-center gap-1.5 bg-[#071520] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-[#0d404f] transition-colors"
         >
           <FileText className="w-3.5 h-3.5" />
           Export PDF
@@ -231,6 +289,36 @@ export default function StatsPanel() {
           accent="#f59e0b"
         />
       </div>
+
+      {/* Grafik detail per bulan & triwulan (admin/verifikator) */}
+      {detailRef ? (
+        detail ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <ChartCard
+              title="Kunjungan & Unduhan per Bulan"
+              subtitle="12 bulan terakhir · semua kunjungan dihitung (IP sama tetap dicatat)"
+              data={detail.byMonth}
+            />
+            <ChartCard
+              title="Kunjungan & Unduhan per Triwulan"
+              subtitle="8 triwulan terakhir · TW1–TW4 per tahun"
+              data={detail.byQuarter}
+            />
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-[11px] text-gray-400 bg-white border border-gray-200 rounded-xl px-4 py-3">
+            <BarChart3 className="w-4 h-4" />
+            Memuat detail statistik per bulan & triwulan…
+          </div>
+        )
+      ) : (
+        <div className="flex items-center gap-2 text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <BarChart3 className="w-4 h-4" />
+          Grafik per bulan/triwulan aktif setelah fungsi{' '}
+          <code className="bg-amber-100 px-1 rounded">stats.getStatsDetail</code> ter-deploy
+          (jalankan <code className="bg-amber-100 px-1 rounded">npx convex dev</code> sekali).
+        </div>
+      )}
     </div>
   );
 }

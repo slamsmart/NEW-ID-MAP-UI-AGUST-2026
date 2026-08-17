@@ -14,9 +14,9 @@ const KATEGORI_ORDER: DataSource['kategori'][] = ['spasial', 'ekosistem', 'lingk
 export default function DataSourcesPanel() {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-200 bg-slate-800">
+      <div className="px-5 py-4 border-b border-white/10 bg-[#071520]">
         <div className="flex items-center gap-3">
-          <Database className="w-5 h-5 text-slate-300" />
+          <Database className="w-5 h-5 text-[#ffb28e]" />
           <div>
             <h3 className="font-bold text-white">Sumber Data & Referensi Ilmiah</h3>
             <p className="text-xs text-slate-400 mt-0.5">

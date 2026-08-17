@@ -197,7 +197,7 @@ export default function MangroveNasional() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mb-2">
-            <TreePine className="w-4 h-4 text-green-700" />
+            <TreePine className="w-4 h-4 text-[#0d404f]" />
           </div>
           <p className="text-xs text-gray-500">Total Mangrove Nasional</p>
           <p className="text-xl font-bold text-gray-800">{(PMN_TOTAL_HA / 1000).toFixed(0)}K ha</p>
@@ -221,7 +221,7 @@ export default function MangroveNasional() {
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center mb-2">
-            <TrendingUp className="w-4 h-4 text-teal-700" />
+            <TrendingUp className="w-4 h-4 text-[#0d404f]" />
           </div>
           <p className="text-xs text-gray-500">Target Rehabilitasi</p>
           <p className="text-xl font-bold text-gray-800">{(kabkotaSummary.totalLuasRehabilitasi / 1000).toFixed(1)}K ha</p>
@@ -329,7 +329,7 @@ export default function MangroveNasional() {
             </div>
             <button
               onClick={handleExport}
-              className="flex items-center gap-1.5 text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 text-xs bg-[#071520] hover:bg-[#0d404f] text-white px-3 py-1.5 rounded-lg transition-colors"
             >
               <Download className="w-3.5 h-3.5" />
               Export CSV
@@ -479,7 +479,7 @@ export default function MangroveNasional() {
                   <button
                     key={p}
                     onClick={() => setPage(p)}
-                    className={`px-3 py-1 text-xs border rounded-lg ${page === p ? 'bg-green-600 text-white border-green-600' : 'border-gray-200 hover:bg-gray-50'}`}
+                    className={`px-3 py-1 text-xs border rounded-lg ${page === p ? 'bg-[#071520] text-white border-[#071520]' : 'border-gray-200 hover:bg-gray-50'}`}
                   >
                     {p}
                   </button>

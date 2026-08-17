@@ -120,9 +120,9 @@ export default function AnalisisLingkungan() {
           label="Rata-rata Kekeruhan"
           value={`${avgKekeruhan}`}
           unit="NTU"
-          icon={<Waves className="w-6 h-6 text-teal-600" />}
-          colorClass={avgKekeruhan > 30 ? 'text-red-700' : 'text-teal-700'}
-          bgClass={avgKekeruhan > 30 ? 'bg-red-100' : 'bg-teal-100'}
+          icon={<Waves className="w-6 h-6 text-[#0d404f]" />}
+          colorClass={avgKekeruhan > 30 ? 'text-red-700' : 'text-[#0d404f]'}
+          bgClass={avgKekeruhan > 30 ? 'bg-red-100' : 'bg-[#0d404f]/10'}
         />
       </div>
 

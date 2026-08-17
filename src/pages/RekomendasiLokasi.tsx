@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Fragment } from 'react';
 import {
   Sprout, AlertTriangle, MapPin, Filter, ChevronDown, ChevronUp,
   Leaf, Droplets, Layers, Camera, ClipboardCheck, BarChart2, Info,
@@ -162,7 +162,7 @@ function SurveyPotensiCard({ survey, isAdmin, onEdit, onDelete }: {
           <div className="flex items-center gap-1 flex-shrink-0">
             {isAdmin && (
               <>
-                <button onClick={() => onEdit(survey)} className="text-gray-400 hover:text-green-700 p-1 rounded hover:bg-green-50 transition-colors" title="Edit data">
+                <button onClick={() => onEdit(survey)} className="text-gray-400 hover:text-[#0d404f] p-1 rounded hover:bg-[#0d404f]/10 transition-colors" title="Edit data">
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
                 <button onClick={() => onDelete(survey.id, survey.locationName)} className="text-gray-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors" title="Hapus data">
@@ -646,10 +646,10 @@ export default function RekomendasiLokasi() {
 
       {/* Info Banner */}
       <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex gap-3">
-        <Info className="w-4 h-4 text-green-700 flex-shrink-0 mt-0.5" />
+        <Info className="w-4 h-4 text-[#0d404f] flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-sm font-semibold text-green-800">Rekomendasi Lokasi Penanaman Mangrove</p>
-          <p className="text-xs text-green-700 mt-0.5 leading-relaxed">
+          <p className="text-xs text-[#0d404f] mt-0.5 leading-relaxed">
             Titik rawan abrasi diidentifikasi dari survey lapangan dan analisis citra satelit. Data input lapangan petugas
             (substrat, salinitas, tutupan tajuk) digunakan sebagai dasar skor potensi penanaman mangrove secara otomatis.
             Semakin tinggi skor, semakin cocok lokasi untuk penanaman.
@@ -695,7 +695,7 @@ export default function RekomendasiLokasi() {
               ],
             )
           }
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors border bg-white text-green-700 border-green-300 hover:bg-green-50"
+          className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors border bg-white text-[#0d404f] border-[#0d404f]/30 hover:bg-[#0d404f]/10"
           title="Unduh data CSV"
         >
           <Download className="w-3.5 h-3.5" /> CSV
@@ -721,7 +721,7 @@ export default function RekomendasiLokasi() {
               })),
             )
           }
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors border bg-white text-green-700 border-green-300 hover:bg-green-50"
+          className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors border bg-white text-[#0d404f] border-[#0d404f]/30 hover:bg-[#0d404f]/10"
           title="Unduh GeoJSON (peta)"
         >
           <Download className="w-3.5 h-3.5" /> GeoJSON
@@ -729,7 +729,7 @@ export default function RekomendasiLokasi() {
         {isAdmin && (
           <button
             onClick={handleExportPDF}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors border bg-green-700 text-white border-green-700 hover:bg-green-800"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors border bg-[#071520] text-white border-[#071520] hover:bg-[#0d404f]"
             title="Export PDF"
           >
             <FileDown className="w-3.5 h-3.5" /> Export PDF
@@ -746,7 +746,7 @@ export default function RekomendasiLokasi() {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors flex-1 justify-center
                 ${activeTab === tab.id
-                  ? 'text-green-700 border-b-2 border-green-600 bg-green-50'
+                  ? 'text-[#0d404f] border-b-2 border-[#f06424] bg-[#0d404f]/10'
                   : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
             >
               <tab.icon className="w-4 h-4" />
@@ -816,8 +816,8 @@ export default function RekomendasiLokasi() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredAbrasi.map((row, idx) => (
-                    <>
-                      <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                    <Fragment key={row.id}>
+                      <tr className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3 text-gray-500 font-medium">{idx + 1}</td>
                         <td className="px-4 py-3">
                           <p className="font-semibold text-gray-800">{row.namaPantai}</p>
@@ -867,7 +867,7 @@ export default function RekomendasiLokasi() {
                               <>
                                 <button
                                   onClick={() => startEditAbrasi(row)}
-                                  className="text-gray-400 hover:text-green-700 text-xs flex items-center gap-0.5"
+                                  className="text-gray-400 hover:text-[#0d404f] text-xs flex items-center gap-0.5"
                                   title="Edit data"
                                 >
                                   <Pencil className="w-3 h-3" />
@@ -888,9 +888,9 @@ export default function RekomendasiLokasi() {
                         <tr key={`${row.id}-edit`}>
                           <td colSpan={10} className="px-4 py-4 bg-yellow-50/50 border-t border-yellow-200">
                             <div className="flex items-center justify-between mb-3">
-                              <p className="text-xs font-semibold text-green-700">Edit Data Abrasi — {row.id}</p>
+                              <p className="text-xs font-semibold text-[#0d404f]">Edit Data Abrasi — {row.id}</p>
                               <div className="flex items-center gap-2">
-                                <button onClick={saveEditAbrasi} className="flex items-center gap-1 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg transition-colors">
+                                <button onClick={saveEditAbrasi} className="flex items-center gap-1 text-xs font-semibold text-white bg-[#071520] hover:bg-[#0d404f] px-3 py-1.5 rounded-lg transition-colors">
                                   <Check className="w-3 h-3" /> Simpan
                                 </button>
                                 <button onClick={cancelEditAbrasi} className="flex items-center gap-1 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors">
@@ -1011,7 +1011,7 @@ export default function RekomendasiLokasi() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   ))}
                   {filteredAbrasi.length === 0 && (
                     <tr>
@@ -1183,16 +1183,16 @@ export default function RekomendasiLokasi() {
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <FileDown className="w-5 h-5 text-green-700" />
+                    <FileDown className="w-5 h-5 text-[#0d404f]" />
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-green-800">Export Data Referensi ke PDF</p>
-                    <p className="text-xs text-green-700">Dokumen berisi tabel abrasi, rekomendasi tanaman, dan potensi penanaman.</p>
+                    <p className="text-xs text-[#0d404f]">Dokumen berisi tabel abrasi, rekomendasi tanaman, dan potensi penanaman.</p>
                   </div>
                 </div>
                 <button
                   onClick={handleExportPDF}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-green-700 text-white hover:bg-green-800 transition-colors shadow-sm flex-shrink-0"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-[#071520] text-white hover:bg-[#0d404f] transition-colors shadow-sm flex-shrink-0"
                 >
                   <FileDown className="w-4 h-4" />
                   Export PDF
@@ -1208,7 +1208,7 @@ export default function RekomendasiLokasi() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-gray-200 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <p className="text-sm font-bold text-green-700">Edit Data Survei — {editSurvey.id}</p>
+              <p className="text-sm font-bold text-[#0d404f]">Edit Data Survei — {editSurvey.id}</p>
               <button onClick={cancelEditSurvey} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-4 space-y-3">
@@ -1263,7 +1263,7 @@ export default function RekomendasiLokasi() {
             </div>
             <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl">
               <button onClick={cancelEditSurvey} className="px-4 py-2 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Batal</button>
-              <button onClick={saveEditSurvey} className="px-4 py-2 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1">
+              <button onClick={saveEditSurvey} className="px-4 py-2 text-xs font-semibold text-white bg-[#071520] hover:bg-[#0d404f] rounded-lg transition-colors flex items-center gap-1">
                 <Check className="w-3 h-3" /> Simpan
               </button>
             </div>

@@ -262,6 +262,21 @@ export default defineSchema({
   }).index('by_key', ['key']),
 
   // ─────────────────────────────────────────────────────────────
+  // statEvents — riwayat event statistik untuk analisis waktu
+  // (grafik per bulan & triwulan di Dashboard untuk admin/verifikator).
+  // Setiap kunjungan & unduhan dicatat sebagai SATU baris event dengan
+  // timestamp otomatis `_creationTime` dari Convex. Tidak ada deduplikasi
+  // (IP sama tetap dihitung) sesuai kebutuhan verifikator.
+  // Skala kabupaten → jumlah baris kecil, query agregasi tetap cepat.
+  // ─────────────────────────────────────────────────────────────
+  statEvents: defineTable({
+    type: v.union(v.literal('visit'), v.literal('download')),
+    kind: v.optional(v.union(v.literal('pdf'), v.literal('geojson'), v.literal('csv'))),
+  })
+    .index('by_type', ['type'])
+    .index('by_kind', ['kind']),
+
+  // ─────────────────────────────────────────────────────────────
   // pokmaswas — Kelompok Masyarakat Pengawas Konservasi.
   // Seed awal (PKM-001..PKM-044) tetap di file statis di klien
   // (src/data/pokmaswasData.ts). Tabel ini menyimpan entri yang

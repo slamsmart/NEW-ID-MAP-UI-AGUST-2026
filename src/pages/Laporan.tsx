@@ -77,19 +77,19 @@ export default function Laporan() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-green-950 rounded-xl p-6 text-white border border-green-900">
+      <div className="bg-[#071520] rounded-xl p-6 text-white border border-white/10">
         <div className="flex flex-col sm:flex-row items-start sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <FileText className="w-5 h-5 text-green-400" />
-              <span className="text-sm font-medium text-green-400">Laporan Komprehensif · ID-MAP</span>
+              <FileText className="w-5 h-5 text-[#ffb28e]" />
+              <span className="text-sm font-medium text-[#ffb28e]">Laporan Komprehensif · ID-MAP</span>
             </div>
             <h2 className="text-2xl font-bold mb-1">Evaluasi Program Restorasi Mangrove Nasional</h2>
-            <p className="text-green-400 text-sm">Periode: 2018 – Q1 2025 | Basis data untuk Pemantauan dan Restorasi Lingkungan</p>
+            <p className="text-white/60 text-sm">Periode: 2018 – Q1 2025 | Basis data untuk Pemantauan dan Restorasi Lingkungan</p>
           </div>
           <button
             onClick={handlePrint}
-            className="flex-shrink-0 flex items-center gap-2 bg-green-700 hover:bg-green-600 border border-green-600 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors"
+            className="flex-shrink-0 flex items-center gap-2 bg-[#f06424] hover:bg-[#d9531b] border border-[#f06424] rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors"
           >
             <Download className="w-4 h-4" />
             Export PDF + Kebijakan
@@ -103,10 +103,10 @@ export default function Laporan() {
             { label: 'Total Stok Bibit', value: `${(totalBibit / 1000).toFixed(0)}K bibit`, icon: TrendingUp },
             { label: 'Lokasi Perlu Intervensi', value: `${kritisCount} lokasi`, icon: AlertTriangle },
           ].map(item => (
-            <div key={item.label} className="bg-green-900 rounded-lg p-4 border border-green-800">
-              <item.icon className="w-4 h-4 text-green-400 mb-2" />
+            <div key={item.label} className="bg-[#0d404f] rounded-lg p-4 border border-white/10">
+              <item.icon className="w-4 h-4 text-[#ffb28e] mb-2" />
               <p className="text-2xl font-bold text-white">{item.value}</p>
-              <p className="text-xs text-green-400 mt-1">{item.label}</p>
+              <p className="text-xs text-white/60 mt-1">{item.label}</p>
             </div>
           ))}
         </div>
@@ -259,7 +259,7 @@ export default function Laporan() {
             <h3 className="font-semibold text-gray-800">Rekap Data Komprehensif Semua Lokasi</h3>
             <p className="text-xs text-gray-500 mt-0.5">Integrasi data spasial, ekosistem, lingkungan, dan sosial-ekonomi</p>
           </div>
-          <button className="flex items-center gap-2 text-sm text-green-700 border border-green-200 bg-green-50 hover:bg-green-100 rounded-lg px-3 py-1.5 transition-colors">
+          <button className="flex items-center gap-2 text-sm text-[#0d404f] border border-[#0d404f]/25 bg-[#0d404f]/10 hover:bg-[#0d404f]/20 rounded-lg px-3 py-1.5 transition-colors">
             <Download className="w-4 h-4" />
             Export CSV
           </button>
@@ -315,7 +315,7 @@ export default function Laporan() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Scale className="w-5 h-5 text-green-700" />
+            <Scale className="w-5 h-5 text-[#0d404f]" />
             <div>
               <h3 className="font-bold text-gray-900">Rekomendasi Kebijakan per Lokasi</h3>
               <p className="text-xs text-gray-500 mt-0.5">Klik lokasi untuk detail rekomendasi jangka pendek, menengah, panjang + dasar hukum</p>
@@ -323,7 +323,7 @@ export default function Laporan() {
           </div>
           <button
             onClick={handlePrint}
-            className="flex items-center gap-2 text-sm text-white bg-green-700 hover:bg-green-800 rounded-lg px-3 py-1.5 transition-colors font-semibold"
+            className="flex items-center gap-2 text-sm text-white bg-[#071520] hover:bg-[#0d404f] rounded-lg px-3 py-1.5 transition-colors font-semibold"
           >
             <Download className="w-4 h-4" />
             Export PDF

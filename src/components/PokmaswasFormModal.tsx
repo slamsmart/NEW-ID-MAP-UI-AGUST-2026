@@ -122,7 +122,7 @@ export default function PokmaswasFormModal({ open, onClose, initial, onSaved }: 
   };
 
   const inputCls =
-    'w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:border-emerald-400 focus:bg-white';
+    'w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:border-[#f06424] focus:bg-white';
   const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
 
   return (
@@ -346,7 +346,7 @@ export default function PokmaswasFormModal({ open, onClose, initial, onSaved }: 
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-semibold px-4 py-2 rounded-lg"
+            className="flex items-center gap-1.5 bg-[#071520] hover:bg-[#0d404f] disabled:opacity-60 text-white text-sm font-semibold px-4 py-2 rounded-lg"
           >
             <Save className="w-4 h-4" />
             {saving ? 'Menyimpan…' : isEdit ? 'Simpan Perubahan' : 'Simpan'}

@@ -15,6 +15,9 @@ dist-ssr
 # Claude Code local settings
 .claude/
 
+# Local auth artifacts
+gh-auth-login.txt
+
 # Environment variables (jangan commit secrets)
 .env
 .env.local

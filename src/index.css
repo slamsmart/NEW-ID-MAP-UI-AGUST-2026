@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 @layer utilities {
+  /* Judul hero — Plus Jakarta Sans Bold dengan tracking sedang */
+  .font-hero-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
   .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
   .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
   .pl-safe { padding-left: env(safe-area-inset-left, 0px); }
@@ -96,22 +102,78 @@
   .fade-stagger > *:nth-child(n+11) { animation-delay: 0.42s; }
 }
 
+/* ID MAP dark map panel: explicit legacy slate utilities need light text on teal. */
+.idmap-map-shell > main > div > aside .text-slate-900,
+.idmap-map-shell > main > div > aside .text-slate-800,
+.idmap-map-shell > main > div > aside .text-slate-700,
+.idmap-map-shell > main > div > aside .text-slate-600,
+.idmap-map-shell > main > div > aside .text-slate-500,
+.idmap-map-shell > main > div > aside .text-slate-400 {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+.idmap-map-shell > main > div > aside .border-slate-200,
+.idmap-map-shell > main > div > aside .border-slate-100 {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
 /* ── Scroll-reveal: elements start hidden, become visible via JS ── */
 .reveal {
   opacity: 0;
-  transform: translateY(32px);
-  transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .reveal.visible {
   opacity: 1;
+}
+/* Elemen dalam (kartu/teks): fade + naik halus — dipakai bersama .reveal */
+.reveal-rise {
+  transform: translateY(12px);
+  transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal-rise.visible {
   transform: translateY(0);
 }
+
 /* Stagger helper — add delay via CSS var or inline style */
 .reveal-delay-1 { transition-delay: 0.10s; }
 .reveal-delay-2 { transition-delay: 0.20s; }
 .reveal-delay-3 { transition-delay: 0.30s; }
 .reveal-delay-4 { transition-delay: 0.40s; }
+
+/* ── Liquid glass panel — efek kaca ala landing page untuk permukaan navy ── */
+.glass-panel {
+  /* fallback navy bila backdrop-filter tidak didukung browser */
+  background-color: rgba(13, 27, 42, 0.55);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.04) 45%, rgba(255, 255, 255, 0.08) 100%);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14),
+              inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+              0 10px 30px rgba(0, 0, 0, 0.28);
+}
+
+/* ── 3D tilt for glass cards (mengikuti kursor) ── */
+.tilt-card {
+  position: relative;
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.25s ease,
+              background-color 0.25s ease,
+              border-color 0.25s ease;
+  will-change: transform;
+}
+.tilt-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(560px circle at var(--gx, 50%) var(--gy, 50%), rgba(255, 255, 255, 0.16), transparent 45%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.tilt-card:hover::before { opacity: 1; }
+.tilt-card:hover { box-shadow: 0 18px 44px rgba(0, 0, 0, 0.35); }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in,
@@ -139,6 +201,18 @@
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;
+  }
+  .tilt-card {
+    transform: none !important;
+    box-shadow: none !important;
+    transition: none !important;
+  }
+  .tilt-card::before { display: none !important; }
+  .hero-kenburns,
+  .hero-rise {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 
@@ -180,11 +254,11 @@ html {
 html, body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   letter-spacing: -0.01em;
-  background: #f4fcf0;
+  background: #ffffff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -192,6 +266,58 @@ html, body {
   font-feature-settings: 'cv05', 'cv08', 'calt', 'kern';
   font-optical-sizing: auto;
 }
+
+/* ── Aksesibilitas & kualitas dasar ──
+   - focus-visible ring oranye: navigasi keyboard selalu terlihat.
+   - selection bertema brand (oranye lembut).
+   - anchor scroll tidak ketutup header sticky/absolute.
+*/
+:focus-visible {
+  outline: 2px solid #f06424;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: rgba(240, 100, 36, 0.28);
+  color: inherit;
+}
+
+section[id],
+div[id] {
+  scroll-margin-top: 88px;
+}
+
+/* ── Display font untuk heading besar (kohesi dengan hero) ── */
+.font-display {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* ── Hero load sequence (landing) — orkestrasi saat halaman dibuka ── */
+/* Slow cinematic zoom pada foto udara + rise berurutan teks & kartu. */
+@keyframes heroKenburns {
+  from { opacity: 0; transform: scale(1.08); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.hero-kenburns {
+  animation: heroKenburns 1.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes heroRise {
+  from { opacity: 0; transform: translateY(26px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hero-rise {
+  opacity: 0;
+  animation: heroRise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hero-rise-1 { animation-delay: 0.10s; }
+.hero-rise-2 { animation-delay: 0.20s; }
+.hero-rise-3 { animation-delay: 0.30s; }
+.hero-rise-4 { animation-delay: 0.40s; }
+.hero-rise-5 { animation-delay: 0.50s; }
 
 /* ── Typography polish ──
    text-balance  : heading wrap rata kiri-kanan, hindari 1-2 kata yatim di baris terakhir
@@ -263,7 +389,7 @@ canvas {
 
 .leaflet-popup-content-wrapper {
   border-radius: 12px !important;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
 }
 
 .leaflet-popup-tip {

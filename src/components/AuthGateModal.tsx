@@ -120,7 +120,7 @@ export default function AuthGateModal({
               autoComplete="username"
               onChange={e => { setUsername(e.target.value); setError(''); }}
               placeholder="Username admin / verifikator"
-              className="w-full bg-white/95 text-gray-800 placeholder-gray-400 rounded-full px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 shadow-sm"
+              className="w-full bg-white/95 text-gray-800 placeholder-gray-400 rounded-full px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#f06424]/60 shadow-sm"
             />
           </div>
           <div className="relative">
@@ -130,7 +130,7 @@ export default function AuthGateModal({
               autoComplete="current-password"
               onChange={e => { setPassword(e.target.value); setError(''); }}
               placeholder="Password"
-              className="w-full bg-white/95 text-gray-800 placeholder-gray-400 rounded-full px-5 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 shadow-sm"
+              className="w-full bg-white/95 text-gray-800 placeholder-gray-400 rounded-full px-5 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-[#f06424]/60 shadow-sm"
             />
             <button
               type="button"
@@ -149,7 +149,7 @@ export default function AuthGateModal({
             </div>
           )}
           {success && (
-            <div className="flex items-center gap-2 text-xs text-emerald-100 bg-emerald-500/30 border border-emerald-300/40 rounded-xl px-3 py-2">
+            <div className="flex items-center gap-2 text-xs text-[#ffb28e] bg-[#f06424]/20 border border-[#f06424]/40 rounded-xl px-3 py-2">
               <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
               {success}
             </div>

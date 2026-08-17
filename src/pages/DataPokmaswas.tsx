@@ -102,7 +102,7 @@ export default function DataPokmaswas() {
             {record.bidangCore.slice(0, 3).map((b) => (
               <span
                 key={b}
-                className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full"
+                className="text-[10px] bg-[#0d404f]/10 text-[#0d404f] border border-[#0d404f]/25 px-1.5 py-0.5 rounded-full"
               >
                 {b}
               </span>
@@ -124,7 +124,7 @@ export default function DataPokmaswas() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Users className="w-5 h-5 text-emerald-600" />
+            <Users className="w-5 h-5 text-[#0d404f]" />
             Data Pokmaswas
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
@@ -143,7 +143,7 @@ export default function DataPokmaswas() {
               <Plus className="w-4 h-4" /> Tambah Pokmaswas
             </button>
           )}
-          <span className="bg-emerald-50 text-emerald-700 font-semibold px-2.5 py-1 rounded-lg border border-emerald-200">
+          <span className="bg-[#0d404f]/10 text-[#0d404f] font-semibold px-2.5 py-1 rounded-lg border border-[#0d404f]/25">
             {filtered.length} kelompok
           </span>
         </div>
@@ -166,7 +166,7 @@ export default function DataPokmaswas() {
           <select
             value={filterKab}
             onChange={(e) => setFilterKab(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 focus:outline-none focus:border-emerald-400"
+            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 focus:outline-none focus:border-[#f06424]"
           >
             <option value="semua">Semua Kab/Kota</option>
             {kabList.map((k) => (

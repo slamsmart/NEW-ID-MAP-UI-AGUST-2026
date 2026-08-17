@@ -453,7 +453,7 @@ function UnitKerjaField({ value, onChange, required }: {
   );
 }
 
-function SectionHead({ icon: Icon, label, color = 'text-green-700' }: {
+function SectionHead({ icon: Icon, label, color = 'text-[#0d404f]' }: {
   icon: React.ElementType; label: string; color?: string;
 }) {
   return (
@@ -517,8 +517,8 @@ function JenisPenyuField({ value, onChange }: {
               onClick={() => toggleJenis(option)}
               className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                 selectedItems.includes(option)
-                  ? 'border-teal-500 bg-teal-600 text-white font-bold shadow-sm'
-                  : 'border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100'
+                  ? 'border-[#071520] bg-[#071520] text-white font-bold shadow-sm'
+                  : 'border-[#0d404f]/25 bg-[#0d404f]/10 text-[#0d404f] hover:bg-[#0d404f]/20'
               }`}
             >
               {selectedItems.includes(option) ? '✓ ' : '+ '}{option}
@@ -782,7 +782,7 @@ function SarangMultiInput({ sarangList, setSarangList, isOnline }: {
       {/* Action bar -- koordinat dulu, foto opsional */}
       <div className="flex items-center gap-2 flex-wrap">
         <button type="button" onClick={addManual}
-          className="flex items-center gap-1.5 px-3 py-2 bg-teal-600 text-white text-xs font-bold rounded-lg hover:bg-teal-700 transition-colors">
+          className="flex items-center gap-1.5 px-3 py-2 bg-[#071520] text-white text-xs font-bold rounded-lg hover:bg-[#0d404f] transition-colors">
           <MapPin className="w-3.5 h-3.5" />
           + Tambah Titik Manual
         </button>
@@ -1375,7 +1375,7 @@ export default function InputLapangan() {
           <div className="flex gap-3 justify-center pt-2">
             <button
               onClick={resetFormState}
-              className="px-5 py-2 bg-green-700 text-white text-sm font-semibold rounded-lg hover:bg-green-800 transition-colors"
+              className="px-5 py-2 bg-[#071520] text-white text-sm font-semibold rounded-lg hover:bg-[#0d404f] transition-colors"
             >
               Input Data Baru
             </button>
@@ -1414,7 +1414,7 @@ export default function InputLapangan() {
       {/* Online Badge */}
       <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-emerald-700 rounded-lg flex items-center justify-center">
+          <div className="w-9 h-9 bg-[#071520] rounded-lg flex items-center justify-center">
             <ClipboardList className="w-4.5 h-4.5 text-white" />
           </div>
           <div>
@@ -1709,7 +1709,7 @@ export default function InputLapangan() {
           {/* Vegetasi pesisir section */}
           {monVeg.adaVegetasi && (
             <div className="space-y-3 border-l-4 border-emerald-400 pl-4">
-              <SectionHead icon={Trees} label="Data Vegetasi Pesisir" color="text-emerald-700" />
+              <SectionHead icon={Trees} label="Data Vegetasi Pesisir" color="text-[#0d404f]" />
               <div className="grid grid-cols-2 gap-3">
                 <G label="Jenis Vegetasi Utama" req>
                   <Sel value={monVeg.jenisVegetasi} onChange={setMV('jenisVegetasi')}>
@@ -1765,7 +1765,7 @@ export default function InputLapangan() {
           </div>
 
           <button onClick={handleSubmit} disabled={!monVeg.namaPetugas || !monVeg.koordinatLat || (!monVeg.adaMangrove && !monVeg.adaVegetasi) || savingStatus === 'saving'}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl transition-colors disabled:opacity-50">
+            className="w-full flex items-center justify-center gap-2 py-3 bg-[#071520] hover:bg-[#0d404f] text-white font-bold rounded-xl transition-colors disabled:opacity-50">
             {savingStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
             {savingStatus === 'saving' ? 'Menyimpan...' : 'Simpan Data Monitoring Mangrove / Vegetasi'}
           </button>
@@ -1948,7 +1948,7 @@ export default function InputLapangan() {
 
           {/* Identitas */}
           <div className="space-y-3">
-            <SectionHead icon={ClipboardList} label="Identitas Petugas & Lokasi" color="text-teal-700" />
+            <SectionHead icon={ClipboardList} label="Identitas Petugas & Lokasi" color="text-[#0d404f]" />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <G label="Nama Petugas" req><Inp value={penyu.namaPetugas} onChange={setPn('namaPetugas')} placeholder="Nama lengkap" /></G>
               <UnitKerjaField value={penyu.unitKerja} onChange={setPn('unitKerja')} />
@@ -1975,7 +1975,7 @@ export default function InputLapangan() {
 
           {/* Data Penyu */}
           <div className="space-y-3">
-            <SectionHead icon={Turtle} label="Data Pendaratan Penyu" color="text-teal-700" />
+            <SectionHead icon={Turtle} label="Data Pendaratan Penyu" color="text-[#0d404f]" />
             <div className="grid grid-cols-2 gap-3">
               <JenisPenyuField value={penyu.jenisPenyu} onChange={setPn('jenisPenyu')} />
               <G label="Status Perlindungan">
@@ -2009,7 +2009,7 @@ export default function InputLapangan() {
 
           {/* Titik Sarang â€" multi-point */}
           <div className="space-y-3">
-            <SectionHead icon={MapPin} label="Titik Sarang Per Koordinat" color="text-teal-700" />
+            <SectionHead icon={MapPin} label="Titik Sarang Per Koordinat" color="text-[#0d404f]" />
             <SarangMultiInput sarangList={sarangList} setSarangList={setSarangList} isOnline={isOnline} />
           </div>
 
@@ -2029,7 +2029,7 @@ export default function InputLapangan() {
             </p>
           )}
           <button onClick={handleSubmit} disabled={!penyu.namaPetugas || !penyu.namaPantai || sarangList.filter(s => s.lat && s.lng).length === 0 || savingStatus === 'saving'}
-            className="w-full flex items-center justify-center gap-2 py-3 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl transition-colors disabled:opacity-50">
+            className="w-full flex items-center justify-center gap-2 py-3 bg-[#071520] hover:bg-[#0d404f] text-white font-bold rounded-xl transition-colors disabled:opacity-50">
             {savingStatus === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Turtle className="w-4 h-4" />}
             {savingStatus === 'saving'
               ? 'Menyimpan...'

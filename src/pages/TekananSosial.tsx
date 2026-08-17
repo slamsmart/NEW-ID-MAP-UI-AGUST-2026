@@ -62,9 +62,9 @@ export default function TekananSosial() {
           label="Total Stok Bibit"
           value={(totalBibit / 1000).toFixed(0)}
           unit="ribu bibit"
-          icon={<Sprout className="w-6 h-6 text-green-600" />}
-          colorClass="text-green-700"
-          bgClass="bg-green-100"
+          icon={<Sprout className="w-6 h-6 text-[#0d404f]" />}
+          colorClass="text-[#0d404f]"
+          bgClass="bg-[#0d404f]/10"
         />
         <KPICard
           label="Legalitas dan Sengketa Kawasan"

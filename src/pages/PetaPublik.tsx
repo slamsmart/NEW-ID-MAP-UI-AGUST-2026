@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo, cloneElement } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, GeoJSON } from 'react-leaflet';
 import type { FeatureCollection } from 'geojson';
-import JSZip from 'jszip';
-import { kml as kmlToGeoJSON } from '@tmcw/togeojson';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { mangroveLocations as seedLocations, ekosistemData } from '../data/seedData';
@@ -244,19 +242,17 @@ const LAYER_OPTIONS = [
 type DataLayer = Exclude<(typeof LAYER_OPTIONS)[number]['val'], 'none' | 'all'>;
 const DATA_LAYER_OPTIONS = LAYER_OPTIONS.filter((layer): layer is Extract<(typeof LAYER_OPTIONS)[number], { val: DataLayer }> => layer.val !== 'none' && layer.val !== 'all');
 
-async function loadKmzFeatureCollection(url: string): Promise<FeatureCollection> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+// Cache in-memory hasil GeoJSON RTRW agar toggle layer tidak fetch ulang.
+// (Pakai object biasa — nama `Map` sudah dipakai icon lucide-react.)
+const rtrwCache: Record<string, FeatureCollection> = {};
 
-  const archive = await JSZip.loadAsync(await response.arrayBuffer());
-  const kmlEntry = Object.values(archive.files).find(file => /\.kml$/i.test(file.name));
-  if (!kmlEntry) throw new Error('Berkas KML tidak ditemukan di dalam KMZ.');
-
-  const kmlDocument = new DOMParser().parseFromString(await kmlEntry.async('text'), 'application/xml');
-  if (kmlDocument.querySelector('parsererror')) throw new Error('KML di dalam KMZ tidak valid.');
-
-  return kmlToGeoJSON(kmlDocument) as FeatureCollection;
-}
+const RTRW_GEOJSON_FILES = [
+  'Kab. Malang.geojson',
+  'Kab. Pasuruan.geojson',
+  'Kota. Pasuruan.geojson',
+  'Kota Surabaya.geojson',
+  'Kab. Sidoarjo.geojson',
+];
 
 function rtrwFeatureStyle(feature?: GeoJSON.Feature) {
   const properties = feature?.properties as Record<string, unknown> | null | undefined;
@@ -287,7 +283,9 @@ export default function PetaPublik() {
   const [activeMapLayer, setActiveMapLayer] = useState('osm');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<'mangrove' | 'abrasi' | 'penyu' | null>(null);
-  const [panelOpen, setPanelOpen] = useState(true);
+  // Panel legenda: default TERTUTUP di mobile (agar peta langsung terlihat),
+  // terbuka di layar sm+ (>=640px) seperti perilaku desktop sebelumnya.
+  const [panelOpen, setPanelOpen] = useState(() => window.innerWidth >= 640);
   const [layerMenuOpen, setLayerMenuOpen] = useState(false);
   const [mapTypeMenuOpen, setMapTypeMenuOpen] = useState(false);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
@@ -520,7 +518,10 @@ export default function PetaPublik() {
     }
   }, [showKonservasi, konservasiData]);
 
-  // Load RTRW directly from the five original KMZ archives only when selected.
+  // Load RTRW Jawa Timur dari GeoJSON hasil pre-konversi build-time
+  // (scripts/convert-rtrw.mjs). Geometri & properti identik dengan KMZ asli,
+  // tapi browser tidak lagi unzip + parse XML + konversi KML di main thread
+  // sehingga loading jauh lebih ringan dan tidak membekukan UI.
   useEffect(() => {
     if (!showRtrw) {
       setRtrwData(null);
@@ -530,15 +531,18 @@ export default function PetaPublik() {
     let active = true;
     setRtrwLoading(true);
     setRtrwData(null);
-    const regionalFiles = [
-      'Kab. Malang.kmz',
-      'Kab. Pasuruan.kmz',
-      'Kota. Pasuruan.kmz',
-      'Kota Surabaya.kmz',
-      'Kab. Sidoarjo.kmz',
-    ];
 
-    Promise.all(regionalFiles.map(file => loadKmzFeatureCollection(`/boundaries/${file}`)))
+    const loadFile = async (file: string): Promise<FeatureCollection> => {
+      const hit = rtrwCache[file];
+      if (hit) return hit;
+      const response = await fetch(`/boundaries/${file}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json() as FeatureCollection;
+      rtrwCache[file] = data;
+      return data;
+    };
+
+    Promise.all(RTRW_GEOJSON_FILES.map(loadFile))
       .then(layers => {
         if (!active) return;
         setRtrwData({
@@ -546,7 +550,7 @@ export default function PetaPublik() {
           features: layers.flatMap(layer => layer.features),
         });
       })
-      .catch(error => console.warn('[peta-publik] layer RTRW KMZ gagal dimuat:', error))
+      .catch(error => console.warn('[peta-publik] layer RTRW GeoJSON gagal dimuat:', error))
       .finally(() => { if (active) setRtrwLoading(false); });
 
     return () => { active = false; };
@@ -878,18 +882,18 @@ export default function PetaPublik() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#eef3fb] text-slate-900">
-      <aside className="hidden md:flex w-[82px] lg:w-[104px] flex-col items-center border-r border-slate-200 bg-[#f7f8fc] px-3 py-5">
+    <div className="idmap-map-shell flex h-screen overflow-hidden bg-[#071520] text-white">
+      <aside className="glass-panel hidden md:flex w-[82px] lg:w-[104px] flex-col items-center border-r border-white/15 px-3 py-5">
         <div className="flex flex-col items-center gap-6">
-          <div className="h-12 w-12 overflow-hidden rounded-full border border-slate-200 shadow-sm">
+          <div className="h-12 w-12 overflow-hidden rounded-full border border-white/15">
             <img src="/logo.png" alt="ID-MAP" className="h-full w-full object-cover" />
           </div>
           <nav className="flex flex-col items-stretch gap-2">
-            <button onClick={() => navigate('/')} className="flex flex-col items-center gap-1 rounded-2xl px-2.5 py-3 text-[11px] font-medium text-slate-700 hover:bg-white hover:shadow-sm transition-colors">
+            <button onClick={() => navigate('/')} className="flex flex-col items-center gap-1 rounded-2xl px-2.5 py-3 text-[11px] font-medium text-white/65 hover:bg-white/10 hover:text-white transition-colors">
               <Home className="h-5 w-5" />
               <span>Home</span>
             </button>
-            <button className="relative flex flex-col items-center gap-1 rounded-2xl bg-white px-2.5 py-3 text-[11px] font-semibold text-emerald-700 shadow-sm">
+            <button className="relative flex flex-col items-center gap-1 rounded-2xl bg-[#0d404f] px-2.5 py-3 text-[11px] font-semibold text-white">
               <span className="absolute right-0 top-2 h-12 w-1 rounded-l-full bg-emerald-600" />
               <Layers className="h-5 w-5" />
               <span>Map</span>
@@ -899,10 +903,10 @@ export default function PetaPublik() {
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="relative z-10 flex flex-shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-[#d6dbe3]/95 px-4 py-3 backdrop-blur-sm sm:px-5 lg:px-6">
+        <header className="glass-panel relative z-10 flex flex-shrink-0 items-center justify-between gap-3 border-b border-white/15 px-4 py-3 sm:px-5 lg:px-6">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-emerald-800">ID-MAP</p>
-            <h1 className="max-w-[26rem] text-[18px] font-bold leading-snug text-slate-950 sm:text-[21px] lg:max-w-[34rem]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#ffb28e]">ID MAP</p>
+            <h1 className="max-w-[26rem] truncate text-[18px] font-bold leading-snug text-white sm:text-[21px] lg:max-w-[34rem]">
               Peta Interaktif Mangrove dan Ekosistem Pesisir
             </h1>
           </div>
@@ -937,7 +941,7 @@ export default function PetaPublik() {
             />
 
             {user ? (
-              <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 rounded-full bg-emerald-700 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-emerald-700/20 transition-colors hover:bg-emerald-800 sm:px-5">
+              <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 rounded-full border border-white/20 bg-white px-4 py-2 text-xs font-semibold text-slate-800 shadow-md transition-colors hover:bg-slate-100 sm:px-5">
                 <span>Dashboard</span>
                 <ChevronRight className="h-3.5 w-3.5" />
               </button>
@@ -945,7 +949,7 @@ export default function PetaPublik() {
               <>
                 <AuthRequired mode="signup">
                   <button
-                    className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-700 to-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-emerald-700/20 transition-all hover:brightness-110"
+                    className="flex items-center gap-1.5 rounded-full border border-white/70 bg-[#071520] px-4 py-2 text-xs font-semibold text-white transition-colors hover:border-white hover:bg-[#0d404f]"
                   >
                     <UserPlus className="h-3.5 w-3.5" />
                     Daftar
@@ -1700,18 +1704,18 @@ export default function PetaPublik() {
         )}
 
         {panelOpen && (
-          <aside className="hidden w-[380px] flex-shrink-0 flex-col overflow-hidden border-l border-slate-200 bg-[#dbe5f7]/95 shadow-2xl shadow-slate-900/10 backdrop-blur sm:flex lg:w-[420px]">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <aside className="glass-panel hidden w-[380px] flex-shrink-0 flex-col overflow-hidden border-l border-white/15 sm:flex lg:w-[420px]">
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
               <div className="flex items-center gap-3">
-                <Layers className="h-5 w-5 text-emerald-700" />
+                <Layers className="h-5 w-5 text-[#f06424]" />
                 <div>
-                  <h2 className="text-[18px] font-semibold text-slate-900">Legenda</h2>
-                  <p className="text-[11px] uppercase tracking-wide text-slate-700">Konfigurasi visualisasi</p>
+                  <h2 className="text-[18px] font-semibold text-white">Legenda</h2>
+                  <p className="text-[11px] uppercase tracking-wide text-white/55">Konfigurasi visualisasi</p>
                 </div>
               </div>
               <button
                 onClick={() => setPanelOpen(false)}
-                className="flex items-center gap-2 rounded-xl bg-[#d6e2ff] px-4 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-[#cfdcff]"
+                className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/15"
                 title={panelOpen ? 'Sembunyikan panel' : 'Tampilkan panel'}
               >
                 <X className="h-4 w-4" />

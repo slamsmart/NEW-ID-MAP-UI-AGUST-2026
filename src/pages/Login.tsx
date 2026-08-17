@@ -25,13 +25,13 @@ export default function Login() {
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center px-4 py-10 font-sans overflow-hidden">
-      {/* Background image */}
+      {/* Background image — sama dengan landing page agar seragam */}
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: 'url(/hero-mangrove.webp)' }}
+        style={{ backgroundImage: 'url(/assets/id-map-mangrove.jpg)', filter: 'brightness(1.12) saturate(1.05)' }}
       />
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#003527]/50 to-[#003527]/70" />
+      {/* Overlay — sama dengan hero landing page */}
+      <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(7,21,32,.5)_0%,rgba(7,32,40,.18)_45%,rgba(3,15,24,.46)_100%)]" />
 
       <div className="relative z-10 w-full max-w-md animate-fade-up text-fade-scope">
         {/* Brand row */}

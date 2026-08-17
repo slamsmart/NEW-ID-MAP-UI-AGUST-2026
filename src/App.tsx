@@ -26,6 +26,8 @@ const TekananSosial = lazy(() => import('./pages/TekananSosial'));
 const AnalisisLingkungan = lazy(() => import('./pages/AnalisisLingkungan'));
 const MangroveNasional = lazy(() => import('./pages/MangroveNasional'));
 const PedomanTeknisPage = lazy(() => import('./pages/PedomanTeknisPage'));
+const SyaratKetentuan = lazy(() => import('./pages/SyaratKetentuan'));
+const KebijakanPrivasi = lazy(() => import('./pages/KebijakanPrivasi'));
 
 function AppShellFallback() {
   return (
@@ -95,7 +97,10 @@ function AppRoutes() {
         <Route path="/" element={<RootRoute />} />
         <Route path="/peta" element={<PublicPeta />} />
         <Route path="/login" element={<LoginRedirect />} />
+        <Route path="/admin" element={<LoginRedirect />} />
         <Route path="/pedoman-teknis" element={<PedomanTeknisPage />} />
+        <Route path="/syarat-ketentuan" element={<SyaratKetentuan />} />
+        <Route path="/kebijakan-privasi" element={<KebijakanPrivasi />} />
 
         <Route element={<ProtectedLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />

@@ -11,11 +11,11 @@ type FilterStatus = 'semua' | 'pending' | 'approved' | 'rejected';
 type FilterTujuan = 'semua' | 'monitoring' | 'potensi_penanaman' | 'abrasi' | 'vegetasi_mangrove' | 'pendaratan_penyu';
 
 const TUJUAN_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  monitoring: { label: 'Monitoring Mangrove', icon: Leaf, color: 'text-green-700' },
+  monitoring: { label: 'Monitoring Mangrove', icon: Leaf, color: 'text-[#0d404f]' },
   potensi_penanaman: { label: 'Potensi Penanaman', icon: Sprout, color: 'text-blue-700' },
   abrasi: { label: 'Titik Rawan Abrasi', icon: AlertTriangle, color: 'text-orange-700' },
-  vegetasi_mangrove: { label: 'Vegetasi Mangrove', icon: Trees, color: 'text-emerald-700' },
-  pendaratan_penyu: { label: 'Pendaratan Penyu', icon: Turtle, color: 'text-teal-700' },
+  vegetasi_mangrove: { label: 'Vegetasi Mangrove', icon: Trees, color: 'text-[#0d404f]' },
+  pendaratan_penyu: { label: 'Pendaratan Penyu', icon: Turtle, color: 'text-[#0d404f]' },
 };
 
 const STATUS_CONFIG = {
@@ -232,7 +232,7 @@ export default function VerifikasiData() {
               <div className="p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${tujuanCfg.color === 'text-green-700' ? 'bg-green-50' : tujuanCfg.color === 'text-blue-700' ? 'bg-blue-50' : tujuanCfg.color === 'text-orange-700' ? 'bg-orange-50' : tujuanCfg.color === 'text-teal-700' ? 'bg-teal-50' : 'bg-emerald-50'}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${tujuanCfg.color === 'text-[#0d404f]' ? 'bg-[#0d404f]/10' : tujuanCfg.color === 'text-blue-700' ? 'bg-blue-50' : 'bg-orange-50'}`}>
                       <Icon className={`w-4 h-4 ${tujuanCfg.color}`} />
                     </div>
                     <div className="flex-1 min-w-0">

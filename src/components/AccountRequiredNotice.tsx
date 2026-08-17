@@ -62,7 +62,7 @@ export function AccountNoticeProvider({ children }: { children: ReactNode }) {
               <X className="h-4 w-4" />
             </button>
 
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#0d404f] to-[#071520] shadow-lg">
               <UserPlus className="h-7 w-7 text-white" />
             </div>
 
@@ -82,7 +82,7 @@ export function AccountNoticeProvider({ children }: { children: ReactNode }) {
                   close();
                   navigate('/login');
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:brightness-110 transition"
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-[#071520] px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#0d404f] transition"
               >
                 <LogIn className="h-4 w-4" /> Login Sekarang
               </button>
@@ -93,7 +93,7 @@ export function AccountNoticeProvider({ children }: { children: ReactNode }) {
                   close();
                   navigate('/login');
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-5 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+                className="flex w-full items-center justify-center gap-2 rounded-full border border-[#0d404f]/30 bg-[#0d404f]/10 px-5 py-2.5 text-sm font-semibold text-[#0d404f] hover:bg-[#0d404f]/20 transition"
               >
                 <UserPlus className="h-4 w-4" /> Daftar Akun Baru
               </button>

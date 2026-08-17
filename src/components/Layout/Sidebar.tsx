@@ -71,7 +71,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       if (!allowed) {
         return (
           <div key={to}
-            className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-400 cursor-not-allowed select-none"
+            className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-white/40 cursor-not-allowed select-none"
             title="Akses terbatas"
           >
             <Icon className="w-[18px] h-[18px] flex-shrink-0" />
@@ -94,14 +94,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           className={({ isActive }) =>
             `flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium transition-all ${
               isActive
-                ? 'bg-emerald-100/80 text-gray-900 border-l-4 border-emerald-600'
-                : 'text-gray-700 hover:bg-emerald-50 hover:text-gray-900 border-l-4 border-transparent'
+                ? 'bg-white/10 text-white border-l-4 border-[#f06424]'
+                : 'text-white/75 hover:bg-white/10 hover:text-white border-l-4 border-transparent'
             }`
           }
         >
           {({ isActive }: { isActive: boolean }) => (
             <>
-              <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-emerald-700' : 'text-gray-500'}`} />
+              <Icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-[#f06424]' : 'text-white/50'}`} />
               <span className="flex-1 leading-tight">{label}</span>
             </>
           )}
@@ -111,7 +111,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const sidebarContent = (
     <aside
-      className="w-[220px] h-full flex flex-col bg-[#f4fcf0] border-r border-emerald-100"
+      className="relative w-[220px] h-full flex flex-col overflow-hidden border-r border-white/15 bg-[#071520] bg-[linear-gradient(160deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.02)_45%,rgba(255,255,255,0.05)_100%)]"
     >
       {/* Logo / Brand */}
       <div className="px-5 pt-5 pb-3 flex items-center justify-between">
@@ -119,12 +119,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           className="cursor-pointer"
           onClick={() => { navigate('/'); handleNavClick(); }}
         >
-          <h1 className="text-xl font-bold text-emerald-800 tracking-tight">ID-MAP</h1>
-          <p className="text-[11px] text-gray-700 font-medium mt-0.5">Integrasi Data Mangrove dan Pesisir</p>
+          <h1 className="text-xl font-bold text-white tracking-tight">ID-MAP</h1>
+          <p className="text-[11px] text-white/70 font-medium mt-0.5">Integrasi Data Mangrove dan Pesisir</p>
         </div>
         <button
           onClick={onClose}
-          className="md:hidden p-1.5 text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100 rounded-lg transition-colors"
+          className="md:hidden p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
@@ -136,36 +136,36 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {user && (user.role === 'verifikator' || user.role === 'admin') && (
           <div className="mt-4">
-            <p className="text-[10px] text-gray-500 uppercase tracking-[0.15em] font-semibold px-5 pb-1.5">Input Data</p>
+            <p className="text-[10px] text-white/60 uppercase tracking-[0.15em] font-semibold px-5 pb-1.5">Input Data</p>
             {renderNavItems(NAV_INPUT)}
           </div>
         )}
 
         {user && (
           <div className="mt-4">
-            <p className="text-[10px] text-gray-500 uppercase tracking-[0.15em] font-semibold px-5 pb-1.5">Monitoring Pesisir</p>
+            <p className="text-[10px] text-white/60 uppercase tracking-[0.15em] font-semibold px-5 pb-1.5">Monitoring Pesisir</p>
             {renderNavItems(NAV_MONITORING)}
           </div>
         )}
 
         {user && user.role === 'verifikator' && (
           <div className="mt-4">
-            <p className="text-[10px] text-gray-500 uppercase tracking-[0.15em] font-semibold px-5 pb-1.5">Verifikasi</p>
+            <p className="text-[10px] text-white/60 uppercase tracking-[0.15em] font-semibold px-5 pb-1.5">Verifikasi</p>
             {renderNavItems(NAV_VERIFIKASI)}
           </div>
         )}
 
         {user && user.role === 'admin' && (
           <div className="mt-4">
-            <p className="text-[10px] text-gray-500 uppercase tracking-[0.15em] font-semibold px-5 pb-1.5">Data Nasional</p>
+            <p className="text-[10px] text-white/60 uppercase tracking-[0.15em] font-semibold px-5 pb-1.5">Data Nasional</p>
             {renderNavItems(NAV_DATA)}
           </div>
         )}
       </nav>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-emerald-100">
-        <p className="text-[10px] text-gray-400 text-center font-medium">ID-MAP v1.0 · Cabdin KP Kab. Malang</p>
+      <div className="px-4 py-3 border-t border-white/10">
+        <p className="text-[10px] text-white/50 text-center font-medium">ID-MAP v1.0 · Cabdin KP Kab. Malang</p>
       </div>
     </aside>
   );

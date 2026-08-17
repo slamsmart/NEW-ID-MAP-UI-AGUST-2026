@@ -22,23 +22,36 @@ export default function Layout() {
   const pageInfo = pageTitles[location.pathname] || { title: 'ID-MAP', subtitle: '' };
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Di halaman dashboard, header global disembunyikan — search & akun sudah
+  // ditanam di dalam box "Dashboard Utama" (lihat pages/Dashboard.tsx).
+  const isDashboard = location.pathname === '/dashboard';
+
   // Dynamic document title per page
   useEffect(() => {
     document.title = `${pageInfo.title} — ID-MAP`;
   }, [pageInfo.title]);
 
+  // Dashboard (di dalam box) bisa membuka sidebar mobile via custom event.
+  useEffect(() => {
+    const openSidebar = () => setSidebarOpen(true);
+    window.addEventListener('idmap:open-sidebar', openSidebar);
+    return () => window.removeEventListener('idmap:open-sidebar', openSidebar);
+  }, []);
+
   return (
     <div
-      className="flex h-dvh text-gray-900 bg-[#f4fcf0]"
+      className="flex h-dvh text-gray-900 bg-white"
     >
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
-        <Header
-          title={pageInfo.title}
-          subtitle={pageInfo.subtitle}
-          onMenuClick={() => setSidebarOpen(true)}
-        />
-        <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 bg-[#f4fcf0] pb-safe">
+        {!isDashboard && (
+          <Header
+            title={pageInfo.title}
+            subtitle={pageInfo.subtitle}
+            onMenuClick={() => setSidebarOpen(true)}
+          />
+        )}
+        <main className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6 bg-white pb-safe">
           <PageFade>
             <Outlet />
           </PageFade>

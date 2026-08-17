@@ -59,25 +59,25 @@ export default function MonitoringEkosistem() {
               label="Tutupan Tajuk"
               value={`${selectedEco.tutupanTajuk}`}
               unit="%"
-              icon={<Leaf className="w-6 h-6 text-green-600" />}
-              colorClass="text-green-700"
-              bgClass="bg-green-100"
+              icon={<Leaf className="w-6 h-6 text-[#0d404f]" />}
+              colorClass="text-[#0d404f]"
+              bgClass="bg-[#0d404f]/10"
             />
             <KPICard
               label="Kerapatan Pohon"
               value={selectedEco.kerapatanPohon.toLocaleString('id-ID')}
               unit="pohon/ha"
-              icon={<TreePine className="w-6 h-6 text-teal-600" />}
-              colorClass="text-teal-700"
-              bgClass="bg-teal-100"
+              icon={<TreePine className="w-6 h-6 text-[#0d404f]" />}
+              colorClass="text-[#0d404f]"
+              bgClass="bg-[#0d404f]/10"
             />
             <KPICard
               label="Jumlah Spesies"
               value={`${selectedEco.komposisiJenis.length}`}
               unit="spesies"
-              icon={<Sprout className="w-6 h-6 text-emerald-600" />}
-              colorClass="text-emerald-700"
-              bgClass="bg-emerald-100"
+              icon={<Sprout className="w-6 h-6 text-[#0d404f]" />}
+              colorClass="text-[#0d404f]"
+              bgClass="bg-[#0d404f]/10"
             />
           </div>
 
@@ -222,7 +222,7 @@ export default function MonitoringEkosistem() {
                   {ekosistemData.map(eco => {
                     const loc = mangroveLocations.find(l => l.id === eco.locationId)!;
                     return (
-                      <tr key={eco.locationId} className={`hover:bg-green-50/30 cursor-pointer transition-colors ${eco.locationId === selectedId ? 'bg-green-50' : ''}`} onClick={() => setSelectedId(eco.locationId)}>
+                      <tr key={eco.locationId} className={`hover:bg-[#0d404f]/5 cursor-pointer transition-colors ${eco.locationId === selectedId ? 'bg-[#0d404f]/10' : ''}`} onClick={() => setSelectedId(eco.locationId)}>
                         <td className="px-5 py-3 font-medium text-gray-800">{loc.name}</td>
                         <td className="px-4 py-3 text-center">
                           <div className="flex items-center gap-2 justify-center">

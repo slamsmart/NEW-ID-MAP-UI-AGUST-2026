@@ -289,11 +289,11 @@ export default function PetaInteraktif() {
         </div>
             <div className="ml-auto flex items-center gap-4 text-sm text-gray-500">
             <div className="flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-emerald-600" />
+              <Layers className="w-3.5 h-3.5 text-[#0d404f]" />
               <select
                 value={regionalBoundary}
                 onChange={event => setRegionalBoundary(event.target.value as RegionalBoundaryId | '')}
-                className="text-xs border border-emerald-200 rounded-lg px-2 py-1 bg-emerald-50 focus:outline-none focus:border-emerald-500"
+                className="text-xs border border-[#0d404f]/25 rounded-lg px-2 py-1 bg-[#0d404f]/10 focus:outline-none focus:border-[#f06424]"
                 title="Tampilkan layer RTRW wilayah"
               >
                 <option value="">RTRW: nonaktif</option>
@@ -455,7 +455,7 @@ export default function PetaInteraktif() {
 
                       {/* Verifikator inline edit form */}
                       {isVerifikator && editingId === loc.id ? (
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 mb-2 space-y-1.5">
+                        <div className="bg-[#0d404f]/10 border border-[#0d404f]/25 rounded-lg p-2 mb-2 space-y-1.5">
                           <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Edit Koordinat</p>
                           <div className="grid grid-cols-2 gap-1.5">
                             <input
@@ -488,7 +488,7 @@ export default function PetaInteraktif() {
                                 setOverride(loc.id, lat, lng, user?.nama);
                                 setEditingId(null);
                               }}
-                              className="flex-1 flex items-center justify-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-2 py-1 rounded"
+                              className="flex-1 flex items-center justify-center gap-1 bg-[#071520] hover:bg-[#0d404f] text-white text-xs font-semibold px-2 py-1 rounded"
                             >
                               <Save className="w-3 h-3" /> Simpan
                             </button>
@@ -523,7 +523,7 @@ export default function PetaInteraktif() {
                                 setEditLat(loc.lat.toString());
                                 setEditLng(loc.lng.toString());
                               }}
-                              className="w-full mb-2 flex items-center justify-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold px-2 py-1 rounded border border-emerald-200"
+                              className="w-full mb-2 flex items-center justify-center gap-1 bg-[#0d404f]/10 hover:bg-[#0d404f]/20 text-[#0d404f] text-xs font-semibold px-2 py-1 rounded border border-[#0d404f]/25"
                             >
                               <Pencil className="w-3 h-3" /> Edit Koordinat
                             </button>
@@ -639,7 +639,7 @@ export default function PetaInteraktif() {
                               {pkm.bidangCore.map(b => (
                                 <span
                                   key={b}
-                                  className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded-full"
+                                  className="text-[10px] bg-[#0d404f]/10 text-[#0d404f] border border-[#0d404f]/25 px-1.5 py-0.5 rounded-full"
                                 >
                                   {b}
                                 </span>

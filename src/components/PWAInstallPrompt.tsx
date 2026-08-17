@@ -45,8 +45,8 @@ export default function PWAInstallPrompt() {
   return (
     <div className="fixed bottom-4 left-4 right-4 z-[9999] sm:left-auto sm:right-4 sm:w-80 animate-in slide-in-from-bottom-4 duration-300">
       <div className="bg-white border border-slate-200 text-slate-900 rounded-2xl shadow-xl shadow-slate-900/15 p-4 flex items-start gap-3">
-        <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0">
-          <Smartphone className="w-5 h-5 text-emerald-700" />
+        <div className="w-10 h-10 bg-[#071520] rounded-xl flex items-center justify-center flex-shrink-0">
+          <Smartphone className="w-5 h-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm">Install ID-MAP</p>
@@ -54,7 +54,7 @@ export default function PWAInstallPrompt() {
           <div className="flex gap-2 mt-3">
             <button
               onClick={handleInstall}
-              className="flex items-center gap-1.5 bg-[#006a61] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-[#005049] transition-colors"
+              className="flex items-center gap-1.5 bg-[#071520] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-[#0d404f] transition-colors"
             >
               <Download className="w-3.5 h-3.5" />
               Install APK

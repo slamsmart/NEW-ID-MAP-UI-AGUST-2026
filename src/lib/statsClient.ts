@@ -25,10 +25,26 @@ function statsApi() {
 
 export async function recordVisit() {
   if (!isConvexConfigured()) return;
+
+  // Jangan hitung kunjungan di localhost (dev) — counter hanya bertambah
+  // di production. Vite set import.meta.env.DEV=true saat `npm run dev`,
+  // dan false pada build production (`npm run build` + deploy).
+  if (import.meta.env.DEV) return;
+
   const s = statsApi();
   if (!s?.recordVisit) return;
+
+  // Satu kunjungan per sesi tab: refresh halaman / StrictMode mount ulang
+  // tidak menambah counter lagi (sessionStorage bertahan sampai tab ditutup).
+  const KEY = 'idmap_visit_recorded';
   try {
-    // Setiap kunjungan dihitung (tanpa deduplikasi)
+    if (sessionStorage.getItem(KEY)) return;
+    sessionStorage.setItem(KEY, '1');
+  } catch {
+    // sessionStorage bisa gagal (mode privat) — lanjut rekam saja.
+  }
+
+  try {
     await convex.mutation(s.recordVisit as any, {});
   } catch (err) {
     if (import.meta.env.DEV) console.warn('[stats] recordVisit gagal:', err);

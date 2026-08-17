@@ -76,7 +76,7 @@ export default function DownloadDropdown({
   const buttonBase =
     variant === 'dark'
       ? 'bg-white/10 border-white/30 text-white hover:bg-white/20'
-      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-emerald-300';
+      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-[#f06424]';
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
@@ -111,9 +111,9 @@ export default function DownloadDropdown({
                 type="button"
                 role="menuitem"
                 onClick={() => handleSelect(item)}
-                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors text-left"
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-slate-700 hover:bg-[#0d404f]/10 hover:text-[#0d404f] transition-colors text-left"
               >
-                <Icon className="w-4 h-4 flex-shrink-0 text-emerald-600" />
+                <Icon className="w-4 h-4 flex-shrink-0 text-[#0d404f]" />
                 <span className="flex-1">{item.label}</span>
               </button>
             );
