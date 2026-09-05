@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, cloneElement } from 'react';
+import { useState, useEffect, useMemo, useRef, cloneElement } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, GeoJSON } from 'react-leaflet';
 import type { FeatureCollection } from 'geojson';
 import L from 'leaflet';
@@ -14,7 +14,7 @@ import { api } from '../../convex/_generated/api';
 import { getCloudinaryUrl } from '../lib/cloudinary';
 import { Layers, Map, Satellite, Mountain, ChevronRight, ChevronDown, X, Download, FileText, LogIn, UserPlus, PanelRight, Home, Plus, Minus, Check, Search, Waves, LocateFixed, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { SignInButton, SignUpButton } from '@clerk/clerk-react';
+import ClerkAuthGate from '../components/clerk/ClerkAuthGate';
 import { useAuth } from '../context/useAuth';
 import { useAccountNotice } from '../components/AccountRequiredNotice';
 import DownloadDropdown from '../components/DownloadDropdown';
@@ -293,6 +293,8 @@ export default function PetaPublik() {
   const [coordinateInputOpen, setCoordinateInputOpen] = useState(false);
   const [coordinateInput, setCoordinateInput] = useState('');
   const [coordinateInputError, setCoordinateInputError] = useState('');
+  const [pendingDownload, setPendingDownload] = useState<'pdf' | 'geojson' | null>(null);
+  const clerkDownloadTrigger = useRef<HTMLButtonElement | null>(null);
 
   const goToCoordinates = () => {
     const values = coordinateInput.trim().split(/[,;\s]+/).map(Number);
@@ -343,6 +345,14 @@ export default function PetaPublik() {
     setSelectedId(null);
     setSelectedType(null);
   };
+
+  useEffect(() => {
+    if (!user || !pendingDownload) return;
+    const action = pendingDownload;
+    setPendingDownload(null);
+    if (action === 'pdf') downloadReportPDF();
+    else downloadMarkerGeoJSON();
+  }, [user, pendingDownload]);
 
   const { records: pokmaswasRecords } = usePokmaswas();
   const [filterRuangLingkup, setFilterRuangLingkup] = useState<string>('semua');
@@ -849,17 +859,26 @@ export default function PetaPublik() {
   }) => {
     if (user) return children;
     if (isClerkConfigured) {
-      if (mode === 'signup') {
-        return (
-          <SignUpButton mode="modal" forceRedirectUrl="/peta">
-            {children}
-          </SignUpButton>
-        );
-      }
+      // Clerk aktif: bungkus tombol dengan SignIn/SignUp modal (dimuat lazy
+      // agar chunk Clerk tidak ikut di halaman publik pada first load).
       return (
-        <SignInButton mode="modal" forceRedirectUrl="/peta">
+        <ClerkAuthGate
+          mode={mode}
+          redirectUrl="/peta"
+          onFallback={() =>
+            showAccountNotice(
+              mode === 'signup'
+                ? {
+                    title: 'Daftar Akun Baru',
+                    message:
+                      'Untuk mengakses fitur unduh data dan kontribusi survei, silakan daftar akun ID-MAP. Pendaftaran publik via Google sedang dalam persiapan — sementara hubungi admin untuk mendapat akses.',
+                  }
+                : undefined,
+            )
+          }
+        >
           {children}
-        </SignInButton>
+        </ClerkAuthGate>
       );
     }
     // Fallback: Clerk belum ter-config → tampilkan notice modal yang friendly
@@ -921,9 +940,31 @@ export default function PetaPublik() {
               />
             </div>
 
-            {/* Tombol Unduh — tampil untuk semua user; handler di-guard auth */}
+            {/* Trigger Clerk tersembunyi. Download tanpa sesi akan membuka
+                modal login/daftar Clerk, lalu aksi dilanjutkan setelah login. */}
+            {isClerkConfigured && (
+              <ClerkAuthGate
+                redirectUrl="/peta"
+                onFallback={() => setPendingDownload(null)}
+              >
+                <button
+                  ref={clerkDownloadTrigger}
+                  type="button"
+                  className="hidden"
+                  aria-hidden="true"
+                />
+              </ClerkAuthGate>
+            )}
+
+            {/* Tombol Unduh — user wajib login/daftar sebelum file dibuat */}
             <DownloadDropdown
               className="hidden sm:block"
+              beforeSelect={(item) => {
+                if (user) return true;
+                setPendingDownload(item.kind === 'pdf' ? 'pdf' : 'geojson');
+                window.setTimeout(() => clerkDownloadTrigger.current?.click(), 0);
+                return false;
+              }}
               items={[
                 {
                   kind: 'pdf',

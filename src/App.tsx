@@ -31,10 +31,10 @@ const KebijakanPrivasi = lazy(() => import('./pages/KebijakanPrivasi'));
 
 function AppShellFallback() {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0fdf4' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#071520' }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ width: 40, height: 40, border: '3px solid #16a34a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
-        <p style={{ color: '#16a34a', fontSize: 14, fontWeight: 600 }}>Memuat...</p>
+        <div style={{ width: 40, height: 40, border: '3px solid #f06424', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
+        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: 600, letterSpacing: '0.02em' }}>Memuat...</p>
       </div>
     </div>
   );
@@ -57,6 +57,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 function RootRoute() {
+  const { loading } = useAuth();
+  if (loading) return <AppShellFallback />;
+  // Landing page tetap bisa diakses walau sudah login —
+  // klik logo/brand di sidebar mengarah ke sini (jangan redirect ke /dashboard).
   return (
     <PageFade>
       <LandingPage />

@@ -1,5 +1,6 @@
 import { query, mutation } from './_generated/server';
 import { v, ConvexError } from 'convex/values';
+import { callerRole, requireRole } from './authGuard';
 
 const tujuanSurveiValidator = v.union(
   v.literal('monitoring'),
@@ -189,6 +190,13 @@ const upsertArgs = {
   verifiedAt: v.optional(v.string()),
 
   syncStatus: v.optional(syncStatusValidator),
+
+  /**
+   * Kunci internal untuk skrip migrasi data lama (Supabase → Convex) agar
+   * boleh menulis status approved/rejected tanpa sesi login.
+   * Isi = nilai env Convex MIGRATION_KEY (`npx convex env set MIGRATION_KEY=...`).
+   */
+  migrationKey: v.optional(v.string()),
 };
 
 // ── QUERIES ────────────────────────────────────────────────────────────────
@@ -268,6 +276,13 @@ export const stats = query({
 
 /**
  * Upsert survei by legacyId. Idempotent — aman untuk retry & sync queue offline.
+ *
+ * `verificationStatus` dari klien hanya dihormati bila:
+ *  - nilainya 'pending', atau
+ *  - sama dengan status record yang sudah ada (re-sync idempotent), atau
+ *  - pemanggil admin/verifikator, atau
+ *  - `migrationKey` cocok dengan env MIGRATION_KEY (skrip migrasi).
+ * Selain itu dipaksa 'pending' — menutup jalan self-approve via API publik.
  */
 export const upsert = mutation({
   args: upsertArgs,
@@ -278,9 +293,27 @@ export const upsert = mutation({
       .withIndex('by_legacy', (q) => q.eq('legacyId', args.legacyId))
       .unique();
 
+    const { migrationKey, ...rest } = args;
+    const requested = args.verificationStatus ?? 'pending';
+    let verificationStatus: 'pending' | 'approved' | 'rejected' = 'pending';
+    if (requested === 'pending') {
+      verificationStatus = 'pending';
+    } else if (existing?.verificationStatus === requested) {
+      verificationStatus = requested;
+    } else {
+      const role = await callerRole(ctx);
+      const migrationKeyOk =
+        !!migrationKey &&
+        !!process.env.MIGRATION_KEY &&
+        migrationKey === process.env.MIGRATION_KEY;
+      if (role === 'admin' || role === 'verifikator' || migrationKeyOk) {
+        verificationStatus = requested;
+      }
+    }
+
     const payload = {
-      ...args,
-      verificationStatus: args.verificationStatus ?? 'pending',
+      ...rest,
+      verificationStatus,
       syncStatus: args.syncStatus ?? 'synced',
     };
 
@@ -293,7 +326,7 @@ export const upsert = mutation({
 });
 
 /**
- * Verify survei — hanya untuk role verifikator (caller harus enforce auth).
+ * Verify survei — hanya untuk role verifikator/admin (dicek server-side).
  */
 export const verify = mutation({
   args: {
@@ -304,6 +337,7 @@ export const verify = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireRole(ctx, ['verifikator', 'admin']);
     const existing = await ctx.db
       .query('surveys')
       .withIndex('by_legacy', (q) => q.eq('legacyId', args.legacyId))
@@ -325,6 +359,7 @@ export const remove = mutation({
   args: { legacyId: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireRole(ctx, ['verifikator', 'admin']);
     const existing = await ctx.db
       .query('surveys')
       .withIndex('by_legacy', (q) => q.eq('legacyId', args.legacyId))

@@ -1,9 +1,12 @@
 /**
- * AuthContext — disederhanakan untuk dual-track auth:
- *  - Admin / Verifikator → form username+password yang match `ADMIN_ACCOUNTS`
- *    (hardcoded). Role bisa 'admin' / 'verifikator'.
+ * AuthContext — sesi UI untuk semua jalur login (via Clerk):
+ *  - Admin / Verifikator → form email+password; kredensial divalidasi di
+ *    server oleh Clerk, role dibaca dari tabel `userProfiles` di Convex.
  *  - User umum → Clerk (Google/TikTok/X). Role otomatis 'viewer'.
- *    Dipanggil via `signInExternal()` oleh `ClerkBridge`.
+ * Kedua jalur digalurkan ke sini lewat `signInExternal()` oleh `ClerkBridge`.
+ * localStorage hanya cache tampilan — otorisasi sebenarnya dicek server-side
+ * (guard requireRole di fungsi Convex), jadi memanipulasi cache ini tidak
+ * memberi hak akses apa pun.
  */
 import { useState, useCallback } from 'react';
 import { ADMIN_ACCOUNTS } from './authAccounts';

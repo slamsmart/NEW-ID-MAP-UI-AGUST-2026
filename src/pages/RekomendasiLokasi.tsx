@@ -23,6 +23,12 @@ type TabId = 'abrasi' | 'potensi' | 'ringkasan';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+/** Escape nilai user sebelum masuk ke HTML cetak — cegah XSS lewat field survei. */
+const escapeHtml = (s: unknown) =>
+  String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!),
+  );
+
 function formatLuasan(min: number, max: number, satuan: string): string {
   if (min === max) return `${min.toLocaleString('id-ID')} ${satuan}`;
   return `${min.toLocaleString('id-ID')}–${max.toLocaleString('id-ID')} ha`;
@@ -533,14 +539,14 @@ export default function RekomendasiLokasi() {
               ${combinedAbrasiData.map((r, i) => `
                 <tr>
                   <td>${i + 1}</td>
-                  <td><strong>${r.namaPantai}</strong></td>
-                  <td>${r.kecamatan}, ${r.kabKota}</td>
-                  <td>${r.indikasi}</td>
-                  <td>${r.kondisiSesudah}</td>
-                  <td style="text-transform:capitalize">${r.substrat}</td>
-                  <td>${r.luasanRestorasi.min === r.luasanRestorasi.max ? r.luasanRestorasi.min : `${r.luasanRestorasi.min}–${r.luasanRestorasi.max}`} ${r.luasanRestorasi.satuan}</td>
-                  <td><span class="badge-${r.prioritas === 'Tinggi' ? 'tinggi' : r.prioritas === 'Sedang' ? 'sedang' : 'rendah'}">${r.prioritas}</span></td>
-                  <td><em>${r.tanamanRekomendasi.join(', ')}</em></td>
+                  <td><strong>${escapeHtml(r.namaPantai)}</strong></td>
+                  <td>${escapeHtml(r.kecamatan)}, ${escapeHtml(r.kabKota)}</td>
+                  <td>${escapeHtml(r.indikasi)}</td>
+                  <td>${escapeHtml(r.kondisiSesudah)}</td>
+                  <td style="text-transform:capitalize">${escapeHtml(r.substrat)}</td>
+                  <td>${r.luasanRestorasi.min === r.luasanRestorasi.max ? r.luasanRestorasi.min : `${r.luasanRestorasi.min}–${r.luasanRestorasi.max}`} ${escapeHtml(r.luasanRestorasi.satuan)}</td>
+                  <td><span class="badge-${r.prioritas === 'Tinggi' ? 'tinggi' : r.prioritas === 'Sedang' ? 'sedang' : 'rendah'}">${escapeHtml(r.prioritas)}</span></td>
+                  <td><em>${r.tanamanRekomendasi.map(escapeHtml).join(', ')}</em></td>
                 </tr>`).join('')}
             </tbody>
           </table>
@@ -562,14 +568,14 @@ export default function RekomendasiLokasi() {
                 const skor = s.skorPotensi ?? hitungSkorPotensi(s.substrat ?? '', s.salinitas, s.tutupanTajuk);
                 return `<tr>
                   <td>${i + 1}</td>
-                  <td><strong>${s.locationName}</strong></td>
-                  <td>${s.province}</td>
-                  <td style="text-transform:capitalize">${s.substrat ?? '—'}</td>
+                  <td><strong>${escapeHtml(s.locationName)}</strong></td>
+                  <td>${escapeHtml(s.province)}</td>
+                  <td style="text-transform:capitalize">${escapeHtml(s.substrat) || '—'}</td>
                   <td>${s.salinitas || '—'}</td>
                   <td>${s.tutupanTajuk || '—'}</td>
                   <td><strong>${skor}/10</strong></td>
-                  <td><em>${s.spesiesDominan || '—'}</em></td>
-                  <td>${s.rekomendasiLapangan || '—'}</td>
+                  <td><em>${escapeHtml(s.spesiesDominan) || '—'}</em></td>
+                  <td>${escapeHtml(s.rekomendasiLapangan) || '—'}</td>
                   <td>${new Date(s.timestamp).toLocaleDateString('id-ID')}</td>
                 </tr>`;
               }).join('')}

@@ -165,7 +165,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* Footer */}
       <div className="px-4 py-3 border-t border-white/10">
-        <p className="text-[10px] text-white/50 text-center font-medium">ID-MAP v1.0 · Cabdin KP Kab. Malang</p>
+        <p className="text-[10px] text-white/50 text-center font-medium">ID-MAP v1.1 · Cabdin KP Kab. Malang</p>
       </div>
     </aside>
   );

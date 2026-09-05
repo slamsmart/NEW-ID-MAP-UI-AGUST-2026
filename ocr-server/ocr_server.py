@@ -256,6 +256,10 @@ def ocr_extract_gps(image_bytes: bytes, filename: str = ""):
 app = Flask(__name__)
 CORS(app, origins=["http://localhost:*", "http://127.0.0.1:*"])
 
+# Batas abuse: total body maks 25MB dan maks 12 foto per request.
+app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
+MAX_FILES_PER_REQUEST = 12
+
 
 @app.route("/ocr", methods=["POST"])
 def ocr_endpoint():
@@ -267,6 +271,8 @@ def ocr_endpoint():
     files = request.files.getlist("photos")
     if not files:
         return jsonify({"error": "Tidak ada file yang dikirim"}), 400
+    if len(files) > MAX_FILES_PER_REQUEST:
+        return jsonify({"error": f"Maksimal {MAX_FILES_PER_REQUEST} file per request"}), 400
 
     results = []
     for f in files:
@@ -305,4 +311,6 @@ if __name__ == "__main__":
     print("  Endpoint: POST http://localhost:5050/ocr")
     print("  Health:   GET  http://localhost:5050/health")
     print("=" * 60)
-    app.run(host="0.0.0.0", port=5050, debug=False)
+    # Loopback saja — companion lokal untuk browser di mesin yang sama,
+    # jangan ekspos ke jaringan karena endpoint ini tanpa autentikasi.
+    app.run(host="127.0.0.1", port=5050, debug=False)

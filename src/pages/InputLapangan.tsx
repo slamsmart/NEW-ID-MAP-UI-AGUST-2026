@@ -211,7 +211,14 @@ function getSurveyTypeLabel(tujuan?: SurveyRecord['tujuanSurvei']) {
   return 'Monitoring Mangrove / Vegetasi';
 }
 
+/** Escape nilai user sebelum masuk ke HTML cetak — cegah XSS lewat field survei. */
+const escapeHtml = (s: unknown) =>
+  String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!),
+  );
+
 function buildSurveyBAHtml(survey: SurveyRecord) {
+  const esc = escapeHtml;
   const tujuanLabel = getSurveyTypeLabel(survey.tujuanSurvei);
   const namaLokasi = survey.locationName || survey.namaPantai || '-';
   const tanggal = survey.timestamp ? new Date(survey.timestamp).toLocaleDateString('id-ID') : '-';
@@ -242,10 +249,10 @@ function buildSurveyBAHtml(survey: SurveyRecord) {
   const titikSarangRows = (survey.sarangPoints ?? []).map((point, idx) => `
     <tr>
       <td>${idx + 1}</td>
-      <td>${point.lat || '-'}</td>
-      <td>${point.lng || '-'}</td>
-      <td>${point.waktu || '-'}</td>
-      <td>${point.catatan || '-'}</td>
+      <td>${esc(point.lat) || '-'}</td>
+      <td>${esc(point.lng) || '-'}</td>
+      <td>${esc(point.waktu) || '-'}</td>
+      <td>${esc(point.catatan) || '-'}</td>
     </tr>`).join('');
 
   return `
@@ -282,24 +289,24 @@ function buildSurveyBAHtml(survey: SurveyRecord) {
         <div class="section-title">A. Identitas Kegiatan</div>
         <table class="meta">
           <tr><td>Jenis Kegiatan</td><td>: ${tujuanLabel}</td></tr>
-          <tr><td>Nama Lokasi</td><td>: ${namaLokasi}</td></tr>
+          <tr><td>Nama Lokasi</td><td>: ${esc(namaLokasi)}</td></tr>
           <tr><td>Tanggal Survei</td><td>: ${tanggal}</td></tr>
-          <tr><td>Petugas</td><td>: ${survey.namaPetugas || '-'}</td></tr>
-          <tr><td>Unit Kerja</td><td>: ${survey.unit || '-'}</td></tr>
+          <tr><td>Petugas</td><td>: ${esc(survey.namaPetugas) || '-'}</td></tr>
+          <tr><td>Unit Kerja</td><td>: ${esc(survey.unit) || '-'}</td></tr>
           <tr><td>Koordinat</td><td>: ${koordinat}</td></tr>
         </table>
       </div>
 
       <div class="section box">
         <div class="section-title">B. Hasil Pengamatan</div>
-        <ul>${tujuanIsi.map(item => `<li>${item}</li>`).join('')}</ul>
+        <ul>${tujuanIsi.map(item => `<li>${esc(item)}</li>`).join('')}</ul>
       </div>
 
       <div class="section box">
         <div class="section-title">C. Kondisi Umum dan Rekomendasi</div>
-        <p><strong>Kondisi Umum:</strong><br/>${survey.kondisiUmum || '-'}</p>
-        <p><strong>Rekomendasi:</strong><br/>${survey.rekomendasiLapangan || '-'}</p>
-        <p><strong>Ancaman:</strong><br/>${ancaman.length ? ancaman.join(', ') : '-'}</p>
+        <p><strong>Kondisi Umum:</strong><br/>${esc(survey.kondisiUmum) || '-'}</p>
+        <p><strong>Rekomendasi:</strong><br/>${esc(survey.rekomendasiLapangan) || '-'}</p>
+        <p><strong>Ancaman:</strong><br/>${ancaman.length ? ancaman.map(escapeHtml).join(', ') : '-'}</p>
       </div>
 
       ${survey.tujuanSurvei === 'pendaratan_penyu' ? `
@@ -321,8 +328,8 @@ function buildSurveyBAHtml(survey: SurveyRecord) {
         <div class="sign-box">
           <p>Petugas Lapangan,</p>
           <div class="sign-space"></div>
-          <p><strong>${survey.namaPetugas || '-'}</strong></p>
-          <p>${survey.unit || '-'}</p>
+          <p><strong>${esc(survey.namaPetugas) || '-'}</strong></p>
+          <p>${esc(survey.unit) || '-'}</p>
         </div>
         <div class="sign-box">
           <p>Mengetahui,</p>

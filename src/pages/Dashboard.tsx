@@ -6,10 +6,9 @@ import {
 } from 'recharts';
 import {
   AlertTriangle, CheckCircle, TrendingUp, TrendingDown,
-  MapPin, ClipboardList, ArrowUpRight, Users, Leaf,
-  Calendar, Clock, AlertCircle, Pencil, Upload, X,
+  MapPin, ClipboardList, ArrowUpRight, Users,
+  Calendar, Clock, AlertCircle,
 } from 'lucide-react';
-import { useRef } from 'react';
 import {
   mangroveLocations as seedLocations, ekosistemData, alerts, timeSeriesData,
 } from '../data/seedData';
@@ -36,9 +35,10 @@ interface HeroKPIProps {
   data: { v: number }[];
   color: string;
   trendNegative?: boolean;
+  ready?: boolean;
 }
 
-function HeroKPI({ label, value, unit, trend, data, color }: HeroKPIProps) {
+function HeroKPI({ label, value, unit, trend, data, color, ready = true }: HeroKPIProps) {
   const isUp = trend >= 0;
   return (
     <div className="bg-md-surface-lowest rounded-xl p-4 border border-md-outline-variant shadow-sm hover:shadow-md transition-shadow">
@@ -54,12 +54,16 @@ function HeroKPI({ label, value, unit, trend, data, color }: HeroKPIProps) {
             <span>{Math.abs(trend)}% vs tahun lalu</span>
           </div>
         </div>
-        <div className="w-24 h-14 flex-shrink-0">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data}>
-              <Bar dataKey="v" fill={color} radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="w-24 h-14 flex-shrink-0 min-w-[96px] min-h-[56px]">
+          {ready ? (
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={56}>
+              <BarChart data={data}>
+                <Bar dataKey="v" fill={color} radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full w-full" aria-hidden="true" />
+          )}
         </div>
       </div>
     </div>
@@ -69,6 +73,7 @@ function HeroKPI({ label, value, unit, trend, data, color }: HeroKPIProps) {
 export default function Dashboard() {
   const { user } = useAuth();
   const isStaff = user?.role === 'admin' || user?.role === 'verifikator';
+  const [chartsReady, setChartsReady] = useState(false);
   const [mangroveLocations, setMangroveLocations] = useState<MangroveLocation[]>(seedLocations);
   const totalArea = mangroveLocations.reduce((s, l) => s + l.areaHa, 0);
   const avgHealth = Math.round(ekosistemData.reduce((s, e) => s + e.skorKesehatan, 0) / ekosistemData.length);
@@ -79,35 +84,13 @@ export default function Dashboard() {
   const [recentSurveys, setRecentSurveys] = useState(getSurveys().slice(0, 5));
   const [verificationStats, setVerificationStats] = useState(getVerificationStats());
 
-  // ── Dashboard header image ──
-  const BANNER_KEY = 'dashboard_header_img';
-  const [bannerImg, setBannerImg] = useState<string | null>(
-    () => localStorage.getItem(BANNER_KEY)
-  );
-  const [bannerEditing, setBannerEditing] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string;
-      localStorage.setItem(BANNER_KEY, result);
-      setBannerImg(result);
-      setBannerEditing(false);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleBannerRemove = () => {
-    localStorage.removeItem(BANNER_KEY);
-    setBannerImg(null);
-    setBannerEditing(false);
-  };
-
   useEffect(() => {
     void fetchAllLocations().then(setMangroveLocations);
+  }, []);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setChartsReady(true));
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
@@ -162,20 +145,9 @@ export default function Dashboard() {
     <div className="space-y-4">
 
       {/* ── Dashboard Header Banner ── */}
-      <section className="relative rounded-2xl overflow-hidden flex flex-col group bg-[#071520]">
-        {/* Background: gambar upload atau navy solid senada sidebar kiri */}
-        {bannerImg ? (
-          <img
-            src={bannerImg}
-            alt="Dashboard header"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-[#071520] bg-[linear-gradient(160deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.02)_45%,rgba(255,255,255,0.05)_100%)]" />
-        )}
-
-        {/* Overlay gelap hanya saat pakai gambar upload agar teks tetap terbaca */}
-        {bannerImg && <div className="absolute inset-0 bg-black/40" />}
+      <section className="relative rounded-2xl flex flex-col bg-[#071520]">
+        {/* Background: navy solid senada sidebar kiri */}
+        <div className="absolute inset-0 rounded-2xl bg-[#071520] bg-[linear-gradient(160deg,rgba(255,255,255,0.07)_0%,rgba(255,255,255,0.02)_45%,rgba(255,255,255,0.05)_100%)]" />
 
         {/* Konten: teks di pojok kiri atas box, aksi + akun di kanan atas */}
         <div className="relative z-10 w-full flex flex-col md:flex-row md:items-start justify-between gap-4 px-5 py-5 md:px-6">
@@ -190,27 +162,6 @@ export default function Dashboard() {
                 <Calendar className="w-3.5 h-3.5" />
                 {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
               </div>
-              {/* Tombol edit — hanya tampil untuk staff */}
-              {isStaff && (
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => { setBannerEditing(e => !e); fileInputRef.current?.click(); }}
-                    title="Ganti gambar header"
-                    className="p-2 bg-white/5 text-white rounded-lg border border-white/10 hover:bg-white/10 transition-all"
-                  >
-                    <Upload className="w-4 h-4" />
-                  </button>
-                  {bannerImg && (
-                    <button
-                      onClick={handleBannerRemove}
-                      title="Hapus gambar header"
-                      className="p-2 bg-white/5 text-white rounded-lg border border-white/10 hover:bg-red-500/40 transition-all"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              )}
             </div>
             <HeaderActions
               variant="dark"
@@ -220,26 +171,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Edit mode hint — overlay saat hover untuk staff */}
-        {isStaff && !bannerEditing && (
-          <div
-            className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/20 transition-all cursor-pointer opacity-0 group-hover:opacity-100"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <div className="flex items-center gap-2 bg-[#0d1b2a]/80 text-white text-xs font-semibold px-4 py-2 rounded-full border border-white/10">
-              <Pencil className="w-3.5 h-3.5" /> Klik untuk ganti gambar header
-            </div>
-          </div>
-        )}
-
-        {/* Hidden file input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleBannerUpload}
-        />
       </section>
 
       {/* Statistics Cards — colored top border style */}
@@ -342,6 +273,7 @@ export default function Dashboard() {
           trend={3.2}
           data={sparkArea}
           color="#0d404f"
+          ready={chartsReady}
         />
         <HeroKPI
           label="Indeks Tutupan Vegetasi"
@@ -350,6 +282,7 @@ export default function Dashboard() {
           trend={4.2}
           data={sparkHealth}
           color="#071520"
+          ready={chartsReady}
         />
         <HeroKPI
           label="Area Restorasi Aktif"
@@ -359,6 +292,7 @@ export default function Dashboard() {
           data={sparkRestore}
           color="#334155"
           trendNegative={false}
+          ready={chartsReady}
         />
       </div>
 
@@ -367,18 +301,22 @@ export default function Dashboard() {
         {/* Gauge: Tutupan Lebat */}
         <div className="bg-md-surface-lowest rounded-xl p-4 border border-md-outline-variant shadow-sm flex flex-col">
           <h3 className="font-headline-sm text-headline-sm text-md-primary text-center">Tutupan Lebat</h3>
-          <div className="relative flex-1 flex items-center justify-center mt-2">
-            <ResponsiveContainer width="100%" height={180}>
-              <RadialBarChart
-                cx="50%" cy="80%"
-                innerRadius="100%" outerRadius="160%"
-                barSize={18}
-                startAngle={180} endAngle={0}
-                data={[{ name: 'tutupan', value: tutupanLebatPct, fill: '#006a61' }]}
-              >
-                <RadialBar background={{ fill: '#e0e3e5' }} dataKey="value" cornerRadius={10} />
-              </RadialBarChart>
-            </ResponsiveContainer>
+          <div className="relative flex-1 flex items-center justify-center mt-2 min-h-[180px] min-w-0">
+            {chartsReady ? (
+              <ResponsiveContainer width="100%" height={180} minWidth={0} minHeight={180}>
+                <RadialBarChart
+                  cx="50%" cy="80%"
+                  innerRadius="100%" outerRadius="160%"
+                  barSize={18}
+                  startAngle={180} endAngle={0}
+                  data={[{ name: 'tutupan', value: tutupanLebatPct, fill: '#006a61' }]}
+                >
+                  <RadialBar background={{ fill: '#e0e3e5' }} dataKey="value" cornerRadius={10} />
+                </RadialBarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[180px] w-full" aria-hidden="true" />
+            )}
             <div className="absolute inset-0 flex flex-col items-center justify-center pt-6">
               <span className="font-headline-lg text-headline-lg text-md-on-surface">{tutupanLebatPct}<span className="font-headline-md text-headline-md text-md-on-surface-variant/70">%</span></span>
             </div>
@@ -389,22 +327,26 @@ export default function Dashboard() {
         {/* Donut: Distribusi Status Tutupan */}
         <div className="bg-md-surface-lowest rounded-xl p-4 border border-md-outline-variant shadow-sm">
           <h3 className="font-headline-sm text-headline-sm text-md-primary text-center">Distribusi Status Tutupan</h3>
-          <div className="relative">
-            <ResponsiveContainer width="100%" height={170}>
-              <PieChart>
-                <Pie
-                  data={statusPieData}
-                  cx="50%" cy="50%"
-                  innerRadius={45} outerRadius={70}
-                  dataKey="value" paddingAngle={3}
-                >
-                  {statusPieData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} stroke="none" />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ borderRadius: '12px', fontSize: '12px' }} />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="relative min-h-[170px] min-w-0">
+            {chartsReady ? (
+              <ResponsiveContainer width="100%" height={170} minWidth={0} minHeight={170}>
+                <PieChart>
+                  <Pie
+                    data={statusPieData}
+                    cx="50%" cy="50%"
+                    innerRadius={45} outerRadius={70}
+                    dataKey="value" paddingAngle={3}
+                  >
+                    {statusPieData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} stroke="none" />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: '12px', fontSize: '12px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[170px] w-full" aria-hidden="true" />
+            )}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <span className="font-headline-md text-headline-md text-md-on-surface">{Math.round(((lebatCount + mangroveLocations.filter(l => l.status === 'sedang').length) / mangroveLocations.length) * 100)}<span className="font-headline-sm text-headline-sm text-md-on-surface-variant/70">%</span></span>
               <span className="font-label-md text-label-md text-md-on-surface-variant uppercase">Sehat</span>
@@ -455,18 +397,22 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Indeks Kesehatan Ekosistem (gaya Climate Change Index) */}
         <div className="bg-md-primary rounded-xl p-4 flex items-center gap-4 border border-md-primary-container">
-          <div className="relative w-20 h-20 flex-shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadialBarChart
-                cx="50%" cy="50%"
-                innerRadius="70%" outerRadius="100%"
-                barSize={6}
-                startAngle={90} endAngle={-270}
-                data={[{ value: avgHealth, fill: '#95d3ba' }]}
-              >
-                <RadialBar background={{ fill: '#0b513d' }} dataKey="value" cornerRadius={10} />
-              </RadialBarChart>
-            </ResponsiveContainer>
+          <div className="relative w-20 h-20 flex-shrink-0 min-w-[80px] min-h-[80px]">
+            {chartsReady ? (
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={80}>
+                <RadialBarChart
+                  cx="50%" cy="50%"
+                  innerRadius="70%" outerRadius="100%"
+                  barSize={6}
+                  startAngle={90} endAngle={-270}
+                  data={[{ value: avgHealth, fill: '#95d3ba' }]}
+                >
+                  <RadialBar background={{ fill: '#0b513d' }} dataKey="value" cornerRadius={10} />
+                </RadialBarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full w-full" aria-hidden="true" />
+            )}
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="font-label-md text-label-md text-white">{avgHealth}</span>
             </div>
@@ -478,37 +424,38 @@ export default function Dashboard() {
           <ArrowUpRight className="w-5 h-5 text-md-inverse-primary" />
         </div>
 
-        {/* Aktivitas Survei (gaya water level / community) */}
-        <div className="bg-md-secondary-container rounded-xl p-4 flex items-center gap-4 border border-md-outline-variant relative overflow-hidden">
-          <div className="absolute right-0 top-0 bottom-0 w-32 opacity-25 pointer-events-none" aria-hidden>
-            <Leaf className="w-full h-full text-md-secondary" />
-          </div>
-          <div className="relative w-16 h-16 flex-shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadialBarChart
-                cx="50%" cy="50%"
-                innerRadius="65%" outerRadius="100%"
-                barSize={6}
-                startAngle={90} endAngle={-270}
-                data={[{ value: Math.min(surveyStats.total * 5, 100), fill: '#006a61' }]}
-              >
-                <RadialBar background={{ fill: '#ffffff' }} dataKey="value" cornerRadius={10} />
-              </RadialBarChart>
-            </ResponsiveContainer>
+        {/* Aktivitas Survei (gaya community, senada dengan Indeks Kesehatan) */}
+        <div className="bg-md-primary rounded-xl p-4 flex items-center gap-4 border border-md-primary-container">
+          <div className="relative w-16 h-16 flex-shrink-0 min-w-[64px] min-h-[64px]">
+            {chartsReady ? (
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={64}>
+                <RadialBarChart
+                  cx="50%" cy="50%"
+                  innerRadius="65%" outerRadius="100%"
+                  barSize={6}
+                  startAngle={90} endAngle={-270}
+                  data={[{ value: Math.min(surveyStats.total * 5, 100), fill: '#95d3ba' }]}
+                >
+                  <RadialBar background={{ fill: '#0b513d' }} dataKey="value" cornerRadius={10} />
+                </RadialBarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full w-full" aria-hidden="true" />
+            )}
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="font-label-md text-label-md text-md-on-secondary-container">{surveyStats.total}</span>
+              <span className="font-label-md text-label-md text-white">{surveyStats.total}</span>
             </div>
           </div>
-          <div className="flex-1 relative z-10">
-            <p className="font-headline-sm text-headline-sm text-md-on-secondary-container">Komunitas EcoTrack</p>
-            <p className="font-body-sm text-body-sm text-md-on-secondary-container/80 mt-0.5">Survei lapangan kolaboratif dari tim Wilker Cabdin Malang</p>
+          <div className="flex-1">
+            <p className="font-headline-sm text-headline-sm text-white">Komunitas EcoTrack</p>
+            <p className="font-body-sm text-body-sm text-md-inverse-primary/80 mt-0.5">Survei lapangan kolaboratif dari tim Wilker Cabdin Malang</p>
             <div className="flex items-center gap-1.5 mt-2">
               <div className="flex -space-x-1.5">
                 <div className="w-5 h-5 rounded-full bg-md-secondary border-2 border-white flex items-center justify-center"><Users className="w-2.5 h-2.5 text-white" /></div>
-                <div className="w-5 h-5 rounded-full bg-md-primary border-2 border-white" />
-                <div className="w-5 h-5 rounded-full bg-md-tertiary border-2 border-white" />
+                <div className="w-5 h-5 rounded-full bg-md-inverse-primary border-2 border-white" />
+                <div className="w-5 h-5 rounded-full bg-md-tertiary-container border-2 border-white" />
               </div>
-              <span className="font-label-md text-label-md text-md-on-secondary-container">{surveyStats.total} entri · {surveyStats.customLocCount} lokasi baru</span>
+              <span className="font-label-md text-label-md text-md-inverse-primary">{surveyStats.total} entri · {surveyStats.customLocCount} lokasi baru</span>
             </div>
           </div>
         </div>
@@ -526,8 +473,9 @@ export default function Dashboard() {
             <span className="font-label-md text-label-md text-md-on-secondary-container">+2.7%/thn</span>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={200}>
-          <AreaChart data={trendData}>
+        {chartsReady ? (
+          <ResponsiveContainer width="100%" height={200} minWidth={0} minHeight={200}>
+            <AreaChart data={trendData}>
             <defs>
               <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#006a61" stopOpacity={0.35} />
@@ -539,8 +487,11 @@ export default function Dashboard() {
             <YAxis tick={{ fontSize: 12, fill: '#404944' }} />
             <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #bfc9c3', fontSize: '12px' }} />
             <Area type="monotone" dataKey="Luas Mangrove (ha)" stroke="#006a61" strokeWidth={2.5} fill="url(#areaGrad)" />
-          </AreaChart>
-        </ResponsiveContainer>
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-[200px] w-full" aria-hidden="true" />
+        )}
       </div>
 
       {/* === LUAS PER LOKASI + NOTIFIKASI === */}
@@ -552,8 +503,9 @@ export default function Dashboard() {
             <span className="font-label-md text-label-md bg-md-secondary-container/40 text-md-on-secondary-container border border-md-outline-variant rounded px-2 py-0.5">Kab. Malang</span>
           </div>
           <p className="font-body-sm text-body-sm text-md-on-surface-variant mb-4">Dalam hektar · Wilker Cabdin KP Kab. Malang 2025</p>
-          <ResponsiveContainer width="100%" height={190}>
-            <BarChart data={mangroveLocations.map(l => ({ name: l.name.length > 20 ? l.name.slice(0, 20) + '…' : l.name, luas: l.areaHa, status: l.status }))} layout="vertical" margin={{ left: 20, right: 30 }}>
+          {chartsReady ? (
+            <ResponsiveContainer width="100%" height={190} minWidth={0} minHeight={190}>
+              <BarChart data={mangroveLocations.map(l => ({ name: l.name.length > 20 ? l.name.slice(0, 20) + '…' : l.name, luas: l.areaHa, status: l.status }))} layout="vertical" margin={{ left: 20, right: 30 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e0e3e5" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 11, fill: '#404944' }} />
               <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: '#404944' }} width={120} />
@@ -574,8 +526,11 @@ export default function Dashboard() {
                   />
                 ))}
               </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[190px] w-full" aria-hidden="true" />
+          )}
         </div>
 
         {/* Alerts Panel */}

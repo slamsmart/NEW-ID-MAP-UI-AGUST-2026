@@ -101,7 +101,7 @@ export default function DataSourcesPanel() {
                 ke sumber primer masing-masing institusi.
               </p>
               <p className="text-xs text-amber-600 mt-1.5 font-medium">
-                Versi Data: Q1 2025 | Terakhir diperbarui: April 2025 | ID-MAP v1.0 | Hackathon 2026
+                Versi Data: Q1 2025 | Terakhir diperbarui: April 2025 | ID-MAP v1.1
               </p>
             </div>
           </div>

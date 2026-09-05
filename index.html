@@ -29,7 +29,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- ID MAP typography: DM Sans for UI, Playfair Display for brand accents -->
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet" />
+    <!-- Non-blocking font load: preload CSS, lalu swap saat siap -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" /></noscript>
+
+    <!-- Preload hero LCP image (WebP responsive) agar browser mulai mengunduh
+         gambar latar hero segera, tanpa menunggu CSS diparse. -->
+    <link rel="preload" as="image" href="/assets/optimized/hero-1920.webp"
+      imagesrcset="/assets/optimized/hero-480.webp 480w, /assets/optimized/hero-768.webp 768w, /assets/optimized/hero-1080.webp 1080w, /assets/optimized/hero-1536.webp 1536w, /assets/optimized/hero-1920.webp 1920w"
+      imagesizes="100vw" fetchpriority="high" />
   </head>
   <body>
     <div id="root"></div>

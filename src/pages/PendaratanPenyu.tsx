@@ -6,6 +6,12 @@ import { fetchSurveys, updateSurveyRemote, removeSurvey } from '../data/localSto
 import { downloadCSV, downloadGeoJSON, dateStamp } from '../lib/exportUtils';
 import { getCloudinaryUrl } from '../lib/cloudinary';
 
+/** Escape nilai user sebelum masuk ke HTML cetak — cegah XSS lewat field survei. */
+const escapeHtml = (s: unknown) =>
+  String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!),
+  );
+
 interface PenyuEntry {
   id: string;
   namaPantai: string;
@@ -206,14 +212,14 @@ export default function PendaratanPenyu() {
             ${exportData.map((d, i) => `
               <tr>
                 <td>${i + 1}</td>
-                <td><strong>${d.namaPantai}</strong></td>
-                <td>${d.lokasi}</td>
-                <td><em>${d.jenisPenyu}</em></td>
+                <td><strong>${escapeHtml(d.namaPantai)}</strong></td>
+                <td>${escapeHtml(d.lokasi)}</td>
+                <td><em>${escapeHtml(d.jenisPenyu)}</em></td>
                 <td><strong>${d.jumlahSarang}</strong></td>
-                <td>${d.koordinat}</td>
-                <td><span class="badge badge-${d.statusPerlindungan.toLowerCase()}">${d.statusPerlindungan}</span></td>
-                <td>${d.ancaman}</td>
-                <td>${d.tanggalSurvei}</td>
+                <td>${escapeHtml(d.koordinat)}</td>
+                <td><span class="badge badge-${escapeHtml(d.statusPerlindungan.toLowerCase())}">${escapeHtml(d.statusPerlindungan)}</span></td>
+                <td>${escapeHtml(d.ancaman)}</td>
+                <td>${escapeHtml(d.tanggalSurvei)}</td>
               </tr>`).join('')}
           </tbody>
         </table>

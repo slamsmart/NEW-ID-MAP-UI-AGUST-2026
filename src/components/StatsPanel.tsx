@@ -5,23 +5,23 @@
  *   konfigurasi: panel akan render placeholder graceful.
  * — Dipakai di Dashboard, dibungkus role-check (admin/verifikator only).
  */
-import { useQuery } from 'convex/react';
+import { useEffect, useState } from 'react';
 import { api } from '../../convex/_generated/api';
 import { Eye, Download, Users, FileText, Database, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { isConvexConfigured } from '../lib/convexClient';
+import { convex, isConvexConfigured } from '../lib/convexClient';
 
 // `stats.*` mungkin belum ter-codegen (sebelum user jalankan `npx convex dev`
 // untuk pertama kali). Resolve LAZY di runtime — kalau undefined, fallback
 // ke null dan UI render placeholder. JANGAN akses property di top-level
 // module karena akan throw saat impor → crash seluruh halaman.
-function getStatsApiRef(): any | null {
-  const ref = (api as unknown as { stats?: { getStats?: any } }).stats?.getStats;
+function getStatsApiRef(): unknown | null {
+  const ref = (api as unknown as { stats?: { getStats?: unknown } }).stats?.getStats;
   return ref ?? null;
 }
 
-function getStatsDetailApiRef(): any | null {
-  const ref = (api as unknown as { stats?: { getStatsDetail?: any } }).stats?.getStatsDetail;
+function getStatsDetailApiRef(): unknown | null {
+  const ref = (api as unknown as { stats?: { getStatsDetail?: unknown } }).stats?.getStatsDetail;
   return ref ?? null;
 }
 
@@ -99,8 +99,8 @@ function ChartCard({
           <span className="text-emerald-600">Unduhan {totalDownloads.toLocaleString('id-ID')}</span>
         </div>
       </div>
-      <div className="h-48">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="h-48 min-h-[192px] min-w-0">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={192}>
           <BarChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
             <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#6b7280' }} tickLine={false} axisLine={{ stroke: '#e5e7eb' }} interval={0} angle={-30} textAnchor="end" height={40} />
@@ -119,16 +119,58 @@ function ChartCard({
 export default function StatsPanel() {
   const ref = getStatsApiRef();
   const detailRef = getStatsDetailApiRef();
-  // useQuery diizinkan menerima 'skip' kalau Convex tidak siap — tetap aman
-  // di server-side render dan saat ref belum ada.
-  const stats = useQuery(
-    ref ?? ('skip' as any),
-    isConvexConfigured() && ref ? {} : 'skip',
-  ) as StatsResult | undefined;
-  const detail = useQuery(
-    detailRef ?? ('skip' as any),
-    isConvexConfigured() && detailRef ? {} : 'skip',
-  ) as StatsDetailResult | undefined;
+  const [stats, setStats] = useState<StatsResult | undefined>(undefined);
+  const [detail, setDetail] = useState<StatsDetailResult | undefined>(undefined);
+  const [detailStatus, setDetailStatus] = useState<'loading' | 'ready' | 'unavailable'>(
+    detailRef ? 'loading' : 'unavailable',
+  );
+
+  useEffect(() => {
+    if (!isConvexConfigured() || !ref) return;
+    let cancelled = false;
+
+    const loadStats = async () => {
+      try {
+        const result = await convex.query(ref as never, {} as never) as StatsResult;
+        if (!cancelled) setStats(result);
+      } catch (err) {
+        if (import.meta.env.DEV) console.warn('[StatsPanel] stats.getStats gagal:', err);
+      }
+    };
+
+    void loadStats();
+    const timer = window.setInterval(() => { void loadStats(); }, 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [ref]);
+
+  useEffect(() => {
+    if (!isConvexConfigured() || !detailRef) return;
+    let cancelled = false;
+
+    const loadDetail = async () => {
+      try {
+        const result = await convex.query(detailRef as never, {} as never) as StatsDetailResult;
+        if (cancelled) return;
+        setDetail(result);
+        setDetailStatus('ready');
+      } catch (err) {
+        if (cancelled) return;
+        setDetail(undefined);
+        setDetailStatus('unavailable');
+        if (import.meta.env.DEV) console.warn('[StatsPanel] stats.getStatsDetail belum tersedia:', err);
+      }
+    };
+
+    void loadDetail();
+    const timer = window.setInterval(() => { void loadDetail(); }, 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [detailRef]);
 
   if (!isConvexConfigured()) {
     return (
@@ -291,7 +333,7 @@ export default function StatsPanel() {
       </div>
 
       {/* Grafik detail per bulan & triwulan (admin/verifikator) */}
-      {detailRef ? (
+      {detailStatus !== 'unavailable' ? (
         detail ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             <ChartCard
@@ -314,9 +356,9 @@ export default function StatsPanel() {
       ) : (
         <div className="flex items-center gap-2 text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
           <BarChart3 className="w-4 h-4" />
-          Grafik per bulan/triwulan aktif setelah fungsi{' '}
-          <code className="bg-amber-100 px-1 rounded">stats.getStatsDetail</code> ter-deploy
-          (jalankan <code className="bg-amber-100 px-1 rounded">npx convex dev</code> sekali).
+          Grafik per bulan/triwulan belum tersedia di backend aktif. Jalankan deploy Convex yang memuat
+          <code className="bg-amber-100 px-1 rounded ml-1">stats.getStatsDetail</code>
+          atau biarkan dashboard memakai ringkasan statistik saja.
         </div>
       )}
     </div>

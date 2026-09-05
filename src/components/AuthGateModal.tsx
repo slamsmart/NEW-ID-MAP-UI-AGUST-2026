@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, LogIn, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { SignInButton, useUser } from '@clerk/clerk-react';
-// Note: hook Clerk hanya dipanggil di komponen anak yang dirender saat
-// `isClerkConfigured`, supaya app tidak crash bila ClerkProvider absen.
-import { useAuth } from '../context/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/useAuth';
 
 const isClerkConfigured = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -32,7 +30,8 @@ export default function AuthGateModal({
 
   const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(''); setSuccess('');
+    setError('');
+    setSuccess('');
     const ok = login(username.trim(), password);
     if (ok) {
       setSuccess('Berhasil masuk. Mengalihkan...');
@@ -47,6 +46,7 @@ export default function AuthGateModal({
       className="fixed inset-0 z-[1100] flex items-center justify-center p-4 animate-fade-in"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
+
       {/* Backdrop dengan gradien hijau→biru tema mangrove */}
       <div
         className="absolute inset-0"
@@ -118,8 +118,8 @@ export default function AuthGateModal({
               type="text"
               value={username}
               autoComplete="username"
-              onChange={e => { setUsername(e.target.value); setError(''); }}
-              placeholder="Username admin / verifikator"
+                onChange={e => { setUsername(e.target.value); setError(''); }}
+                placeholder="Username"
               className="w-full bg-white/95 text-gray-800 placeholder-gray-400 rounded-full px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#f06424]/60 shadow-sm"
             />
           </div>

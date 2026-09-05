@@ -1,9 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ConvexProvider } from 'convex/react'
-import { ClerkProvider } from '@clerk/clerk-react'
 import './index.css'
 import App from './App.tsx'
+import { ClerkProviderGate } from './components/clerk/ClerkContext'
 import { convex } from './lib/convexClient'
 
 const clerkKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
@@ -32,12 +32,8 @@ const Root = (
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {clerkKey ? (
-      <ClerkProvider publishableKey={clerkKey} afterSignOutUrl="/">
-        {Root}
-      </ClerkProvider>
-    ) : (
-      Root
-    )}
+    {/* Clerk dimuat lazy-aggressive: provider baru ter-mount setelah chunk
+        Clerk selesai diunduh, sehingga entry chunk jauh lebih ringan. */}
+    <ClerkProviderGate>{Root}</ClerkProviderGate>
   </StrictMode>,
 )

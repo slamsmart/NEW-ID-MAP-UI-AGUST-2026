@@ -4,6 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { downloadCSV, dateStamp } from '../lib/exportUtils';
 
+/** Escape nilai user sebelum masuk ke HTML cetak — cegah XSS lewat field yang diedit user. */
+const escapeHtml = (s: unknown) =>
+  String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!),
+  );
+
 interface VegetasiEntry {
   id: string;
   nama: string;
@@ -143,13 +149,13 @@ export default function VegetasiMangrove() {
             ${exportData.map((d, i) => `
               <tr>
                 <td>${i + 1}</td>
-                <td><strong>${d.nama}</strong></td>
-                <td><em>${d.jenis}</em></td>
-                <td>${d.lokasi}</td>
-                <td>${d.koordinat}</td>
-                <td>${d.luasArea ?? '-'}</td>
-                <td><span class="badge badge-${d.kondisi.toLowerCase()}">${d.kondisi}</span></td>
-                <td>${d.tanggal}</td>
+                <td><strong>${escapeHtml(d.nama)}</strong></td>
+                <td><em>${escapeHtml(d.jenis)}</em></td>
+                <td>${escapeHtml(d.lokasi)}</td>
+                <td>${escapeHtml(d.koordinat)}</td>
+                <td>${escapeHtml(d.luasArea) || '-'}</td>
+                <td><span class="badge badge-${escapeHtml(d.kondisi.toLowerCase())}">${escapeHtml(d.kondisi)}</span></td>
+                <td>${escapeHtml(d.tanggal)}</td>
               </tr>`).join('')}
           </tbody>
         </table>

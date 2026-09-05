@@ -305,6 +305,38 @@ div[id] {
   animation: heroKenburns 1.8s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* ── Responsive background images (WebP via image-set, JPEG fallback) ── */
+/* Perangkat kecil mengunduh varian kecil, layar besar varian besar. */
+.bg-hero {
+  background-image: url('/assets/id-map-mangrove.jpg');
+  background-image: image-set(
+    url('/assets/optimized/hero-480.webp') 480w,
+    url('/assets/optimized/hero-768.webp') 768w,
+    url('/assets/optimized/hero-1080.webp') 1080w,
+    url('/assets/optimized/hero-1536.webp') 1536w,
+    url('/assets/optimized/hero-1920.webp') 1920w
+  );
+}
+.bg-fitur {
+  background-image: url('/assets/fitur-background.jpg');
+  background-image: image-set(
+    url('/assets/optimized/fitur-480.webp') 480w,
+    url('/assets/optimized/fitur-768.webp') 768w,
+    url('/assets/optimized/fitur-1080.webp') 1080w,
+    url('/assets/optimized/fitur-1536.webp') 1536w,
+    url('/assets/optimized/fitur-1920.webp') 1920w
+  );
+}
+.bg-statistik {
+  background-image: url('/assets/statistik-background.jpeg');
+  background-image: image-set(
+    url('/assets/optimized/statistik-480.webp') 480w,
+    url('/assets/optimized/statistik-768.webp') 768w,
+    url('/assets/optimized/statistik-1080.webp') 1080w,
+    url('/assets/optimized/statistik-1600.webp') 1600w
+  );
+}
+
 @keyframes heroRise {
   from { opacity: 0; transform: translateY(26px); }
   to   { opacity: 1; transform: translateY(0); }

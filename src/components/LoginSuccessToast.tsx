@@ -11,6 +11,7 @@ import { CheckCircle2, X } from 'lucide-react';
 interface ToastState {
   nama: string;
   role: string;
+  title: string;
   key: number;
 }
 
@@ -27,10 +28,17 @@ export default function LoginSuccessToast() {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<{ nama: string; role: string }>).detail;
       if (!detail) return;
-      setToast({ nama: detail.nama, role: detail.role, key: Date.now() });
+      setToast({ nama: detail.nama, role: detail.role, title: 'Login berhasil', key: Date.now() });
+    };
+    const logoutHandler = () => {
+      setToast({ nama: '', role: '', title: 'Berhasil keluar', key: Date.now() });
     };
     window.addEventListener('idmap:login-success', handler);
-    return () => window.removeEventListener('idmap:login-success', handler);
+    window.addEventListener('idmap:logout-success', logoutHandler);
+    return () => {
+      window.removeEventListener('idmap:login-success', handler);
+      window.removeEventListener('idmap:logout-success', logoutHandler);
+    };
   }, []);
 
   // Auto-dismiss
@@ -49,25 +57,25 @@ export default function LoginSuccessToast() {
       role="status"
       aria-live="polite"
     >
-      <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-white px-4 py-3 shadow-2xl shadow-emerald-900/15 sm:px-5 sm:py-3.5">
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100">
-          <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+      <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-[#071520]/95 px-4 py-3 text-white shadow-2xl shadow-black/30 backdrop-blur-md sm:px-5 sm:py-3.5">
+        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#f06424]/15 ring-1 ring-[#f06424]/40">
+          <CheckCircle2 className="h-5 w-5 text-[#ff9a70]" />
         </div>
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-emerald-900 sm:text-sm">
-            Login berhasil
+          <p className="text-[13px] font-semibold text-white sm:text-sm">
+            {toast.title}
           </p>
-          <p className="mt-0.5 text-[12px] text-emerald-700 sm:text-xs">
-            Selamat datang, <span className="font-semibold">{toast.nama}</span>
-            {toast.role && (
-              <span className="text-emerald-600/80"> · {ROLE_LABEL[toast.role] ?? toast.role}</span>
-            )}
+          <p className="mt-0.5 text-[12px] text-white/65 sm:text-xs">
+            {toast.nama ? <>Selamat datang, <span className="font-semibold text-white/90">{toast.nama}</span>
+              {toast.role && (
+                <span className="text-[#ffb28e]"> · {ROLE_LABEL[toast.role] ?? toast.role}</span>
+              )}</> : <span className="text-white/80">Sesi Anda telah diakhiri.</span>}
           </p>
         </div>
         <button
           type="button"
           onClick={() => setToast(null)}
-          className="ml-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-emerald-700/60 transition-colors hover:bg-emerald-50 hover:text-emerald-900"
+          className="ml-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/10 hover:text-[#ffb28e]"
           aria-label="Tutup notifikasi"
         >
           <X className="h-4 w-4" />

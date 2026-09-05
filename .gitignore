@@ -39,5 +39,7 @@ gh-auth-login.txt
 supabase/.temp/
 tmp_doc_image1.png
 
-.vercel
 .env*.local
+
+ocr-server/__pycache__/
+scripts/screenshots/

@@ -11,6 +11,8 @@
  *        VITE_SUPABASE_URL=...
  *        SUPABASE_SERVICE_ROLE_KEY=...   (atau VITE_SUPABASE_ANON_KEY untuk read-only)
  *        VITE_CONVEX_URL=https://xxx.convex.cloud
+ *        CONVEX_MIGRATION_KEY=...  (nilai env MIGRATION_KEY di Convex —
+ *        dibutuhkan agar status approved/rejected lama boleh ditulis)
  *   2. Jalankan:  node scripts/migrateSupabaseToConvex.mjs
  *
  * Catatan: skrip ini sengaja TIDAK menyentuh `survey_photos` foto-binary;
@@ -44,6 +46,10 @@ const KEY_KIND =
     ? 'service_role'
     : 'anon';
 const CONVEX_URL = process.env.VITE_CONVEX_URL;
+const MIGRATION_KEY = process.env.CONVEX_MIGRATION_KEY;
+if (!MIGRATION_KEY) {
+  console.warn('⚠️  CONVEX_MIGRATION_KEY tidak ada — status approved/rejected akan ditulis sebagai pending.');
+}
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error('❌ VITE_SUPABASE_URL atau key tidak ditemukan di .env.local');
@@ -146,6 +152,7 @@ function rowToSurveyArgs(s) {
       : 'pending';
   return {
     legacyId: s.id,
+    migrationKey: MIGRATION_KEY,
     tujuanSurvei: s.tujuan_survei,
     petugasNama: s.petugas_nama ?? '',
     petugasNip: str(s.petugas_nip),

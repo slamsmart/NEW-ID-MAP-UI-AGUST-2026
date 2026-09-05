@@ -23,10 +23,9 @@ export interface SignUpData {
 export interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
-  /** Login admin/verifikator (form username+password match ADMIN_ACCOUNTS). */
   login: (username: string, password: string) => boolean;
   logout: () => Promise<void>;
-  /** Set user dari penyedia auth eksternal (mis. Clerk Google sign-in). */
+  /** Set user dari sesi Clerk untuk login publik/social. */
   signInExternal: (user: AuthUser) => void;
 }
 

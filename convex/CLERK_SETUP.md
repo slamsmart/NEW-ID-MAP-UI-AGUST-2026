@@ -3,8 +3,34 @@
 Tujuan: user publik bisa login/daftar pakai akun Google tanpa isi form,
 lalu bisa **Unduh PDF** dan akses fitur peta penuh.
 
-Akun **admin & verifikator** TIDAK pakai Clerk — tetap di `ADMIN_ACCOUNTS`
-hardcoded (`@/src/context/authAccounts.ts`).
+Akun **admin & verifikator** sekarang JUGA pakai Clerk: form login yang sama
+(email+password), tapi kredensialnya divalidasi di server oleh Clerk dan
+role-nya dibaca dari tabel `userProfiles` di Convex — tidak ada lagi
+`ADMIN_ACCOUNTS` hardcoded di bundle browser.
+
+## 0. Prasyarat admin login (sekali saja)
+
+1. **Clerk JWT template "convex"**: dashboard Clerk → JWT Templates →
+   New Template → pilih **Convex** → simpan (nama default `convex`).
+2. **Convex percayai Clerk**: dashboard Convex (deployment aktif) →
+   Settings → Authentication → tambah provider Clerk dengan domain
+   frontend API Anda (mis. `clerk.idmap-dkp.web.id`).
+3. **Buat akun admin**: dashboard Clerk → Users → Invite/Add user —
+   isi email + password admin (mis. `admin@…`). Pastikan sign-in option
+   **Email + password** aktif (User & Authentication → Email).
+4. **Daftarkan email admin** di env Convex:
+   ```bash
+   npx convex env set ADMIN_EMAILS="admin@contoh.go.id,verifikator@contoh.go.id"
+   ```
+   Email dalam daftar ini otomatis mendapat role `admin` saat login
+   (bootstrap). Verifikator lain bisa dipromosikan admin lewat
+   `profiles.setRole`.
+5. *(Opsional, hanya untuk jalan-ulang migrasi Supabase → Convex):*
+   ```bash
+   npx convex env set MIGRATION_KEY="string-acak-panjang"
+   ```
+   lalu isi `CONVEX_MIGRATION_KEY` dengan nilai yang sama di `.env.local`
+   untuk dipakai `scripts/migrateSupabaseToConvex.mjs`.
 
 ## 1. Buat Application di Clerk Dashboard
 

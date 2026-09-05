@@ -43,6 +43,7 @@ export default function HeaderActions({ variant = 'light', onMenuClick, hideSear
   const handleLogout = async () => {
     setAccountMenuOpen(false);
     await logout();
+    window.dispatchEvent(new CustomEvent('idmap:logout-success'));
     navigate('/', { replace: true });
   };
 
@@ -138,19 +139,19 @@ export default function HeaderActions({ variant = 'light', onMenuClick, hideSear
           </button>
 
           {accountMenuOpen && (
-            <div className={`absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-20 text-gray-800 ${isDark ? 'mt-2' : ''}`}>
-              <div className="px-4 py-3 border-b border-gray-100">
-                <p className="text-sm font-semibold text-gray-800 truncate">{user?.nama ?? 'Pengguna'}</p>
-                <p className="text-xs text-gray-500">{roleName}</p>
-                {user?.email && <p className="text-xs text-gray-400 mt-1 truncate">{user.email}</p>}
+            <div className={`absolute right-0 top-full mt-2 w-56 overflow-hidden rounded-xl border border-white/15 bg-[#071520] text-white shadow-xl shadow-black/25 z-20 ${isDark ? 'mt-2' : ''}`}>
+              <div className="border-b border-white/10 px-4 py-3">
+                <p className="truncate text-sm font-semibold text-white">{user?.nama ?? 'Pengguna'}</p>
+                <p className="text-xs text-white/55">{roleName}</p>
+                {user?.email && <p className="mt-1 truncate text-xs text-white/40">{user.email}</p>}
               </div>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                className="flex w-full items-center gap-2 px-4 py-3 text-sm text-[#ff9a70] transition-colors hover:bg-white/10 hover:text-white"
               >
                 <LogOut className="w-4 h-4" />
-                Logout
+                Keluar
               </button>
             </div>
           )}

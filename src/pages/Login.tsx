@@ -14,7 +14,7 @@ export default function Login() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const ok = login(username.trim(), password);
-    if (ok) navigate('/', { replace: true });
+    if (ok) navigate('/dashboard', { replace: true });
     else setError('Username atau password tidak valid.');
   };
 
@@ -27,8 +27,8 @@ export default function Login() {
     <div className="relative min-h-screen w-full flex items-center justify-center px-4 py-10 font-sans overflow-hidden">
       {/* Background image — sama dengan landing page agar seragam */}
       <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: 'url(/assets/id-map-mangrove.jpg)', filter: 'brightness(1.12) saturate(1.05)' }}
+        className="bg-hero absolute inset-0 bg-cover bg-center"
+        style={{ filter: 'brightness(1.12) saturate(1.05)' }}
       />
       {/* Overlay — sama dengan hero landing page */}
       <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(7,21,32,.5)_0%,rgba(7,32,40,.18)_45%,rgba(3,15,24,.46)_100%)]" />
@@ -122,7 +122,7 @@ export default function Login() {
 
         {/* Footer */}
         <p className="mt-6 text-center text-xs text-white/70">
-          ID-MAP v1.0 · Cabdin KP Kab. Malang
+          ID-MAP v1.1 · Cabdin KP Kab. Malang
         </p>
         <p className="mt-1 text-center text-xs">
           <button

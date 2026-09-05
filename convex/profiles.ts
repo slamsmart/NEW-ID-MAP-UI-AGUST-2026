@@ -1,5 +1,6 @@
 import { query, mutation } from './_generated/server';
 import { v, ConvexError } from 'convex/values';
+import { isAdminEmail, requireRole } from './authGuard';
 
 const roleValidator = v.union(
   v.literal('viewer'),
@@ -49,6 +50,10 @@ export const getByEmail = query({
  * Upsert profile — dipanggil saat Clerk webhook fire `user.created`/`user.updated`,
  * atau dari client setelah Clerk auth selesai sebagai fallback.
  * Idempotent: aman dipanggil berkali-kali.
+ *
+ * `args.role` diabaikan: role baru user selalu 'viewer' sampai di-set lewat
+ * `setRole`. Pengecualian: email yang terdaftar di env `ADMIN_EMAILS`
+ * otomatis mendapat role 'admin` saat pertama login (bootstrap).
  */
 export const upsert = mutation({
   args: {
@@ -61,6 +66,20 @@ export const upsert = mutation({
   },
   returns: v.id('userProfiles'),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new ConvexError({
+        code: 'UNAUTHENTICATED',
+        message: 'Harus login untuk membuat/update profil.',
+      });
+    }
+    if (identity.subject !== args.clerkId) {
+      throw new ConvexError({
+        code: 'FORBIDDEN',
+        message: 'clerkId tidak cocok dengan sesi berjalan.',
+      });
+    }
+    const email = (identity.email ?? args.email).trim().toLowerCase();
     const existing = await ctx.db
       .query('userProfiles')
       .withIndex('by_clerk', (q) => q.eq('clerkId', args.clerkId))
@@ -69,10 +88,12 @@ export const upsert = mutation({
     const payload = {
       clerkId: args.clerkId,
       nama: args.nama.trim(),
-      email: args.email.trim().toLowerCase(),
+      email,
       unit: args.unit,
       provinsi: args.provinsi,
-      role: args.role ?? existing?.role ?? 'viewer',
+      role: isAdminEmail(email)
+        ? ('admin' as const)
+        : existing?.role ?? 'viewer',
       updatedAt: Date.now(),
     };
 
@@ -87,6 +108,10 @@ export const upsert = mutation({
 /**
  * Upsert profile by email — untuk user publik yang sign-up via OTP EmailJS
  * (tidak punya clerkId). Idempotent.
+ *
+ * `args.role` hanya diizinkan untuk role non-privilege ('viewer',
+ * 'petugas_daerah') atau role yang sudah dimiliki record — jalur migrasi data
+ * lama tetap jalan, tapi eskalasi ke admin/verifikator dari API publik diblokir.
  */
 export const upsertByEmail = mutation({
   args: {
@@ -104,13 +129,21 @@ export const upsertByEmail = mutation({
       .withIndex('by_email', (q) => q.eq('email', email))
       .unique();
 
+    const SELF_SERVE_ROLES = ['viewer', 'petugas_daerah'] as const;
+    const requested = args.role;
+    const role = isAdminEmail(email)
+      ? ('admin' as const)
+      : requested && (SELF_SERVE_ROLES.includes(requested as (typeof SELF_SERVE_ROLES)[number]) || requested === existing?.role)
+        ? requested
+        : existing?.role ?? 'viewer';
+
     const payload = {
       clerkId: existing?.clerkId,
       nama: args.nama.trim(),
       email,
       unit: args.unit,
       provinsi: args.provinsi,
-      role: args.role ?? existing?.role ?? 'viewer',
+      role,
       updatedAt: Date.now(),
     };
 
@@ -122,7 +155,7 @@ export const upsertByEmail = mutation({
   },
 });
 
-/** Set role — operasi admin. */
+/** Set role — operasi admin; diproteksi requireRole server-side. */
 export const setRole = mutation({
   args: {
     clerkId: v.string(),
@@ -130,6 +163,7 @@ export const setRole = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireRole(ctx, ['admin']);
     const existing = await ctx.db
       .query('userProfiles')
       .withIndex('by_clerk', (q) => q.eq('clerkId', args.clerkId))
@@ -142,11 +176,12 @@ export const setRole = mutation({
   },
 });
 
-/** List semua profiles (admin only — caller harus enforce). */
+/** List semua profiles — admin & verifikator saja (guard server-side). */
 export const list = query({
   args: {},
   returns: v.array(profileReturn),
   handler: async (ctx) => {
+    await requireRole(ctx, ['admin', 'verifikator']);
     return await ctx.db.query('userProfiles').order('desc').collect();
   },
 });

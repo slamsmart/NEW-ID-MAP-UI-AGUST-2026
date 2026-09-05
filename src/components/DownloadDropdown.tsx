@@ -35,6 +35,8 @@ interface DownloadDropdownProps {
   disabledTitle?: string;
   /** Variant warna tombol (light untuk light bg, dark untuk dark bg). */
   variant?: 'light' | 'dark';
+  /** Dipanggil sebelum download; return false untuk membatalkan aksi. */
+  beforeSelect?: (item: DownloadItem) => boolean;
 }
 
 export default function DownloadDropdown({
@@ -45,6 +47,7 @@ export default function DownloadDropdown({
   disabled = false,
   disabledTitle,
   variant = 'light',
+  beforeSelect,
 }: DownloadDropdownProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -67,6 +70,7 @@ export default function DownloadDropdown({
   }, [open]);
 
   const handleSelect = (item: DownloadItem) => {
+    if (beforeSelect && !beforeSelect(item)) return;
     setOpen(false);
     // Track best-effort (non-blocking)
     void recordDownload(item.kind);
