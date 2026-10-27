@@ -1,5 +1,6 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import { requireRole } from './authGuard';
 
 const nurseryReturn = v.object({
   _id: v.id('customNurseries'),
@@ -50,6 +51,7 @@ export const upsert = mutation({
   },
   returns: v.id('customNurseries'),
   handler: async (ctx, args) => {
+    await requireRole(ctx, ['admin', 'verifikator']);
     const existing = await ctx.db
       .query('customNurseries')
       .withIndex('by_legacy', (q) => q.eq('legacyId', args.legacyId))
@@ -66,6 +68,7 @@ export const setActive = mutation({
   args: { legacyId: v.string(), isActive: v.boolean() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireRole(ctx, ['admin', 'verifikator']);
     const existing = await ctx.db
       .query('customNurseries')
       .withIndex('by_legacy', (q) => q.eq('legacyId', args.legacyId))
@@ -81,6 +84,7 @@ export const remove = mutation({
   args: { legacyId: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireRole(ctx, ['admin', 'verifikator']);
     const existing = await ctx.db
       .query('customNurseries')
       .withIndex('by_legacy', (q) => q.eq('legacyId', args.legacyId))

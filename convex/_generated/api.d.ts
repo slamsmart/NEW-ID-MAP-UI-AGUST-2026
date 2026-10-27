@@ -13,6 +13,7 @@ import type * as locations from "../locations.js";
 import type * as nurseries from "../nurseries.js";
 import type * as pokmaswas from "../pokmaswas.js";
 import type * as profiles from "../profiles.js";
+import type * as siteConfig from "../siteConfig.js";
 import type * as stats from "../stats.js";
 import type * as surveyPhotos from "../surveyPhotos.js";
 import type * as surveys from "../surveys.js";
@@ -29,6 +30,7 @@ declare const fullApi: ApiFromModules<{
   nurseries: typeof nurseries;
   pokmaswas: typeof pokmaswas;
   profiles: typeof profiles;
+  siteConfig: typeof siteConfig;
   stats: typeof stats;
   surveyPhotos: typeof surveyPhotos;
   surveys: typeof surveys;

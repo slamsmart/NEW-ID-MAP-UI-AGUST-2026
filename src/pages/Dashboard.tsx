@@ -17,6 +17,7 @@ import { fetchSurveyStats, fetchSurveys, getSurveyStats, getSurveys, getVerifica
 import type { MangroveLocation } from '../types';
 import StatusBadge from '../components/shared/StatusBadge';
 import StatsPanel from '../components/StatsPanel';
+import PolicyAnalysisPanel from '../components/dashboard/PolicyAnalysisPanel';
 import HeaderActions from '../components/Layout/HeaderActions';
 import { useAuth } from '../context/useAuth';
 
@@ -573,6 +574,9 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Analisis Kebijakan — berbasis data ID-MAP; export PDF khusus admin/verifikator */}
+      <PolicyAnalysisPanel locations={mangroveLocations} canExport={isStaff} />
 
       {/* Lokasi Table */}
       <div className="bg-md-surface-lowest rounded-xl border border-md-outline-variant overflow-hidden">

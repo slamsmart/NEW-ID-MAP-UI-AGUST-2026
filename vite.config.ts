@@ -58,6 +58,12 @@ export default defineConfig({
     port: 5000,
     strictPort: true,
     allowedHosts: true,
+    watch: {
+      // Folder hasil build tidak perlu diawasi. Di Windows, file besar di
+      // dist* yang masih dipegang proses lain memicu EBUSY dan mematikan
+      // dev server (chokidar melempar error fatal pada FSWatcher).
+      ignored: ['**/dist/**', '**/dist-*/**', '**/dev-dist/**', '**/.vercel/**'],
+    },
   },
   preview: {
     host: '0.0.0.0',

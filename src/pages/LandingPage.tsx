@@ -1,7 +1,7 @@
 ﻿import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowRight, CheckCircle2, ClipboardList, Database, Eye,
+  ArrowRight, CheckCircle2, ClipboardList, Database, Download, Eye,
   Layers3, Mail, Map, MapPin, Menu, MousePointer2, Phone,
   Turtle, Users, X,
 } from 'lucide-react';
@@ -13,8 +13,9 @@ import TiltCard from '../components/TiltCard';
 import { useAuth } from '../context/useAuth';
 import { isConvexConfigured } from '../lib/convexClient';
 import { recordVisit } from '../lib/statsClient';
-import { useClerkReady } from '../components/clerk/ClerkContext';
+import { useClerkReady } from '../components/clerk/ClerkReadyContext';
 import ClerkAuthButtons from '../components/clerk/ClerkAuthButtons';
+import MaintenanceNotice from '../components/MaintenanceNotice';
 
 const isClerkConfigured = Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
 
@@ -117,9 +118,24 @@ function PlatformStats() {
   const stats = useQuery(
     (statsRef ?? 'skip') as never,
     isConvexConfigured() && statsRef ? {} : 'skip',
-  ) as { totalVisits?: number; totalUsers?: number } | undefined;
+  ) as { totalVisits?: number; totalUsers?: number; totalDownloads?: number } | undefined;
   const visits = stats?.totalVisits;
   const users = stats?.totalUsers;
+  const downloads = stats?.totalDownloads;
+
+  // Status platform live: 'Live' saat data stats dari Convex masuk, '…' saat
+  // memeriksa, 'Offline' bila backend tidak merespons setelah 4 detik.
+  const [statsTimedOut, setStatsTimedOut] = useState(false);
+  useEffect(() => {
+    if (stats != null) return;
+    const timer = window.setTimeout(() => setStatsTimedOut(true), 4000);
+    return () => window.clearTimeout(timer);
+  }, [stats]);
+  const status: 'checking' | 'live' | 'offline' = stats != null
+    ? 'live'
+    : statsTimedOut
+      ? 'offline'
+      : 'checking';
 
   const cards = [
     {
@@ -132,10 +148,15 @@ function PlatformStats() {
       value: users ?? null,
       icon: Users,
     },
+    {
+      label: 'Doc Diunduh',
+      value: downloads ?? null,
+      icon: Download,
+    },
   ];
 
   return (
-    <div className="mt-12 grid gap-6 sm:grid-cols-3">
+    <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
       {cards.map((card, index) => (
         <Card key={card.label} className={`reveal reveal-rise reveal-delay-${index + 1} border-white/10 bg-white/95 backdrop-blur-md shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl`}>
           <CardContent className="flex flex-col items-center p-8 text-center">
@@ -147,15 +168,23 @@ function PlatformStats() {
           </CardContent>
         </Card>
       ))}
-      <Card className="reveal reveal-rise reveal-delay-3 border-white/10 bg-white/95 backdrop-blur-md shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+      <Card className="reveal reveal-rise reveal-delay-4 border-white/10 bg-white/95 backdrop-blur-md shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
         <CardContent className="flex flex-col items-center p-8 text-center">
-          <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50">
-            <span className="relative flex h-4 w-4" aria-hidden="true">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-4 w-4 rounded-full bg-emerald-500" />
-            </span>
+          <div className={`mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl ${status === 'offline' ? 'bg-amber-50' : 'bg-emerald-50'}`}>
+            {status === 'offline' ? (
+              <span className="relative flex h-4 w-4" aria-hidden="true">
+                <span className="relative inline-flex h-4 w-4 rounded-full bg-amber-500" />
+              </span>
+            ) : (
+              <span className="relative flex h-4 w-4" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-4 w-4 rounded-full bg-emerald-500" />
+              </span>
+            )}
           </div>
-          <p className="font-display text-4xl font-bold tracking-tight text-slate-900">Live</p>
+          <p className={`font-display text-4xl font-bold tracking-tight ${status === 'offline' ? 'text-amber-600' : 'text-slate-900'}`}>
+            {status === 'live' ? 'live' : status === 'checking' ? '...' : 'Offline'}
+          </p>
           <p className="mt-2 text-sm font-medium text-slate-500">Status Platform</p>
         </CardContent>
       </Card>
@@ -201,7 +230,7 @@ export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    document.title = 'ID MAP — Integrasi Data Mangrove dan Pesisir';
+    document.title = 'ID MAP (Integrasi Data Mangrove dan Pesisir)';
     void recordVisit();
   }, []);
 
@@ -241,11 +270,16 @@ export default function LandingPage() {
 
       <main id="konten-utama">
         <section id="beranda" className="relative isolate flex min-h-[720px] items-center overflow-hidden px-5 pb-24 pt-36 sm:px-10 lg:min-h-[800px] lg:px-16">
-          <div className="hero-kenburns bg-hero absolute inset-0 -z-20 bg-[#0b5260] bg-cover bg-center" style={{ filter: 'brightness(1.12) saturate(1.05)' }} />
+          <div className="hero-kenburns absolute inset-0 -z-20">
+            {/* Bg image + filter statis di dalam wrapper animasi: filter di-raster sekali,
+                transform wrapper berjalan murni di compositor → tanpa lag, warna tetap sama. */}
+            <div className="bg-hero absolute inset-0 h-full w-full bg-[#0b5260] bg-cover bg-center" style={{ filter: 'brightness(1.12) saturate(1.05)' }} />
+          </div>
           <div className="absolute inset-0 -z-10 bg-[linear-gradient(115deg,rgba(7,21,32,.5)_0%,rgba(7,32,40,.18)_45%,rgba(3,15,24,.46)_100%)]" />
           <div className="absolute inset-x-0 bottom-0 -z-10 h-1/3 bg-gradient-to-t from-[#071520] to-transparent" />
           <div className="mx-auto grid w-full max-w-7xl gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(420px,560px)] lg:items-end">
             <div className="max-w-2xl lg:-translate-y-8">
+              <MaintenanceNotice className="hero-rise hero-rise-1 mb-6 max-w-xl" />
               <p className="hero-rise hero-rise-1 mb-4 text-xs font-bold uppercase tracking-[0.28em] text-[#ffb28e]">Platform data pesisir terintegrasi</p>
               <h1 className="hero-rise hero-rise-2 font-hero-title max-w-3xl text-5xl leading-[1.02] sm:text-6xl lg:text-7xl">Integrasi Data Mangrove<br /><span className="text-white">&amp; Pesisir Jawa Timur</span></h1>
               <p className="hero-rise hero-rise-3 mt-7 max-w-xl text-base leading-7 text-white/75 sm:text-lg">ID MAP menyatukan data spasial, monitoring lapangan, dan informasi ekosistem untuk mendukung konservasi serta pengambilan keputusan berbasis data.</p>

@@ -6,6 +6,8 @@
  */
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import type { MutationCtx } from './_generated/server';
+import { requireRole } from './authGuard';
 
 const GLOBAL_KEY = 'global';
 
@@ -16,10 +18,10 @@ const downloadKindValidator = v.union(
 );
 
 /** Internal: ambil (atau buat) baris global. */
-async function getOrCreateGlobal(ctx: any) {
+async function getOrCreateGlobal(ctx: MutationCtx) {
   const existing = await ctx.db
     .query('siteStats')
-    .withIndex('by_key', (q: any) => q.eq('key', GLOBAL_KEY))
+    .withIndex('by_key', (q) => q.eq('key', GLOBAL_KEY))
     .unique();
   if (existing) return existing;
   const id = await ctx.db.insert('siteStats', {
@@ -56,6 +58,7 @@ export const setTotalVisits = mutation({
   args: { totalVisits: v.number() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireRole(ctx, ['admin']);
     const row = await getOrCreateGlobal(ctx);
     if (!row) return null;
     await ctx.db.patch(row._id, {

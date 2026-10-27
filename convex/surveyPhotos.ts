@@ -1,5 +1,6 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import { requireRole } from './authGuard';
 
 const photoReturn = v.object({
   _id: v.id('surveyPhotos'),
@@ -32,6 +33,7 @@ export const add = mutation({
   },
   returns: v.id('surveyPhotos'),
   handler: async (ctx, args) => {
+    await requireRole(ctx, ['admin', 'verifikator']);
     return await ctx.db.insert('surveyPhotos', {
       surveyLegacyId: args.surveyLegacyId,
       url: args.url,
@@ -45,6 +47,7 @@ export const remove = mutation({
   args: { photoId: v.id('surveyPhotos') },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireRole(ctx, ['admin', 'verifikator']);
     await ctx.db.delete(args.photoId);
     return null;
   },

@@ -26,11 +26,16 @@ export default function HeaderActions({ variant = 'light', onMenuClick, hideSear
 
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (!accountMenuRef.current?.contains(event.target as Node)) {
         setAccountMenuOpen(false);
+      }
+      if (!notifRef.current?.contains(event.target as Node)) {
+        setNotifOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -82,19 +87,50 @@ export default function HeaderActions({ variant = 'light', onMenuClick, hideSear
 
       <div className="flex items-center gap-3 md:gap-4 ml-auto flex-shrink-0">
         {/* Notifications */}
-        <button
-          className={`relative transition-colors active:scale-95 duration-150 ${
-            isDark ? 'text-white/80 hover:text-white' : 'text-gray-500 hover:text-[#f06424]'
-          }`}
-          title="Notifikasi"
-        >
-          <Bell className="w-5 h-5" />
-          {totalAlert > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 ring-2 ring-white rounded-full text-white text-[10px] flex items-center justify-center font-bold">
-              {totalAlert}
-            </span>
+        <div className="relative" ref={notifRef}>
+          <button
+            type="button"
+            onClick={() => setNotifOpen(open => !open)}
+            aria-expanded={notifOpen}
+            aria-haspopup="true"
+            className={`relative flex transition-colors active:scale-95 duration-150 ${
+              isDark ? 'text-white/80 hover:text-white' : 'text-gray-500 hover:text-[#f06424]'
+            }`}
+            title="Notifikasi"
+          >
+            <Bell className="w-5 h-5" />
+            {totalAlert > 0 && (
+              <span className="pointer-events-none absolute -top-1 -right-1 w-4 h-4 bg-red-500 ring-2 ring-white rounded-full text-white text-[10px] flex items-center justify-center font-bold">
+                {totalAlert}
+              </span>
+            )}
+          </button>
+
+          {notifOpen && (
+            <div className="absolute right-0 top-full mt-3 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-white/15 bg-[#071520] text-white shadow-xl shadow-black/25 z-30">
+              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                <p className="text-sm font-semibold">Notifikasi</p>
+                <span className="text-xs text-white/50">{totalAlert} perlu perhatian</span>
+              </div>
+              <ul className="max-h-80 overflow-y-auto divide-y divide-white/5">
+                {alerts.map(a => (
+                  <li key={a.id} className="flex gap-3 px-4 py-3 hover:bg-white/5">
+                    <span
+                      className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${
+                        a.type === 'critical' ? 'bg-red-500' : a.type === 'warning' ? 'bg-amber-400' : 'bg-sky-400'
+                      }`}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-white">{a.lokasi}</p>
+                      <p className="mt-0.5 text-xs text-white/65 leading-snug">{a.pesan}</p>
+                      <p className="mt-1 text-[10px] text-white/40">{a.tanggal}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
-        </button>
+        </div>
 
         {/* History */}
         <button

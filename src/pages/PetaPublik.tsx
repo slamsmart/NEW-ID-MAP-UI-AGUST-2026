@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, cloneElement } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, GeoJSON } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap, useMapEvents, GeoJSON } from 'react-leaflet';
 import type { FeatureCollection } from 'geojson';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -130,6 +130,30 @@ const MHI_COLORS: Record<string, string> = {
 const MHI_DEFAULT_COLOR = '#64748b';
 const MHI_ORDER = ['Potential Rehabilitation Area', 'Poor', 'Moderate', 'Excelent'];
 
+// Keterangan sumber data — ditampilkan di bawah legenda (desktop & mobile)
+const DATA_SOURCES: { label: string; source: string }[] = [
+  {
+    label: 'MHI (Mangrove Health Index)',
+    source: 'Citra Satelit Landsat tahun 2025 dan digitasi petugas.',
+  },
+  {
+    label: 'Pokmaswas',
+    source: 'Pendataan Cabang Dinas Kelautan dan Perikanan Kab. Malang, update tahun 2025.',
+  },
+  {
+    label: 'Benthic',
+    source: 'Peta tutupan terumbu karang hasil citra satelit.',
+  },
+  {
+    label: 'RTRW Darat & RTRW Laut',
+    source: 'Perda Jatim No. 10 Tahun 2023 tentang Rencana Tata Ruang Wilayah Provinsi Jawa Timur.',
+  },
+  {
+    label: 'Penyu',
+    source: 'Ground check petugas Cabang Dinas Kelautan dan Perikanan Kab. Malang di lokasi.',
+  },
+];
+
 const MAP_LAYERS = [
   { id: 'osm', label: 'OpenStreetMap', icon: Map, url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
   { id: 'satellite', label: 'Satelit', icon: Satellite, url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '&copy; Esri' },
@@ -175,6 +199,19 @@ function makePokmaswasIcon() {
     html: `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:#7c3aed;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4);font-size:14px">👤</div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
+    popupAnchor: [0, -14],
+  });
+}
+
+// Badge pin untuk titik tujuan "Input Koordinat": menandai lokasi yang
+// dituju di atas polygon zona ruang (RTRW Darat/RTRW Laut) agar
+// pengguna melihat posisi titik terhadap zonanya.
+function makeCoordinatePinIcon() {
+  return L.divIcon({
+    className: 'coordinate-pin-icon',
+    html: `<div class="coordinate-pin"><span class="coordinate-pin-ring"></span><span class="coordinate-pin-core"></span></div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
     popupAnchor: [0, -14],
   });
 }
@@ -234,9 +271,9 @@ const LAYER_OPTIONS = [
   { val: 'pokmaswas', label: 'Pokmaswas',    color: '#7c3aed' },
   { val: 'mhi',       label: 'MHI',          color: '#006100' },
   { val: 'benthic',   label: 'Benthic',      color: '#0891b2' },
-  { val: 'polaruang',   label: 'Pemanfaatan Ruang Laut',   color: '#d97706' },
+  { val: 'polaruang',   label: 'RTRW Laut',    color: '#d97706' },
   { val: 'konservasi',  label: 'Konservasi',   color: '#15803d' },
-  { val: 'rtrw-jawa-timur', label: 'RTRW Provinsi Jawa Timur', color: '#047857' },
+  { val: 'rtrw-jawa-timur', label: 'RTRW Darat', color: '#047857' },
 ] as const;
 
 type DataLayer = Exclude<(typeof LAYER_OPTIONS)[number]['val'], 'none' | 'all'>;
@@ -268,6 +305,48 @@ function rtrwFeatureStyle(feature?: GeoJSON.Feature) {
   };
 }
 
+type CoordinateZone = { source: string; zone: string; color: string };
+
+function pointInRing(point: [number, number], ring: number[][]) {
+  const [lng, lat] = point;
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    const crosses = (yi > lat) !== (yj > lat) && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
+    if (crosses) inside = !inside;
+  }
+  return inside;
+}
+
+function pointInFeature(point: [number, number], feature: GeoJSON.Feature) {
+  const geometry = feature.geometry;
+  if (geometry.type === 'Polygon') {
+    return pointInRing(point, geometry.coordinates[0]) && geometry.coordinates.slice(1).every(hole => !pointInRing(point, hole));
+  }
+  if (geometry.type === 'MultiPolygon') {
+    return geometry.coordinates.some(polygon => pointInRing(point, polygon[0]) && polygon.slice(1).every(hole => !pointInRing(point, hole)));
+  }
+  return false;
+}
+
+function findCoordinateZones(
+  point: [number, number],
+  data: FeatureCollection | null,
+  source: string,
+  fallbackColor: string,
+): CoordinateZone[] {
+  if (!data?.features) return [];
+  return data.features
+    .filter(feature => pointInFeature(point, feature))
+    .map(feature => ({
+      source,
+      zone: String(feature.properties?.zone ?? feature.properties?.name ?? 'Zona tidak bernama'),
+      color: String(feature.properties?.color ?? fallbackColor),
+    }))
+    .filter((zone, index, zones) => zones.findIndex(item => item.source === zone.source && item.zone === zone.zone) === index);
+}
+
 export default function PetaPublik() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -293,6 +372,9 @@ export default function PetaPublik() {
   const [coordinateInputOpen, setCoordinateInputOpen] = useState(false);
   const [coordinateInput, setCoordinateInput] = useState('');
   const [coordinateInputError, setCoordinateInputError] = useState('');
+  // Titik tujuan terakhir dari "Input Koordinat" — dirender sebagai badge pin
+  // di atas zona ruang; bertahan sampai diganti koordinat berikutnya.
+  const [coordinatePin, setCoordinatePin] = useState<[number, number] | null>(null);
   const [pendingDownload, setPendingDownload] = useState<'pdf' | 'geojson' | null>(null);
   const clerkDownloadTrigger = useRef<HTMLButtonElement | null>(null);
 
@@ -307,6 +389,9 @@ export default function PetaPublik() {
 
     mapInstance?.flyTo([lat, lng], 15, { duration: 1.2 });
     setMapCoordinates([lat, lng]);
+    setCoordinatePin([lat, lng]);
+    // Load zone layers automatically: pin must explain its spatial context.
+    setSelectedLayers(current => Array.from(new Set([...current, 'polaruang', 'rtrw-jawa-timur'])));
     setCoordinateInputError('');
     setCoordinateInputOpen(false);
   };
@@ -319,7 +404,10 @@ export default function PetaPublik() {
   const showMhi = isLayerSelected('mhi');
   const showBenthic = isLayerSelected('benthic');
   const showPolaruang = isLayerSelected('polaruang');
-  const showKonservasi = isLayerSelected('konservasi');
+  // Zona konservasi (termasuk Pencadangan/Indikasi Kawasan Konservasi) bagian dari
+  // RTRW Laut: ikut tampil saat RTRW Laut dipilih, legendanya digabung ke tabel RTRW Laut.
+  const showKonservasi = isLayerSelected('konservasi') || showPolaruang;
+  const showKonservasiLegendSeparate = isLayerSelected('konservasi') && !showPolaruang;
   const showRtrw = isLayerSelected('rtrw-jawa-timur');
   const allLayersSelected = selectedLayers.length === DATA_LAYER_OPTIONS.length;
   const layerControlLabel = selectedLayers.length === 0
@@ -566,6 +654,15 @@ export default function PetaPublik() {
     return () => { active = false; };
   }, [showRtrw]);
 
+  const coordinateZones = useMemo(() => {
+    if (!coordinatePin) return [];
+    const point: [number, number] = [coordinatePin[1], coordinatePin[0]];
+    return [
+      ...findCoordinateZones(point, polaruangData, 'RTRW Laut', '#d97706'),
+      ...findCoordinateZones(point, rtrwData, 'RTRW Darat', '#047857'),
+    ];
+  }, [coordinatePin, polaruangData, rtrwData]);
+
   // Aggregate benthic class counts for the legend
   const benthicCounts = useMemo<Record<string, number> | null>(() => {
     if (!benthicData?.features) return null;
@@ -587,6 +684,17 @@ export default function PetaPublik() {
     return counts;
   }, [mhiData]);
 
+  // Unique zone → color pairs for pola ruang legend (sorted alphabetically)
+  const polaruangZones = useMemo<[string, string][]>(() => {
+    if (!polaruangData?.features) return [];
+    const seen: Record<string, string> = {};
+    for (const f of polaruangData.features) {
+      const zone = f.properties?.zone as string;
+      if (zone && !seen[zone]) seen[zone] = f.properties?.color as string ?? '#d97706';
+    }
+    return Object.entries(seen).sort(([a], [b]) => a.localeCompare(b));
+  }, [polaruangData]);
+
   // Unique zone → color pairs for konservasi legend
   const konservasiZones = useMemo<[string, string][]>(() => {
     if (!konservasiData?.features) return [];
@@ -598,16 +706,11 @@ export default function PetaPublik() {
     return Object.entries(seen).sort(([a], [b]) => a.localeCompare(b));
   }, [konservasiData]);
 
-  // Unique zone → color pairs for pola ruang legend (sorted alphabetically)
-  const polaruangZones = useMemo<[string, string][]>(() => {
-    if (!polaruangData?.features) return [];
-    const seen: Record<string, string> = {};
-    for (const f of polaruangData.features) {
-      const zone = f.properties?.zone as string;
-      if (zone && !seen[zone]) seen[zone] = f.properties?.color as string ?? '#d97706';
-    }
-    return Object.entries(seen).sort(([a], [b]) => a.localeCompare(b));
-  }, [polaruangData]);
+  // Legenda RTRW Laut gabungan: zona pola ruang + zona kawasan konservasi (tanpa duplikat nama)
+  const rtrwLautZones = useMemo<[string, string][]>(() => {
+    const names = new Set(polaruangZones.map(([zone]) => zone));
+    return [...polaruangZones, ...konservasiZones.filter(([zone]) => !names.has(zone))];
+  }, [polaruangZones, konservasiZones]);
 
   // Render order matches the reference legend
   const BENTHIC_ORDER = ['Seagrass', 'Rubble', 'Sand', 'Rock', 'Coral/Algae'];
@@ -901,18 +1004,18 @@ export default function PetaPublik() {
   };
 
   return (
-    <div className="idmap-map-shell flex h-screen overflow-hidden bg-[#071520] text-white">
-      <aside className="glass-panel hidden md:flex w-[82px] lg:w-[104px] flex-col items-center border-r border-white/15 px-3 py-5">
+    <div className="idmap-map-shell flex h-screen overflow-hidden bg-white text-slate-900">
+      <aside className="glass-panel hidden md:flex w-[82px] lg:w-[104px] flex-col items-center border-r border-slate-200 px-3 py-5">
         <div className="flex flex-col items-center gap-6">
-          <div className="h-12 w-12 overflow-hidden rounded-full border border-white/15">
+          <div className="h-12 w-12 overflow-hidden rounded-full border border-slate-200">
             <img src="/logo.png" alt="ID-MAP" className="h-full w-full object-cover" />
           </div>
           <nav className="flex flex-col items-stretch gap-2">
-            <button onClick={() => navigate('/')} className="flex flex-col items-center gap-1 rounded-2xl px-2.5 py-3 text-[11px] font-medium text-white/65 hover:bg-white/10 hover:text-white transition-colors">
+            <button onClick={() => navigate('/')} className="flex flex-col items-center gap-1 rounded-2xl px-2.5 py-3 text-[11px] font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
               <Home className="h-5 w-5" />
               <span>Home</span>
             </button>
-            <button className="relative flex flex-col items-center gap-1 rounded-2xl bg-[#0d404f] px-2.5 py-3 text-[11px] font-semibold text-white">
+            <button className="relative flex flex-col items-center gap-1 rounded-2xl bg-slate-100 px-2.5 py-3 text-[11px] font-semibold text-slate-900">
               <span className="absolute right-0 top-2 h-12 w-1 rounded-l-full bg-emerald-600" />
               <Layers className="h-5 w-5" />
               <span>Map</span>
@@ -922,10 +1025,10 @@ export default function PetaPublik() {
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="glass-panel relative z-10 flex flex-shrink-0 items-center justify-between gap-3 border-b border-white/15 px-4 py-3 sm:px-5 lg:px-6">
+        <header className="glass-panel relative z-10 flex flex-shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5 lg:px-6">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#ffb28e]">ID MAP</p>
-            <h1 className="max-w-[26rem] truncate text-[18px] font-bold leading-snug text-white sm:text-[21px] lg:max-w-[34rem]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#c2410c]">ID MAP</p>
+            <h1 className="max-w-[26rem] truncate text-[18px] font-bold leading-snug text-slate-900 sm:text-[21px] lg:max-w-[34rem]">
               Peta Interaktif Mangrove dan Ekosistem Pesisir
             </h1>
           </div>
@@ -982,16 +1085,14 @@ export default function PetaPublik() {
             />
 
             {user ? (
-              <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 rounded-full border border-white/20 bg-white px-4 py-2 text-xs font-semibold text-slate-800 shadow-md transition-colors hover:bg-slate-100 sm:px-5">
+              <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-800 shadow-md transition-colors hover:bg-slate-100 sm:px-5">
                 <span>Dashboard</span>
                 <ChevronRight className="h-3.5 w-3.5" />
               </button>
             ) : (
               <>
                 <AuthRequired mode="signup">
-                  <button
-                    className="flex items-center gap-1.5 rounded-full border border-white/70 bg-[#071520] px-4 py-2 text-xs font-semibold text-white transition-colors hover:border-white hover:bg-[#0d404f]"
-                  >
+                  <button className="flex items-center gap-1.5 rounded-full border border-emerald-700 bg-emerald-700 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-800">
                     <UserPlus className="h-3.5 w-3.5" />
                     Daftar
                   </button>
@@ -1016,15 +1117,32 @@ export default function PetaPublik() {
         </header>
 
         <div className="relative flex min-h-0 flex-1 overflow-hidden">
-          <div className="relative min-w-0 flex-1 bg-[#0f3a3a]">
-            <MapContainer center={DEFAULT_MAP_CENTER} zoom={DEFAULT_MAP_ZOOM} style={{ height: '100%', width: '100%', background: '#0b2b32' }} zoomControl={false}>
+          <div className="relative min-w-0 flex-1 bg-slate-100">
+            <MapContainer center={DEFAULT_MAP_CENTER} zoom={DEFAULT_MAP_ZOOM} style={{ height: '100%', width: '100%', background: '#f1f5f9' }} zoomControl={false}>
             <MapController center={DEFAULT_MAP_CENTER} zoom={DEFAULT_MAP_ZOOM} />
             <MapInstanceCapture onReady={setMapInstance} />
             <MapCoordinates onChange={setMapCoordinates} />
             <FlyToSelected target={flyTarget} zoom={15} />
             <TileLayerSwitcher activeLayer={activeMapLayer} />
 
-            {/* Marker titik mangrove disembunyikan agar layer spasial tetap bersih. */}
+            {/* Badge pin + label zona ruang yang memuat titik. */}
+            {coordinatePin && (
+              <Marker position={coordinatePin} icon={makeCoordinatePinIcon()} zIndexOffset={1000}>
+                <Tooltip permanent direction="right" offset={[12, 0]} className="coordinate-zone-tooltip">
+                  <div className="space-y-1">
+                    <div className="font-bold text-emerald-800">Titik koordinat</div>
+                    {coordinateZones.length ? coordinateZones.map(zone => <div key={`${zone.source}-${zone.zone}`} className="text-[11px]"><strong>{zone.source}:</strong> {zone.zone}</div>) : <div className="text-[11px] text-slate-500">Belum masuk zona terpetakan</div>}
+                  </div>
+                </Tooltip>
+                <Popup>
+                  <div className="min-w-[210px]">
+                    <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700">Lokasi tujuan koordinat</div>
+                    <div className="font-mono text-xs text-gray-700">{coordinatePin[0].toFixed(6)}, {coordinatePin[1].toFixed(6)}</div>
+                    <div className="mt-2 border-t border-gray-100 pt-2 text-xs">{coordinateZones.length ? coordinateZones.map(zone => <div key={`${zone.source}-${zone.zone}`}><strong>{zone.source}:</strong> {zone.zone}</div>) : 'Belum masuk zona terpetakan'}</div>
+                  </div>
+                </Popup>
+              </Marker>
+            )}
 
             {/* Abrasi / Rekomendasi Mangrove markers */}
             {showAbrasi && allAbrasi.map(abr => (
@@ -1458,7 +1576,7 @@ export default function PetaPublik() {
                 onEachFeature={(feature, layer) => {
                   layer.bindPopup(
                     `<div style="font-size:12px;min-width:180px">
-                      <strong>Pola Ruang Pemanfaatan</strong><br/>
+                      <strong>RTRW Laut</strong><br/>
                       Zona: ${feature.properties?.zone ?? '-'}<br/>
                       Kode: ${feature.properties?.kodkws ?? '-'}<br/>
                       Jenis: ${feature.properties?.jenis ?? '-'}
@@ -1476,7 +1594,7 @@ export default function PetaPublik() {
                 onEachFeature={(feature, layer) => {
                   layer.bindPopup(
                     `<div style="font-size:12px;min-width:180px">
-                      <strong>RTRW</strong><br/>
+                      <strong>RTRW Darat</strong><br/>
                       Zona: ${feature.properties?.name ?? feature.properties?.zone ?? '-'}
                     </div>`,
                   );
@@ -1507,12 +1625,20 @@ export default function PetaPublik() {
                 }}
               />
             )}
+
           </MapContainer>
 
           {benthicLoading && (
             <div className="absolute left-4 top-4 z-[999] flex items-center gap-2 rounded-full border border-white/30 bg-white/90 px-3 py-2 text-xs font-semibold text-cyan-800 shadow-md backdrop-blur">
               <span className="h-3 w-3 animate-spin rounded-full border-2 border-cyan-500 border-t-transparent" />
               Memuat data benthic...
+            </div>
+          )}
+
+          {konservasiLoading && (
+            <div className="absolute left-4 top-40 z-[999] flex items-center gap-2 rounded-full border border-white/30 bg-white/90 px-3 py-2 text-xs font-semibold text-green-800 shadow-md backdrop-blur">
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
+              Memuat konservasi...
             </div>
           )}
 
@@ -1533,16 +1659,10 @@ export default function PetaPublik() {
           {rtrwLoading && (
             <div className="absolute left-4 top-40 z-[999] flex items-center gap-2 rounded-full border border-white/30 bg-white/90 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-md backdrop-blur">
               <span className="h-3 w-3 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
-              Memuat layer RTRW...
+              Memuat layer RTRW Darat...
             </div>
           )}
 
-          {konservasiLoading && (
-            <div className="absolute left-4 top-40 z-[999] flex items-center gap-2 rounded-full border border-white/30 bg-white/90 px-3 py-2 text-xs font-semibold text-green-800 shadow-md backdrop-blur">
-              <span className="h-3 w-3 animate-spin rounded-full border-2 border-green-600 border-t-transparent" />
-              Memuat konservasi...
-            </div>
-          )}
 
           <div className="absolute left-4 top-20 z-[1000] w-[calc(100%-2rem)] sm:w-80">
             <button
@@ -1736,7 +1856,7 @@ export default function PetaPublik() {
         {!panelOpen && (
           <button
             onClick={() => setPanelOpen(true)}
-            className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 z-[997] flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-slate-200 bg-[#dbe5f7]/95 px-2.5 py-4 text-[10px] font-semibold text-slate-700 shadow-xl backdrop-blur-sm transition-colors hover:bg-emerald-50 hover:text-emerald-700"
+            className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 z-[997] flex-col items-center gap-1.5 rounded-l-xl border border-r-0 border-slate-200 bg-white/95 px-2.5 py-4 text-[10px] font-semibold text-slate-700 shadow-xl backdrop-blur-sm transition-colors hover:bg-emerald-50 hover:text-emerald-700"
             title="Tampilkan panel legenda"
           >
             <Layers className="h-4 w-4 text-emerald-700" />
@@ -1745,18 +1865,18 @@ export default function PetaPublik() {
         )}
 
         {panelOpen && (
-          <aside className="glass-panel hidden w-[380px] flex-shrink-0 flex-col overflow-hidden border-l border-white/15 sm:flex lg:w-[420px]">
-            <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-              <div className="flex items-center gap-3">
+          <aside className="glass-panel hidden w-[284px] flex-shrink-0 flex-col overflow-hidden border-l border-slate-200 sm:flex lg:w-[300px]">
+            <div className="flex items-center justify-between border-b border-slate-200 px-3.5 py-3">
+              <div className="flex items-center gap-2.5">
                 <Layers className="h-5 w-5 text-[#f06424]" />
                 <div>
-                  <h2 className="text-[18px] font-semibold text-white">Legenda</h2>
-                  <p className="text-[11px] uppercase tracking-wide text-white/55">Konfigurasi visualisasi</p>
+                  <h2 className="text-[17px] font-semibold text-slate-900">Legenda</h2>
+                  <p className="text-[11px] uppercase tracking-wide text-slate-600">Konfigurasi visualisasi</p>
                 </div>
               </div>
               <button
                 onClick={() => setPanelOpen(false)}
-                className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/15"
+                className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-100"
                 title={panelOpen ? 'Sembunyikan panel' : 'Tampilkan panel'}
               >
                 <X className="h-4 w-4" />
@@ -1764,18 +1884,18 @@ export default function PetaPublik() {
               </button>
             </div>
 
-            <div className="overflow-y-auto px-4 py-4">
-              <div className="space-y-4">
+            <div className="overflow-y-auto px-3.5 py-3">
+              <div className="space-y-3">
 
 
                 <section>
-                  <div className="mb-4 flex items-center gap-2 text-slate-800">
+                  <div className="mb-2.5 flex items-center gap-2 text-slate-900">
                     <span className="h-5 w-1 rounded-full bg-orange-700" />
-                    <span className="text-base font-medium uppercase tracking-tight">Titik Abrasi / Rekomendasi</span>
+                    <span className="text-sm font-semibold uppercase tracking-tight">Titik Abrasi / Rekomendasi</span>
                   </div>
-                  <div className="space-y-4 px-1">
+                  <div className="space-y-2.5 px-0.5">
                     {Object.entries(ABRASI_PRIORITAS_COLORS).map(([p, color]) => (
-                      <div key={p} className="flex items-center gap-3 text-[15px] text-slate-800">
+                      <div key={p} className="flex items-center gap-2.5 text-[14px] text-slate-900">
                         <span className="text-lg leading-none text-emerald-700">🌲</span>
                         <span className="flex-1">{p}</span>
                         <div className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
@@ -1785,8 +1905,8 @@ export default function PetaPublik() {
                 </section>
 
                 <section>
-                  <div className="mb-4 text-base font-medium uppercase tracking-tight text-slate-800">Pendaratan Penyu</div>
-                  <div className="flex items-center gap-3 px-1 text-[15px] text-slate-800">
+                  <div className="mb-2.5 text-sm font-semibold uppercase tracking-tight text-slate-900">Pendaratan Penyu</div>
+                  <div className="flex items-center gap-2.5 px-0.5 text-[14px] text-slate-900">
                     <Waves className="h-5 w-5 text-emerald-700" />
                     <span>Titik pendaratan penyu laut</span>
                   </div>
@@ -1794,22 +1914,22 @@ export default function PetaPublik() {
 
                 {showMhi && (
                   <section>
-                    <div className="mb-4 flex items-center gap-2 text-slate-800">
+                    <div className="mb-2.5 flex items-center gap-2 text-slate-900">
                       <span className="h-5 w-1 rounded-full bg-emerald-800" />
-                      <span className="text-base font-medium uppercase tracking-tight">MHI Mangrove</span>
+                      <span className="text-sm font-semibold uppercase tracking-tight">MHI Mangrove</span>
                     </div>
-                    <div className="overflow-hidden rounded-2xl border border-white/70 bg-white/65 shadow-sm">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                       <table className="w-full text-left text-sm">
                         <tbody>
                           {MHI_ORDER.map((cls, index) => (
                             <tr key={cls} className={index !== MHI_ORDER.length - 1 ? 'border-b border-slate-100' : ''}>
-                              <td className="px-4 py-4">
-                                <div className="flex items-center gap-4">
-                                  <span className="h-4 w-4 rounded-sm border border-slate-300" style={{ background: MHI_COLORS[cls] ?? MHI_DEFAULT_COLOR }} />
-                                  <span className="text-slate-900">{cls}</span>
+                              <td className="w-full min-w-0 px-3 py-2.5">
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <span className="h-4 w-4 flex-shrink-0 rounded-sm border border-slate-300" style={{ background: MHI_COLORS[cls] ?? MHI_DEFAULT_COLOR }} />
+                                  <span className="min-w-0 break-words leading-snug text-slate-900">{cls}</span>
                                 </div>
                               </td>
-                              <td className="px-4 py-4 text-right font-medium text-slate-500">
+                              <td className="whitespace-nowrap px-3 py-2.5 text-right font-semibold text-slate-700">
                                 {mhiCounts ? (mhiCounts[cls] ?? 0).toLocaleString() : '0'}
                               </td>
                             </tr>
@@ -1822,22 +1942,22 @@ export default function PetaPublik() {
 
                 {showBenthic && (
                   <section>
-                    <div className="mb-4 flex items-center gap-2 text-slate-800">
+                    <div className="mb-2.5 flex items-center gap-2 text-slate-900">
                       <span className="h-5 w-1 rounded-full bg-blue-600" />
-                      <span className="text-base font-medium uppercase tracking-tight">Kelas Benthic</span>
+                      <span className="text-sm font-semibold uppercase tracking-tight">Kelas Benthic</span>
                     </div>
-                    <div className="overflow-hidden rounded-2xl border border-white/70 bg-white/65 shadow-sm">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                       <table className="w-full text-left text-sm">
                         <tbody>
                           {BENTHIC_ORDER.map((cls, index) => (
                             <tr key={cls} className={index !== BENTHIC_ORDER.length - 1 ? 'border-b border-slate-100' : ''}>
-                              <td className="px-4 py-4">
-                                <div className="flex items-center gap-4">
+                              <td className="px-3 py-2.5">
+                                <div className="flex items-center gap-3">
                                   <span className="h-4 w-4 rounded-sm border border-slate-300" style={{ background: BENTHIC_COLORS[cls] ?? BENTHIC_DEFAULT_COLOR }} />
                                   <span className="text-slate-900">{cls}</span>
                                 </div>
                               </td>
-                              <td className="px-4 py-4 text-right font-medium text-slate-500">
+                              <td className="px-3 py-2.5 text-right font-semibold text-slate-700">
                                 {benthicCounts ? (benthicCounts[cls] ?? 0).toLocaleString() : '0'}
                               </td>
                             </tr>
@@ -1848,19 +1968,19 @@ export default function PetaPublik() {
                   </section>
                 )}
 
-                {showPolaruang && polaruangData && (
+                {showPolaruang && rtrwLautZones.length > 0 && (
                   <section>
-                    <div className="mb-4 flex items-center gap-2 text-slate-800">
+                    <div className="mb-2.5 flex items-center gap-2 text-slate-900">
                       <span className="h-5 w-1 rounded-full bg-amber-500" />
-                      <span className="text-base font-medium uppercase tracking-tight">Pola Ruang Pemanfaatan</span>
+                      <span className="text-sm font-semibold uppercase tracking-tight">RTRW Laut</span>
                     </div>
-                    <div className="overflow-hidden rounded-2xl border border-white/70 bg-white/65 shadow-sm">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                       <table className="w-full text-left text-sm">
                         <tbody>
-                          {polaruangZones.map(([zone, color], index) => (
-                            <tr key={zone} className={index !== polaruangZones.length - 1 ? 'border-b border-slate-100' : ''}>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-4">
+                          {rtrwLautZones.map(([zone, color], index) => (
+                            <tr key={zone} className={index !== rtrwLautZones.length - 1 ? 'border-b border-slate-100' : ''}>
+                              <td className="px-3 py-2.5">
+                                <div className="flex items-center gap-3">
                                   <span className="h-4 w-4 flex-shrink-0 rounded-sm border border-slate-300" style={{ background: color }} />
                                   <span className="text-slate-900">{zone}</span>
                                 </div>
@@ -1873,19 +1993,19 @@ export default function PetaPublik() {
                   </section>
                 )}
 
-                {showKonservasi && konservasiData && (
+                {showKonservasiLegendSeparate && konservasiData && (
                   <section>
-                    <div className="mb-4 flex items-center gap-2 text-slate-800">
+                    <div className="mb-2.5 flex items-center gap-2 text-slate-900">
                       <span className="h-5 w-1 rounded-full bg-green-700" />
-                      <span className="text-base font-medium uppercase tracking-tight">Kawasan Konservasi</span>
+                      <span className="text-sm font-semibold uppercase tracking-tight">Kawasan Konservasi</span>
                     </div>
-                    <div className="overflow-hidden rounded-2xl border border-white/70 bg-white/65 shadow-sm">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                       <table className="w-full text-left text-sm">
                         <tbody>
                           {konservasiZones.map(([zone, color], index) => (
                             <tr key={zone} className={index !== konservasiZones.length - 1 ? 'border-b border-slate-100' : ''}>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-4">
+                              <td className="px-3 py-2.5">
+                                <div className="flex items-center gap-3">
                                   <span className="h-4 w-4 flex-shrink-0 rounded-sm border border-slate-300" style={{ background: color }} />
                                   <span className="text-slate-900">{zone}</span>
                                 </div>
@@ -1897,6 +2017,23 @@ export default function PetaPublik() {
                     </div>
                   </section>
                 )}
+
+                {/* Sumber Data */}
+                <section className="border-t border-slate-200 pt-3">
+                  <div className="mb-2 flex items-center gap-2 text-slate-900">
+                    <Info className="h-4 w-4 text-slate-600" />
+                    <span className="text-sm font-semibold uppercase tracking-tight">Sumber Data</span>
+                  </div>
+                  <ul className="space-y-2 px-0.5">
+                    {DATA_SOURCES.map(({ label, source }) => (
+                      <li key={label} className="text-justify text-[12px] leading-snug text-slate-700">
+                        <span className="font-semibold text-slate-900">{label}</span>
+                        <span className="text-slate-500">: </span>
+                        {source}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               </div>
             </div>
 
@@ -2181,9 +2318,9 @@ export default function PetaPublik() {
                           className="w-3.5 h-3.5 rounded-sm flex-shrink-0"
                           style={{ background: MHI_COLORS[cls] ?? MHI_DEFAULT_COLOR }}
                         />
-                        <span className="text-sm text-slate-700 font-medium flex-1">{cls}</span>
+                        <span className="min-w-0 flex-1 break-words leading-snug text-sm text-slate-700 font-medium">{cls}</span>
                         {mhiCounts && (
-                          <span className="text-xs text-slate-400 font-semibold">
+                          <span className="whitespace-nowrap text-xs text-slate-500 font-semibold">
                             {(mhiCounts[cls] ?? 0).toLocaleString()}
                           </span>
                         )}
@@ -2215,11 +2352,11 @@ export default function PetaPublik() {
                 </>
               )}
 
-              {showPolaruang && polaruangData && (
+              {showPolaruang && rtrwLautZones.length > 0 && (
                 <>
-                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 mt-4">Pola Ruang Pemanfaatan</p>
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 mt-4">RTRW Laut</p>
                   <div className="space-y-2">
-                    {polaruangZones.map(([zone, color]) => (
+                    {rtrwLautZones.map(([zone, color]) => (
                       <div key={zone} className="flex items-center gap-2.5">
                         <span className="w-3.5 h-3.5 rounded-sm flex-shrink-0" style={{ background: color }} />
                         <span className="text-sm text-slate-700 font-medium flex-1">{zone}</span>
@@ -2229,7 +2366,7 @@ export default function PetaPublik() {
                 </>
               )}
 
-              {showKonservasi && konservasiData && (
+              {showKonservasiLegendSeparate && konservasiData && (
                 <>
                   <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 mt-4">Kawasan Konservasi</p>
                   <div className="space-y-2">
@@ -2242,6 +2379,23 @@ export default function PetaPublik() {
                   </div>
                 </>
               )}
+
+              {/* Sumber Data — mobile */}
+              <div className="mt-4 pt-3 border-t border-slate-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Info className="w-3.5 h-3.5 text-slate-400" />
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Sumber Data</p>
+                </div>
+                <ul className="space-y-2">
+                  {DATA_SOURCES.map(({ label, source }) => (
+                    <li key={label} className="text-justify text-[11px] leading-snug text-slate-500">
+                      <span className="font-semibold text-slate-700">{label}</span>
+                      <span className="text-slate-300">: </span>
+                      {source}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
 
             {/* Unduh Data — mobile. Tombol khusus karena top toolbar

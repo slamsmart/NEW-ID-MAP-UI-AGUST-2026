@@ -102,19 +102,8 @@
   .fade-stagger > *:nth-child(n+11) { animation-delay: 0.42s; }
 }
 
-/* ID MAP dark map panel: explicit legacy slate utilities need light text on teal. */
-.idmap-map-shell > main > div > aside .text-slate-900,
-.idmap-map-shell > main > div > aside .text-slate-800,
-.idmap-map-shell > main > div > aside .text-slate-700,
-.idmap-map-shell > main > div > aside .text-slate-600,
-.idmap-map-shell > main > div > aside .text-slate-500,
-.idmap-map-shell > main > div > aside .text-slate-400 {
-  color: rgba(255, 255, 255, 0.82) !important;
-}
-.idmap-map-shell > main > div > aside .border-slate-200,
-.idmap-map-shell > main > div > aside .border-slate-100 {
-  border-color: rgba(255, 255, 255, 0.14) !important;
-}
+/* ID MAP light map panel: legenda memakai surface putih dengan teks gelap.
+   Override teks putih sebelumnya dihapus agar utilitas slate kembali berlaku. */
 
 /* ── Scroll-reveal: elements start hidden, become visible via JS ── */
 .reveal {
@@ -140,16 +129,15 @@
 .reveal-delay-3 { transition-delay: 0.30s; }
 .reveal-delay-4 { transition-delay: 0.40s; }
 
-/* ── Liquid glass panel — efek kaca ala landing page untuk permukaan navy ── */
+/* ── Liquid glass panel — efek kaca untuk permukaan putih ── */
 .glass-panel {
-  /* fallback navy bila backdrop-filter tidak didukung browser */
-  background-color: rgba(13, 27, 42, 0.55);
-  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.04) 45%, rgba(255, 255, 255, 0.08) 100%);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14),
-              inset 0 -1px 0 rgba(255, 255, 255, 0.04),
-              0 10px 30px rgba(0, 0, 0, 0.28);
+  /* fallback putih bila backdrop-filter tidak didukung browser */
+  background-color: rgba(255, 255, 255, 0.88);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.90) 45%, rgba(255, 255, 255, 0.94) 100%);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9),
+              0 10px 30px rgba(15, 23, 42, 0.08);
 }
 
 /* ── 3D tilt for glass cards (mengikuti kursor) ── */
@@ -426,6 +414,59 @@ canvas {
 
 .leaflet-popup-tip {
   box-shadow: none !important;
+}
+
+/* Badge pin titik tujuan "Input Koordinat" — marker di atas polygon zona
+   ruang (RTRW/konservasi/pemanfaatan) agar posisi titik terlihat jelas. */
+.coordinate-pin-icon {
+  background: transparent;
+  border: 0;
+}
+
+.coordinate-pin {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  animation: coordinate-pin-drop 0.45s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+
+.coordinate-pin-core {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #059669;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.55), 0 1px 3px rgba(0, 0, 0, 0.35);
+  z-index: 1;
+}
+
+.coordinate-pin-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(5, 150, 105, 0.75);
+  animation: coordinate-pin-pulse 1.8s ease-out infinite;
+}
+
+@keyframes coordinate-pin-drop {
+  from { opacity: 0; transform: translateY(-10px) scale(0.6); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes coordinate-pin-pulse {
+  0%   { transform: scale(0.6); opacity: 0.9; }
+  70%  { transform: scale(2.1); opacity: 0; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+
+.coordinate-zone-tooltip {
+  border: 1px solid rgba(5, 150, 105, 0.3) !important;
+  border-radius: 8px !important;
+  color: #334155;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18) !important;
 }
 
 .leaflet-popup-content {

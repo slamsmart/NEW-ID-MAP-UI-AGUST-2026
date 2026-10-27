@@ -1,11 +1,11 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList, MapPin, Leaf, Camera, CheckCircle,
   AlertCircle, X, Navigation, Loader2, Upload,
   WifiOff, Wifi, Sprout, AlertTriangle, Info, Droplets, ExternalLink, Trees, Turtle, FileText,
 } from 'lucide-react';
 // Location data no longer needed â€" GPS auto-detect used instead
-import { PROVINSI_LIST, KABKOTA_BY_PROVINSI } from '../data/wilayahIndonesia';
+import { PROVINSI_LIST, KABKOTA_WILKER_CABDIN_MALANG } from '../data/wilayahIndonesia';
 import { fetchSurveys, getSurveys, saveSurvey, type SurveyRecord } from '../data/localStore';
 import { hitungSkorPotensi, rekomendasiSpesiesBySubstrat } from '../data/abrasiData';
 import { useAuth } from '../context/useAuth';
@@ -472,20 +472,65 @@ function SectionHead({ icon: Icon, label, color = 'text-[#0d404f]' }: {
 }
 
 function AncamanChecks({ selected, onChange }: { selected: string[]; onChange: (v: string[]) => void }) {
+  const [showLainnya, setShowLainnya] = useState(false);
+  const [lainnya, setLainnya] = useState('');
   const toggle = (item: string) =>
     onChange(selected.includes(item) ? selected.filter(a => a !== item) : [...selected, item]);
+  const customItems = selected.filter(item => !ANCAMAN_OPTIONS.includes(item));
+  const addLainnya = () => {
+    const value = lainnya.trim();
+    if (!value) return;
+    const exists = selected.some(a => a.toLowerCase() === value.toLowerCase());
+    if (!exists) onChange([...selected, value]);
+    setLainnya('');
+  };
   return (
-    <div className="flex flex-wrap gap-2 mt-1">
-      {ANCAMAN_OPTIONS.map(item => (
-        <button key={item} type="button" onClick={() => toggle(item)}
-          className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-            selected.includes(item)
-              ? 'bg-red-100 border-red-300 text-red-800 font-semibold'
-              : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300'
+    <div className="space-y-2 mt-1">
+      <div className="flex flex-wrap gap-2">
+        {ANCAMAN_OPTIONS.map(item => (
+          <button key={item} type="button" onClick={() => toggle(item)}
+            className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+              selected.includes(item)
+                ? 'bg-red-100 border-red-300 text-red-800 font-semibold'
+                : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300'
+            }`}>
+            {item}
+          </button>
+        ))}
+        {customItems.map(item => (
+          <span key={item}
+            className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border bg-red-100 border-red-300 text-red-800 font-semibold">
+            {item}
+            <button type="button" onClick={() => toggle(item)} aria-label={`Hapus ${item}`}
+              className="ml-0.5 text-red-600 hover:text-red-900">×</button>
+          </span>
+        ))}
+        <button type="button" onClick={() => setShowLainnya(v => !v)}
+          className={`text-xs px-2.5 py-1 rounded-full border border-dashed transition-colors ${
+            showLainnya
+              ? 'bg-orange-50 border-orange-300 text-orange-800 font-semibold'
+              : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'
           }`}>
-          {item}
+          + Lainnya
         </button>
-      ))}
+      </div>
+      {showLainnya && (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={lainnya}
+            onChange={e => setLainnya(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addLainnya(); } }}
+            placeholder="Tulis ancaman lain yang ditemukan di lapangan..."
+            maxLength={100}
+            className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-200"
+          />
+          <button type="button" onClick={addLainnya} disabled={!lainnya.trim()}
+            className="text-xs px-3 py-1.5 rounded-lg bg-orange-600 text-white font-semibold disabled:opacity-40">
+            Tambah
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1624,7 +1669,7 @@ export default function InputLapangan() {
               <G label="Kabupaten/Kota">
                 <select value={monVeg.kabKota} onChange={e => setMonVeg(p => ({ ...p, kabKota: e.target.value }))} disabled={!monVeg.provinsi} className={cls}>
                   <option value="">-- Pilih --</option>
-                  {(KABKOTA_BY_PROVINSI[monVeg.provinsi] ?? []).map(k => <option key={k}>{k}</option>)}
+                  {KABKOTA_WILKER_CABDIN_MALANG.map(k => <option key={k}>{k}</option>)}
                 </select>
               </G>
             </div>
@@ -1807,7 +1852,7 @@ export default function InputLapangan() {
               <G label="Kabupaten/Kota">
                 <select value={potensi.kabKota} onChange={e => setPotensi(p => ({ ...p, kabKota: e.target.value }))} disabled={!potensi.provinsi} className={cls}>
                   <option value="">-- Pilih --</option>
-                  {(KABKOTA_BY_PROVINSI[potensi.provinsi] ?? []).map(k => <option key={k}>{k}</option>)}
+                  {KABKOTA_WILKER_CABDIN_MALANG.map(k => <option key={k}>{k}</option>)}
                 </select>
               </G>
             </div>
@@ -1974,7 +2019,7 @@ export default function InputLapangan() {
               <G label="Kabupaten/Kota">
                 <select value={penyu.kabKota} onChange={e => setPenyu(p => ({ ...p, kabKota: e.target.value }))} disabled={!penyu.provinsi} className={cls}>
                   <option value="">-- Pilih --</option>
-                  {(KABKOTA_BY_PROVINSI[penyu.provinsi] ?? []).map(k => <option key={k}>{k}</option>)}
+                  {KABKOTA_WILKER_CABDIN_MALANG.map(k => <option key={k}>{k}</option>)}
                 </select>
               </G>
             </div>

@@ -9,12 +9,89 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { timeSeriesData, mangroveLocations, ekosistemData, tekananSosialData } from '../data/seedData';
-import { kebijakanData } from '../data/kebijakan';
+import { kebijakanData, type KebijakanLokasi } from '../data/kebijakan';
+import type { EkosistemData, MangroveLocation } from '../types';
+import { recordDownload } from '../lib/statsClient';
+import DownloadDropdown from '../components/DownloadDropdown';
 import StatusBadge from '../components/shared/StatusBadge';
 import DataSourcesPanel from '../components/shared/DataSourcesPanel';
 
 function handlePrint() {
   window.print();
+}
+
+function escapeHtml(value: string | number) {
+  return String(value).replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[character] ?? character);
+}
+
+function printLocationPolicy(keb: KebijakanLokasi, loc: MangroveLocation, eco: EkosistemData) {
+  const win = window.open('', '_blank', 'width=1000,height=800');
+  if (!win) {
+    window.alert('Popup export diblokir browser. Izinkan pop-up untuk mencetak PDF.');
+    return;
+  }
+
+  const list = (items: string[]) => items.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+  const laws = keb.dasarHukum
+    .map(law => `<li><strong>${escapeHtml(law.nomor)}</strong>: ${escapeHtml(law.keterangan)}</li>`)
+    .join('');
+  const agencies = keb.instansiPJ.map(inst => `<span class="tag">${escapeHtml(inst)}</span>`).join('');
+
+  win.document.write(`<!doctype html>
+<html lang="id"><head><meta charset="utf-8" /><title>Analisis Kebijakan - ${escapeHtml(loc.name)}</title>
+<style>
+  @page { size: A4; margin: 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; color: #17212b; line-height: 1.45; font-size: 11px; margin: 0; }
+  h1 { color: #0d404f; font-size: 21px; margin: 0 0 4px; }
+  h2 { color: #0d404f; font-size: 13px; margin: 0 0 7px; }
+  p { margin: 4px 0; }
+  .header { border-bottom: 3px solid #f06424; padding-bottom: 10px; margin-bottom: 12px; }
+  .muted { color: #64748b; font-size: 10px; }
+  .summary { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 7px; padding: 9px; margin: 10px 0; }
+  .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 10px 0; }
+  .meta div, .box { border: 1px solid #dbe3e8; border-radius: 6px; padding: 8px; }
+  .label { color: #64748b; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; }
+  .value { font-weight: 700; margin-top: 2px; }
+  .horizons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .horizon { border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; }
+  .horizon h2 { color: white; padding: 7px 8px; margin: 0; font-size: 11px; }
+  .short h2 { background: #dc2626; } .medium h2 { background: #f59e0b; } .long h2 { background: #2563eb; }
+  ul { margin: 0; padding: 8px 8px 8px 22px; } li { margin: 3px 0; }
+  .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .tag { display: inline-block; background: #ecfdf5; border: 1px solid #bbf7d0; color: #166534; border-radius: 3px; padding: 2px 5px; margin: 2px 3px 0 0; }
+  .note { background: #fefce8; border: 1px solid #fde68a; border-radius: 6px; padding: 8px; margin-top: 8px; }
+  .footer { color: #64748b; border-top: 1px solid #dbe3e8; margin-top: 14px; padding-top: 7px; font-size: 9px; }
+</style></head><body>
+  <div class="header"><div class="muted">ID-MAP · ANALISIS KEBIJAKAN EKOSISTEM PESISIR</div><h1>${escapeHtml(loc.name)}</h1><div class="muted">${escapeHtml(loc.district)} · ${escapeHtml(loc.province)} · Prioritas ${keb.prioritas} · Risiko ${escapeHtml(keb.statusRisiko)}</div></div>
+  <div class="meta">
+    <div><div class="label">Luas terpantau</div><div class="value">${escapeHtml(loc.areaHa.toLocaleString('id-ID'))} ha</div></div>
+    <div><div class="label">Status mangrove</div><div class="value">${escapeHtml(loc.status)}</div></div>
+    <div><div class="label">Skor kesehatan</div><div class="value">${escapeHtml(eco.skorKesehatan)}/100 · Tutupan ${escapeHtml(eco.tutupanTajuk)}%</div></div>
+  </div>
+  <div class="summary"><strong>Ringkasan kebijakan</strong><p>${escapeHtml(keb.ringkasan)}</p></div>
+  <div class="horizons">
+    <section class="horizon short"><h2>Jangka Pendek (0–6 bulan)</h2><ul>${list(keb.rekomendasiPendek)}</ul></section>
+    <section class="horizon medium"><h2>Jangka Menengah (6–24 bulan)</h2><ul>${list(keb.rekomendasiMenengah)}</ul></section>
+    <section class="horizon long"><h2>Jangka Panjang (&gt; 24 bulan)</h2><ul>${list(keb.rekomendasiPanjang)}</ul></section>
+  </div>
+  <div class="columns">
+    <section class="box"><h2>Dasar Hukum</h2><ul>${laws}</ul></section>
+    <section class="box"><h2>Target Capaian</h2><p>${escapeHtml(keb.targetCapaian)}</p><h2 style="margin-top:12px">Instansi Penanggung Jawab</h2><div>${agencies}</div></section>
+  </div>
+  <div class="columns"><section class="box"><h2>Estimasi Anggaran</h2><p>${escapeHtml(keb.estimasiAnggaran)}</p></section><section class="box"><h2>Kawasan</h2><p>${escapeHtml(loc.kawasan)} · Survei terakhir ${escapeHtml(loc.lastSurvey)}</p></section></div>
+  ${keb.catatanKhusus ? `<div class="note"><strong>Catatan khusus:</strong> ${escapeHtml(keb.catatanKhusus)}</div>` : ''}
+  <div class="footer">Data ID-MAP bersifat estimasi/analisis awal dan perlu verifikasi PMN/GMW serta kajian teknis sebelum penetapan program dan anggaran.</div>
+</body></html>`);
+  win.document.close();
+  win.focus();
+  win.setTimeout(() => win.print(), 300);
 }
 
 export default function Laporan() {
@@ -87,13 +164,11 @@ export default function Laporan() {
             <h2 className="text-2xl font-bold mb-1">Evaluasi Program Restorasi Mangrove Nasional</h2>
             <p className="text-white/60 text-sm">Periode: 2018 – Q1 2025 | Basis data untuk Pemantauan dan Restorasi Lingkungan</p>
           </div>
-          <button
-            onClick={handlePrint}
-            className="flex-shrink-0 flex items-center gap-2 bg-[#f06424] hover:bg-[#d9531b] border border-[#f06424] rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Export PDF + Kebijakan
-          </button>
+          <DownloadDropdown
+            variant="dark"
+            buttonLabel="Export PDF + Kebijakan"
+            items={[{ kind: 'pdf', label: 'Laporan lengkap (PDF)', onSelect: handlePrint }]}
+          />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
@@ -321,47 +396,60 @@ export default function Laporan() {
               <p className="text-xs text-gray-500 mt-0.5">Klik lokasi untuk detail rekomendasi jangka pendek, menengah, panjang + dasar hukum</p>
             </div>
           </div>
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-2 text-sm text-white bg-[#071520] hover:bg-[#0d404f] rounded-lg px-3 py-1.5 transition-colors font-semibold"
-          >
-            <Download className="w-4 h-4" />
-            Export PDF
-          </button>
+          <DownloadDropdown
+            buttonLabel="Export PDF"
+            items={[{ kind: 'pdf', label: 'Semua kebijakan (PDF)', onSelect: handlePrint }]}
+          />
         </div>
 
         <div className="divide-y divide-gray-100">
           {kebijakanData
             .sort((a, b) => a.prioritas - b.prioritas)
             .map(keb => {
-              const loc = mangroveLocations.find(l => l.id === keb.locationId)!;
-              const eco = ekosistemData.find(e => e.locationId === keb.locationId)!;
+              const loc = mangroveLocations.find(l => l.id === keb.locationId);
+              const eco = ekosistemData.find(e => e.locationId === keb.locationId);
+              if (!loc || !eco) return null;
               const isOpen = expandedKebijakan === keb.locationId;
               return (
                 <div key={keb.locationId}>
-                  <button
-                    className="w-full flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors text-left"
-                    onClick={() => setExpandedKebijakan(isOpen ? null : keb.locationId)}
-                  >
-                    {/* Priority Badge */}
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-sm flex-shrink-0 ${
-                      keb.statusRisiko === 'kritis' ? 'bg-red-600' :
-                      keb.statusRisiko === 'perhatian' ? 'bg-amber-500' : 'bg-green-600'
-                    }`}>{keb.prioritas}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-gray-900 text-sm">{loc.name}</span>
-                        <StatusBadge status={loc.status} />
-                        <StatusBadge status={keb.statusRisiko === 'kritis' ? 'critical' : keb.statusRisiko === 'perhatian' ? 'warning' : 'info'} />
+                  <div className="flex items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors">
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 flex items-center gap-4 text-left"
+                      onClick={() => setExpandedKebijakan(isOpen ? null : keb.locationId)}
+                    >
+                      {/* Priority Badge */}
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-sm flex-shrink-0 ${
+                        keb.statusRisiko === 'kritis' ? 'bg-red-600' :
+                        keb.statusRisiko === 'perhatian' ? 'bg-amber-500' : 'bg-green-600'
+                      }`}>{keb.prioritas}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-gray-900 text-sm">{loc.name}</span>
+                          <StatusBadge status={loc.status} />
+                          <StatusBadge status={keb.statusRisiko === 'kritis' ? 'critical' : keb.statusRisiko === 'perhatian' ? 'warning' : 'info'} />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">{keb.ringkasan}</p>
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5 truncate">{keb.ringkasan}</p>
-                    </div>
-                    <div className="flex items-center gap-3 flex-shrink-0 text-xs text-gray-500">
-                      <span>{loc.areaHa.toLocaleString()} ha</span>
-                      <span className="font-semibold text-gray-700">{keb.estimasiAnggaran.split('(')[0]}</span>
-                      {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </div>
-                  </button>
+                      <div className="flex items-center gap-3 flex-shrink-0 text-xs text-gray-500">
+                        <span>{loc.areaHa.toLocaleString()} ha</span>
+                        <span className="font-semibold text-gray-700">{keb.estimasiAnggaran.split('(')[0]}</span>
+                        {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void recordDownload('pdf');
+                        printLocationPolicy(keb, loc, eco);
+                      }}
+                      className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-md bg-[#071520] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#0d404f]"
+                      title={`Export kebijakan ${loc.name} sebagai PDF`}
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Export PDF
+                    </button>
+                  </div>
 
                   {isOpen && (
                     <div className="px-5 pb-5 bg-gray-50 border-t border-gray-100">
@@ -406,7 +494,7 @@ export default function Laporan() {
                             {keb.dasarHukum.map(d => (
                               <li key={d.nomor} className="text-xs text-gray-600">
                                 <span className="font-semibold text-gray-800">{d.nomor}</span>
-                                <span className="text-gray-500"> — {d.keterangan}</span>
+                                <span className="text-gray-500">: {d.keterangan}</span>
                               </li>
                             ))}
                           </ul>

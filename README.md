@@ -11,7 +11,9 @@ Currently, two official plugins are available:
 
 The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-## Expanding the ESLint configuration
+# Lint baseline
+
+`npm run lint` is a blocking gate for errors. Existing legacy patterns that are not yet behavior bugs—such as `any`, Fast Refresh mixed exports, and synchronous state setup in effects—are emitted as warnings so they remain visible without blocking unrelated releases. New errors still fail `npm run check`.
 
 If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 

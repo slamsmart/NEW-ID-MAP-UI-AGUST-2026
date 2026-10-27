@@ -1,5 +1,6 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import { requireRole } from './authGuard';
 
 /**
  * Pokmaswas — Kelompok Masyarakat Pengawas Konservasi.
@@ -74,6 +75,7 @@ export const add = mutation({
   },
   returns: v.id('pokmaswas'),
   handler: async (ctx, args) => {
+    await requireRole(ctx, ['admin', 'verifikator']);
     const last = await ctx.db
       .query('pokmaswas')
       .withIndex('by_no')
@@ -121,6 +123,7 @@ export const upsert = mutation({
   },
   returns: v.id('pokmaswas'),
   handler: async (ctx, args) => {
+    await requireRole(ctx, ['admin', 'verifikator']);
     const existing = await ctx.db
       .query('pokmaswas')
       .withIndex('by_legacy', (q) => q.eq('legacyId', args.legacyId))
@@ -166,6 +169,7 @@ export const remove = mutation({
   args: { legacyId: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await requireRole(ctx, ['admin', 'verifikator']);
     const existing = await ctx.db
       .query('pokmaswas')
       .withIndex('by_legacy', (q) => q.eq('legacyId', args.legacyId))

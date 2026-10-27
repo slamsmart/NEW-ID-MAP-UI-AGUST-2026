@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { fetchSurveys, fetchVerificationStats, verifySurveyRemote, type SurveyRecord } from '../data/localStore';
 import { useAuth } from '../context/useAuth';
+import MaintenanceToggle from '../components/MaintenanceToggle';
 
 type FilterStatus = 'semua' | 'pending' | 'approved' | 'rejected';
 type FilterTujuan = 'semua' | 'monitoring' | 'potensi_penanaman' | 'abrasi' | 'vegetasi_mangrove' | 'pendaratan_penyu';
@@ -134,6 +135,9 @@ export default function VerifikasiData() {
           <RefreshCw className="w-3.5 h-3.5" /> Refresh
         </button>
       </div>
+
+      {/* Saklar mode pemeliharaan situs — khusus verifikator */}
+      <MaintenanceToggle />
 
       {/* Stats KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

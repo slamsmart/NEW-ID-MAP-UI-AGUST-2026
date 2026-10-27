@@ -14,19 +14,11 @@
  * untuk menahan render tombol/UI Clerk sampai provider benar-benar ter-mount.
  */
 import {
-  createContext,
-  useContext,
   useEffect,
   useState,
   type ReactNode,
 } from 'react';
-
-const ClerkReadyContext = createContext(false);
-
-/** true saat <ClerkProvider> sudah ter-mount (aman panggil hook/UI Clerk). */
-export function useClerkReady() {
-  return useContext(ClerkReadyContext);
-}
+import { ClerkReadyContext } from './ClerkReadyContext';
 
 
 export function ClerkProviderGate({ children }: { children: ReactNode }) {
@@ -56,7 +48,7 @@ export function ClerkProviderGate({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isClerkConfigured]);
 
   const ClerkProvider = providerState?.Component;
   const ready = !isClerkConfigured || ClerkProvider !== undefined;

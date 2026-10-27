@@ -8,7 +8,7 @@
  * Fallback: cloneElement dengan onClick yang menampilkan AccountNotice.
  */
 import { useEffect, useState, cloneElement, type ReactElement } from 'react';
-import { useClerkReady } from './ClerkContext';
+import { useClerkReady } from './ClerkReadyContext';
 
 type ClerkModule = {
   SignInButton: (props: {

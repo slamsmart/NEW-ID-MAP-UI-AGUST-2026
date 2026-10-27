@@ -6,7 +6,7 @@
  * ClerkBridgeInner (yang memakai hook Clerk) di-dynamic import lalu dirender.
  */
 import { useEffect, useState, type ComponentType } from 'react';
-import { useClerkReady } from './clerk/ClerkContext';
+import { useClerkReady } from './clerk/ClerkReadyContext';
 
 const isClerkConfigured = !!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 

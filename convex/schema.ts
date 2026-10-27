@@ -262,6 +262,25 @@ export default defineSchema({
   }).index('by_key', ['key']),
 
   // ─────────────────────────────────────────────────────────────
+  // siteConfig — konfigurasi situs yang bisa diubah runtime oleh
+  // verifikator (tanpa rebuild/redeploy). Single-document pattern:
+  // satu row dengan key='global', sama seperti `siteStats`.
+  //
+  // Saat `maintenanceEnabled` true, SELURUH situs dikunci dan
+  // pengunjung melihat halaman Maintenance (lihat src/App.tsx →
+  // MaintenanceGate). Verifikator/admin tetap bisa masuk supaya
+  // bisa mematikan mode ini kembali.
+  // ─────────────────────────────────────────────────────────────
+  siteConfig: defineTable({
+    key: v.string(),                          // selalu 'global'
+    maintenanceEnabled: v.boolean(),
+    maintenanceMessage: v.optional(v.string()),
+    maintenanceEta: v.optional(v.string()),
+    updatedBy: v.optional(v.string()),        // nama verifikator terakhir
+    updatedAt: v.number(),
+  }).index('by_key', ['key']),
+
+  // ─────────────────────────────────────────────────────────────
   // statEvents — riwayat event statistik untuk analisis waktu
   // (grafik per bulan & triwulan di Dashboard untuk admin/verifikator).
   // Setiap kunjungan & unduhan dicatat sebagai SATU baris event dengan

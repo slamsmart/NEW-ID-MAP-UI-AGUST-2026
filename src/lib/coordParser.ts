@@ -62,7 +62,7 @@ export function parseCoord(input: string): string | null {
 export function parseLatLng(input: string): { lat: string; lng: string } | null {
   const s = input.trim();
 
-  const parts = s.split(/,\s*(?=[0-9\-]|[NSEWnsew]?\s*\d)/);
+  const parts = s.split(/,\s*(?=[0-9-]|[NSEWnsew]?\s*\d)/);
 
   if (parts.length >= 2) {
     const lat = parseDMS(parts[0].trim());

@@ -16,6 +16,12 @@ export const PROVINSI_LIST = [
   'Papua Tengah', 'Papua Pegunungan',
 ];
 
+/** Wilayah kerja Cabang Dinas Kelautan dan Perikanan Kab. Malang */
+export const KABKOTA_WILKER_CABDIN_MALANG = [
+  'Kab. Malang', 'Kab. Pasuruan', 'Kab. Sidoarjo',
+  'Kota Batu', 'Kota Malang', 'Kota Pasuruan', 'Kota Surabaya',
+];
+
 export const KABKOTA_BY_PROVINSI: Record<string, string[]> = {
   'Aceh': [
     'Kab. Aceh Barat','Kab. Aceh Barat Daya','Kab. Aceh Besar','Kab. Aceh Jaya',

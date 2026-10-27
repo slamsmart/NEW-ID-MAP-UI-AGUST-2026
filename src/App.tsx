@@ -1,5 +1,10 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import {
+  hasMaintenanceBypass,
+  syncMaintenanceBypassFromUrl,
+} from './lib/maintenance';
+import { useMaintenance } from './hooks/useMaintenance';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/useAuth';
 import Layout from './components/Layout/Layout';
@@ -21,11 +26,13 @@ const PendaratanPenyu = lazy(() => import('./pages/PendaratanPenyu'));
 const VerifikasiData = lazy(() => import('./pages/VerifikasiData'));
 const DataPokmaswas = lazy(() => import('./pages/DataPokmaswas'));
 const Laporan = lazy(() => import('./pages/Laporan'));
+const LaporanPengunjung = lazy(() => import('./pages/LaporanPengunjung'));
 const PembibitanMangrove = lazy(() => import('./pages/PembibitanMangrove'));
 const TekananSosial = lazy(() => import('./pages/TekananSosial'));
 const AnalisisLingkungan = lazy(() => import('./pages/AnalisisLingkungan'));
 const MangroveNasional = lazy(() => import('./pages/MangroveNasional'));
 const PedomanTeknisPage = lazy(() => import('./pages/PedomanTeknisPage'));
+const Maintenance = lazy(() => import('./pages/Maintenance'));
 const SyaratKetentuan = lazy(() => import('./pages/SyaratKetentuan'));
 const KebijakanPrivasi = lazy(() => import('./pages/KebijakanPrivasi'));
 
@@ -94,36 +101,72 @@ function ProtectedLayout() {
   return <Layout />;
 }
 
+/**
+ * Menutup situs/route yang sedang diperbaiki.
+ *
+ * Dua sumber (lihat src/hooks/useMaintenance.ts):
+ *  - saklar runtime verifikator (Convex `siteConfig`) → seluruh situs;
+ *  - env `VITE_MAINTENANCE*` → route tertentu.
+ *
+ * Dua jalan tetap terbuka supaya tidak ada yang terkunci permanen:
+ *  - verifikator & admin selalu boleh masuk (agar bisa mematikan saklar);
+ *  - bypass developer: buka URL mana pun dengan `?maintenance=off`.
+ */
+function MaintenanceGate({ children }: { children: React.ReactNode }) {
+  const { pathname, search } = useLocation();
+  const { user } = useAuth();
+  const maintenance = useMaintenance();
+
+  syncMaintenanceBypassFromUrl(search);
+
+  const isStaff = user?.role === 'verifikator' || user?.role === 'admin';
+  // Sengaja TIDAK menunggu status loading Convex: kunci dari env harus
+  // berlaku seketika walau langganan `siteConfig` gagal/belum tiba.
+  const locked = maintenance.isBlocked(pathname) && !isStaff && !hasMaintenanceBypass();
+
+  if (locked) {
+    return (
+      <PageFade>
+        <Maintenance message={maintenance.message} eta={maintenance.eta} />
+      </PageFade>
+    );
+  }
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   return (
     <Suspense fallback={<AppShellFallback />}>
-      <Routes>
-        <Route path="/" element={<RootRoute />} />
-        <Route path="/peta" element={<PublicPeta />} />
-        <Route path="/login" element={<LoginRedirect />} />
-        <Route path="/admin" element={<LoginRedirect />} />
-        <Route path="/pedoman-teknis" element={<PedomanTeknisPage />} />
-        <Route path="/syarat-ketentuan" element={<SyaratKetentuan />} />
-        <Route path="/kebijakan-privasi" element={<KebijakanPrivasi />} />
+      <MaintenanceGate>
+        <Routes>
+          <Route path="/" element={<RootRoute />} />
+          <Route path="/peta" element={<PublicPeta />} />
+          <Route path="/login" element={<LoginRedirect />} />
+          <Route path="/admin" element={<LoginRedirect />} />
+          <Route path="/pedoman-teknis" element={<PedomanTeknisPage />} />
+          <Route path="/syarat-ketentuan" element={<SyaratKetentuan />} />
+          <Route path="/kebijakan-privasi" element={<KebijakanPrivasi />} />
 
-        <Route element={<ProtectedLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/ekosistem" element={<MonitoringEkosistem />} />
-          <Route path="/input-lapangan" element={<AdminRoute><InputLapangan /></AdminRoute>} />
-          <Route path="/rekomendasi-lokasi" element={<RekomendasiLokasi />} />
-          <Route path="/vegetasi-mangrove" element={<VegetasiMangrove />} />
-          <Route path="/pendaratan-penyu" element={<PendaratanPenyu />} />
-          <Route path="/verifikasi-data" element={<VerifikatorRoute><VerifikasiData /></VerifikatorRoute>} />
-          <Route path="/data-pokmaswas" element={<AdminRoute><DataPokmaswas /></AdminRoute>} />
-          <Route path="/laporan" element={<Laporan />} />
-          <Route path="/pembibitan-mangrove" element={<PembibitanMangrove />} />
-          <Route path="/tekanan-sosial" element={<TekananSosial />} />
-          <Route path="/lingkungan" element={<AnalisisLingkungan />} />
-          <Route path="/mangrove-nasional" element={<AdminRoute><MangroveNasional /></AdminRoute>} />
-        </Route>
+          <Route element={<ProtectedLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/ekosistem" element={<MonitoringEkosistem />} />
+            <Route path="/input-lapangan" element={<AdminRoute><InputLapangan /></AdminRoute>} />
+            <Route path="/rekomendasi-lokasi" element={<RekomendasiLokasi />} />
+            <Route path="/vegetasi-mangrove" element={<VegetasiMangrove />} />
+            <Route path="/pendaratan-penyu" element={<PendaratanPenyu />} />
+            <Route path="/verifikasi-data" element={<VerifikatorRoute><VerifikasiData /></VerifikatorRoute>} />
+            <Route path="/data-pokmaswas" element={<AdminRoute><DataPokmaswas /></AdminRoute>} />
+            <Route path="/laporan" element={<Laporan />} />
+            <Route path="/laporan-pengunjung" element={<LaporanPengunjung />} />
+            <Route path="/pembibitan-mangrove" element={<PembibitanMangrove />} />
+            <Route path="/tekanan-sosial" element={<TekananSosial />} />
+            <Route path="/lingkungan" element={<AnalisisLingkungan />} />
+            <Route path="/mangrove-nasional" element={<AdminRoute><MangroveNasional /></AdminRoute>} />
+          </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </MaintenanceGate>
     </Suspense>
   );
 }

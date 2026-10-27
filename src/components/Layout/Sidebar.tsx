@@ -4,10 +4,11 @@ import {
   ClipboardList,
   Lock, Sprout, Turtle, Trees,
   ClipboardCheck, X, Map as MapIcon, Users,
-  FlaskConical, AlertTriangle, BarChart3, Globe, Flower2,
+  FlaskConical, AlertTriangle, BarChart3, Globe, Flower2, FileBarChart, Wrench,
 } from 'lucide-react';
 import type { UserRole } from '../../context/authModel';
 import { useAuth } from '../../context/useAuth';
+import { hasMaintenanceBypass, isRouteUnderMaintenance } from '../../lib/maintenance';
 
 interface NavItem {
   to: string;
@@ -67,6 +68,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const renderNavItems = (items: NavItem[]) =>
     items.map(({ to, icon: Icon, label, exact, minRole }) => {
+      if (isRouteUnderMaintenance(to) && !hasMaintenanceBypass()) {
+        return (
+          <div key={to}
+            className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-white/40 cursor-not-allowed select-none"
+            title="Sedang dalam perbaikan"
+          >
+            <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+            <span className="flex-1 leading-tight">{label}</span>
+            <Wrench className="w-3 h-3 text-[#f06424]" />
+          </div>
+        );
+      }
       const allowed = canAccess({ to, icon: Icon, label, minRole });
       if (!allowed) {
         return (
@@ -164,8 +177,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-white/10">
-        <p className="text-[10px] text-white/50 text-center font-medium">ID-MAP v1.1 · Cabdin KP Kab. Malang</p>
+      <div className="border-t border-white/10">
+        <NavLink
+          to="/laporan-pengunjung"
+          onClick={handleNavClick}
+          className={({ isActive }) => `flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium transition-all ${isActive ? 'bg-white/10 text-white border-l-4 border-[#f06424]' : 'text-white/75 hover:bg-white/10 hover:text-white border-l-4 border-transparent'}`}
+        >
+          {({ isActive }) => <><FileBarChart className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-[#f06424]' : 'text-white/50'}`} /><span className="flex-1 leading-tight">Laporan Pengunjung</span></>}
+        </NavLink>
+        <p className="px-4 py-3 text-center text-[10px] font-medium text-white/50">ID-MAP v1.1 · Cabdin KP Kab. Malang</p>
       </div>
     </aside>
   );

@@ -11,7 +11,7 @@
  *  - onClose: callback opsional setelah menu/tutup.
  */
 import { useEffect, useState, type ComponentType } from 'react';
-import { useClerkReady } from './ClerkContext';
+import { useClerkReady } from './ClerkReadyContext';
 
 type ClerkButtonsProps = {
   origin: string;
